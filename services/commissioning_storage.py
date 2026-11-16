@@ -34,10 +34,10 @@ def store_commissioning_upload(file_storage, *, company_name: str, entity_type: 
     if file_storage is None or not file_storage.filename:
         abort(400, description="Choose an evidence file")
 
-    raw_filename = str(file_storage.filename).replace("\\\\", "/")
+    raw_filename = str(file_storage.filename).replace(chr(92), "/")
     filename = "".join(
         character for character in raw_filename.rsplit("/", 1)[-1]
-        if character.isprintable() and character not in "/\\\\"
+        if character.isprintable() and character not in "/" + chr(92)
     ).strip()
     if not filename or filename in {".", ".."} or len(filename) > 255:
         abort(400, description="Invalid file name")
