@@ -26,5 +26,15 @@ def test_opera_product_surface_keeps_shared_auth_but_hides_legacy_modules(monkey
     ):
         assert legacy_path not in rules
 
-    assert "warehouse." not in " ".join(endpoints)
-    assert "role_workspace." not in " ".join(endpoints)
+    legacy_blueprints = (
+        "supplier.", "material_requisition.", "purchase_order.",
+        "quality_control.", "delivery.", "warehouse.",
+        "project_dashboard.", "report.", "reports.", "admin.",
+        "control_center.", "intelligence.", "operations_copilot.",
+        "material_reconciliation.", "material_master.", "role_workspace.",
+    )
+    assert not any(
+        endpoint.startswith(prefix)
+        for endpoint in endpoints
+        for prefix in legacy_blueprints
+    )
