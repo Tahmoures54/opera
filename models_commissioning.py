@@ -515,6 +515,6 @@ def _protect_signed_check_sheets(session, flush_context, instances):
 @event.listens_for(Session, "before_flush")
 def _protect_commissioning_evidence(session, flush_context, instances):
     """Keep audit events, signatures, and Punch history append-only."""
-    protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision)
+    protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision, CommissioningAttachment)
     if any(isinstance(obj, protected) for obj in set(session.dirty).union(session.deleted)):
         raise ValueError("Commissioning audit evidence is append-only.")
