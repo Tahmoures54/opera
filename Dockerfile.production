@@ -1,32 +1,28 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.12-slim AS builder
+FROM python:3.12-alpine AS builder
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /build
-# The base image ships pip 24.x / setuptools 70.x, which are vulnerable
-# (CVE-2025-47273 in setuptools; the old toolchain also pulls in
-# msgpack 1.1.x, GHSA-6v7p-g79w-8964). Upgrade the system copies first -
-# venvs seed their own toolchain from the system site-packages.
+# Build psycopg2 against Alpine's musl/libpq; the runtime stage keeps only libpq.
+RUN apk add --no-cache --virtual .build-deps build-base postgresql-dev
 RUN python -m pip install --no-cache-dir --upgrade "pip==26.2.1" "setuptools==84.0.0"
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-FROM python:3.12-slim AS runtime
+FROM python:3.12-alpine AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
-RUN groupadd --system --gid 10001 opera && useradd --system --uid 10001 --gid opera --create-home opera
-# Refresh base-image packages at build time so the image is scanned with the
-# newest patched versions (the floating python:3.12-slim tag can lag behind
-# distro security updates, which trips the Trivy HIGH/CRITICAL gate).
-# PostgreSQL is the only supported production database. Remove the optional
-# Python SQLite extension and its vulnerable Debian runtime library; local
-# development and tests continue to use SQLite outside this image.
-RUN apt-get update && apt-get upgrade -y --no-install-recommends \
-    && rm -f /usr/local/lib/python3.12/lib-dynload/_sqlite3*.so \
-    && apt-get purge -y --auto-remove libsqlite3-0 \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apk upgrade --no-cache \
+    && apk add --no-cache postgresql-libs \
+    && addgroup -S -g 10001 opera \
+    && adduser -S -D -H -u 10001 -G opera opera
+# OPERA production uses PostgreSQL only. Remove SQLite's optional Python module
+# and the SQLite runtime package from this minimal Alpine image.
+RUN find /usr/local/lib/python3.12 -type f -name '_sqlite3*.so' -delete \
+    && (apk info -e sqlite-libs >/dev/null 2>&1 && apk del sqlite-libs || true) \
+    && ! python -c "import sqlite3" \
+    && python -c "import psycopg2, sqlalchemy; print('PostgreSQL runtime ready')"
 COPY --from=builder /opt/venv /opt/venv
-RUN python -c "import psycopg, sqlalchemy; print('PostgreSQL runtime ready')" && ! python -c "import sqlite3"
 COPY . .
 RUN chmod 0555 /app/docker/entrypoint.sh && chown -R opera:opera /app
 USER opera
