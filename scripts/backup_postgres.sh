@@ -19,7 +19,15 @@ if [[ -e "$backup" || -e "${backup}.sha256" || -e "$evidence" || -e "${evidence}
   echo "Backup path already exists; refusing to overwrite: $backup" >&2
   exit 1
 fi
-trap 'rm -f "$tmp" "${tmp}.sha256" "$evidence_tmp" "${evidence_tmp}.sha256"' EXIT
+cleanup() {
+  local status=$?
+  rm -f "$tmp" "${tmp}.sha256" "$evidence_tmp" "${evidence_tmp}.sha256"
+  if [[ $status -ne 0 ]]; then
+    rm -f "$backup" "${backup}.sha256" "$evidence" "${evidence}.sha256"
+  fi
+  exit "$status"
+}
+trap cleanup EXIT
 docker compose --env-file .env.prod -f docker-compose.production.yml exec -T db \
   sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' > "$tmp"
 if [[ ! -s "$tmp" ]]; then
