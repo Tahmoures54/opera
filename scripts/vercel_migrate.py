@@ -1,8 +1,9 @@
-"""Run database migrations during a Vercel production deployment.
+"""Manually apply database migrations in an explicitly prepared Vercel environment.
 
-Vercel serverless instances are intentionally not responsible for changing the
-database schema at request time. The production deployment build is the single
-migration point, so the live function only starts after Alembic is up to date.
+This script is not a build hook. Never run production migrations from a Vercel
+build: build jobs may be retried or run concurrently. Back up the database and
+run this helper as a separately controlled release operation only after the
+target database and deployment environment have been verified.
 """
 
 import os

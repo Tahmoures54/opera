@@ -27,8 +27,10 @@ jobs:
         run: ruff check . --select E4,E7,E9,F --ignore E401,E402,E701,E702,F401
       - name: Mypy
         run: mypy --config-file mypy.ini app.py extensions.py config blueprints role_workspace.py utils.py
+      - name: Ensure migrations are not coupled to Vercel builds
+        run: python -c "import json; assert 'buildCommand' not in json.load(open('vercel.json', encoding='utf-8'))"
       - name: Validate operational shell scripts
-        run: bash -n scripts/prod_up.sh scripts/backup_postgres.sh scripts/restore_postgres.sh
+        run: bash -n scripts/prod_up.sh scripts/backup_postgres.sh scripts/restore_postgres.sh scripts/restore_evidence.sh
       - name: Pytest with core coverage
         run: pytest --cov=app.py --cov=blueprints/health.py --cov=blueprints/growth.py --cov=config/config.py --cov=extensions.py --cov=forms --cov=models.py --cov=models_intelligence.py --cov=errors.py --cov=data/country_codes.py --cov-report=term-missing --cov-fail-under=80
       - name: Bandit
@@ -136,6 +138,15 @@ jobs:
     needs: integration
     steps:
       - uses: actions/checkout@v4
+      - name: Validate production Compose configuration
+        run: |
+          mkdir -p secrets
+          printf 'ci-only-password' > secrets/postgres_password
+          printf 'ci-only-cert' > secrets/tls_cert
+          printf 'ci-only-key' > secrets/tls_key
+          cp .env.prod.example .env.prod
+          sed -i 's/^SECRET_KEY=.*/SECRET_KEY=ci-only-opera-secret-key-0123456789abcdef/' .env.prod
+          docker compose --env-file .env.prod -f docker-compose.production.yml config --quiet
       - name: Validate Nginx configuration
         run: |
           mkdir -p "$RUNNER_TEMP/nginx-tls"

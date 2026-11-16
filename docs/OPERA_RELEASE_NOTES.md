@@ -19,3 +19,12 @@
 
 ## Release rule
 Do not promote this build to production until the latest commit has a fully successful CI run and the staging acceptance checklist is signed off.
+
+
+## Evidence storage and deployment hardening
+
+- Added private tenant-scoped evidence upload/download for check sheets, Punch items and handover packages.
+- Restricted uploads to PDF, PNG, JPG/JPEG, TXT and CSV with content-signature checks, bounded size, random storage keys and SHA-256 checksums.
+- Added server-side project permission checks, private no-store downloads, append-only attachment metadata and immutable evidence after final sign-off/verification/acceptance.
+- Added a persistent Docker evidence volume and paired database/evidence backup and evidence restore helpers.
+- Removed the Vercel build-time database migration hook. Vercel build jobs must not mutate production database schema.
