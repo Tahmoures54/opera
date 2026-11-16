@@ -22,12 +22,9 @@ if [[ "$expected" != "$actual" ]]; then
   echo "Evidence backup checksum mismatch" >&2
   exit 1
 fi
-# Reject absolute paths and parent traversal before extraction.
-while IFS= read -r entry; do
-  case "$entry" in
-    /*|..|../*|*/../*) echo "Unsafe archive path: $entry" >&2; exit 1 ;;
-  esac
-done < <(tar -tzf "$archive")
+# Validate member paths and reject symlinks, hardlinks, and special files.
+# GNU tar's name listing alone does not expose link targets.
+python scripts/validate_evidence_archive.py "$archive"
 
 echo "Restoring evidence into the OPERA uploads volume. Stop application writes first."
 docker compose --env-file .env.prod -f docker-compose.production.yml run --rm --no-deps \
