@@ -347,7 +347,7 @@ def create_app(config_name=None):
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        return redirect(url_for('control_center.dashboard'))
+        return redirect(url_for('commissioning.dashboard'))
 
     @app.route('/getting-started')
     def getting_started_alias():
