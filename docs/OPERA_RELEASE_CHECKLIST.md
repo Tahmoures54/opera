@@ -14,18 +14,18 @@ This checklist distinguishes implemented workflows from production deployment ev
 
 ## Automated verification
 - [x] Ruff and Mypy pass on the first CI run
-- [ ] Full pytest suite passes on the latest PR commit
-- [ ] Bandit passes
-- [ ] pip-audit passes with no unresolved high-risk advisories
-- [ ] PostgreSQL migration/integration suite passes
-- [ ] Docker build and Trivy scan pass
+- [x] Full pytest suite passes on the latest main commit (CI run 123)
+- [x] Bandit passes
+- [x] pip-audit passes with no unresolved advisories
+- [x] PostgreSQL migration/integration suite passes
+- [x] Docker build and Trivy scan pass
 
 ## Before production
-- [ ] Review and merge the final PR
+- [x] Review and merge the product foundation PR
 - [ ] Configure production secrets and PostgreSQL
 - [ ] Take and verify a production database backup
 - [ ] Apply migration 20261116_0019 in a staging environment
-- [ ] Verify file/evidence storage and backup policy
+- [ ] Verify evidence volume persistence, paired database/evidence backup and restore
 - [ ] Run an end-to-end commissioning scenario with separate contractor, QC, client and operations accounts
 - [ ] Verify HTTPS, readiness endpoint, logging and monitoring
 - [ ] Obtain operational acceptance from the project owner
