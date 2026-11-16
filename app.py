@@ -82,7 +82,7 @@ def _configure_observability(app):
 
         if not app.extensions.get('opera_otel_flask'):
             FlaskInstrumentor().instrument_app(app)
-            app.extensions['materialhub_otel_flask'] = True
+            app.extensions['opera_otel_flask'] = True
 
         if not _OTEL_SQLALCHEMY_INSTRUMENTED:
             with app.app_context():
@@ -118,7 +118,7 @@ def create_app(config_name=None):
         # _configure_observability.
         if not app.extensions.get('opera_observability'):
             _configure_observability(app)
-            app.extensions['materialhub_observability'] = True
+            app.extensions['opera_observability'] = True
 
     @app.before_request
     def _csrf_token_from_json():
@@ -168,7 +168,7 @@ def create_app(config_name=None):
     @app.after_request
     def _finish_request_observability(response):
         from flask import g
-        duration_ms = round((time.perf_counter() - request.environ.get('materialhub.request_started', time.perf_counter())) * 1000, 2)
+        duration_ms = round((time.perf_counter() - request.environ.get('opera.request_started', time.perf_counter())) * 1000, 2)
         response.headers['X-Request-ID'] = getattr(g, 'request_id', _request_id())
         route_template = request.url_rule.rule if request.url_rule else 'unmatched'
         if request_counter is not None:
