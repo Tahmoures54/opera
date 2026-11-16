@@ -1,6 +1,6 @@
 """OPERA operational workflows: membership, check sheets, punch, witness and handover."""
 from datetime import date, datetime
-from flask import abort, flash, redirect, render_template, request, url_for
+from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 
 from extensions import db
@@ -11,12 +11,12 @@ from models_commissioning import (
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
     WitnessPoint, WitnessType, WitnessStatus, HandoverPackage, HandoverStatus,
-    ProgressSnapshot, CommissioningSignature,
+    ProgressSnapshot, CommissioningSignature, CommissioningAttachment,
 )
 from services.commissioning_access import (
     add_audit_event, get_project, has_permission,
 )
-from services.commissioning_number_service import (
+from services.commissioning_storage import store_commissioning_upload, resolve_commissioning_upload\nfrom services.commissioning_number_service import (
     next_checksheet_number, next_punch_number,
 )
 from blueprints.commissioning import commissioning_bp
@@ -86,6 +86,16 @@ def operations(project_id):
     packages = HandoverPackage.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(HandoverPackage.created_at.desc()).all()
     snapshots = ProgressSnapshot.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(ProgressSnapshot.snapshot_date.desc()).limit(12).all()
     members = CommissioningMembership.query.filter_by(company_name=project.company_name, project_id=project.id, is_active=True).all()
+    punch_ids = [item.id for item in punches]
+    package_ids = [item.id for item in packages]
+    evidence = CommissioningAttachment.query.filter(
+        CommissioningAttachment.company_name == project.company_name,
+        CommissioningAttachment.entity_type.in_(["PunchItem", "HandoverPackage"]),
+        CommissioningAttachment.entity_id.in_(punch_ids + package_ids or [-1]),
+    ).order_by(CommissioningAttachment.uploaded_at.desc()).all()
+    evidence_by_entity = {}
+    for attachment in evidence:
+        evidence_by_entity.setdefault((attachment.entity_type, attachment.entity_id), []).append(attachment)
     users = User.query.filter_by(company_name=project.company_name).order_by(User.full_name).all()
     subsystems = (CommissioningSubsystem.query
         .join(CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id)
@@ -101,6 +111,7 @@ def operations(project_id):
         "commissioning/operations.html", project=project, sheets=sheets,
         punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots, members=members,
         users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}], subsystems=subsystems, roles=list(MembershipRole),
+        evidence_by_entity=evidence_by_entity,
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
         punch_severities=list(PunchSeverity), witness_types=list(WitnessType),
@@ -195,7 +206,11 @@ def checksheet_detail(sheet_id):
     items = CheckSheetItem.query.filter_by(
         company_name=sheet.company_name, check_sheet_id=sheet.id
     ).order_by(CheckSheetItem.sequence).all()
+    attachments = CommissioningAttachment.query.filter_by(
+        company_name=sheet.company_name, entity_type="CheckSheet", entity_id=sheet.id
+    ).order_by(CommissioningAttachment.uploaded_at.desc()).all()
     return render_template("commissioning/checksheet_detail.html", sheet=sheet, items=items,
+                           attachments=attachments,
                            results=list(ItemResultStatus),
                            can_fill=has_permission(sheet.project_id, "checksheets.fill") or has_permission(sheet.project_id, "checksheets.manage"),
                            can_verify=has_permission(sheet.project_id, "checksheets.verify") or has_permission(sheet.project_id, "checksheets.manage"))
@@ -625,6 +640,99 @@ def transition_handover(package_id):
                     before={"status": old.value}, after={"status": target.value})
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=package.project_id))
+
+
+
+_ATTACHMENT_PERMISSIONS = {
+    "CheckSheet": {
+        "upload": ("checksheets.manage", "checksheets.create", "checksheets.fill"),
+        "view": ("checksheets.view", "checksheets.manage", "checksheets.create",
+                 "checksheets.fill", "checksheets.verify", "checksheets.sign"),
+    },
+    "PunchItem": {
+        "upload": ("punch.raise", "punch.assign", "punch.verify"),
+        "view": ("punch.view", "punch.raise", "punch.assign", "punch.verify", "project.manage"),
+    },
+    "HandoverPackage": {
+        "upload": ("handover.manage", "handover.accept"),
+        "view": ("handover.view", "handover.manage", "handover.accept", "project.manage"),
+    },
+}
+
+
+def _attachment_entity(entity_type, entity_id):
+    if entity_type == "CheckSheet":
+        entity = CheckSheet.query.filter_by(
+            id=entity_id, company_name=current_user.company_name
+        ).first_or_404()
+        return entity, entity.project_id
+    if entity_type == "PunchItem":
+        entity = PunchItem.query.filter_by(
+            id=entity_id, company_name=current_user.company_name
+        ).first_or_404()
+        return entity, entity.project_id
+    if entity_type == "HandoverPackage":
+        entity = HandoverPackage.query.filter_by(
+            id=entity_id, company_name=current_user.company_name
+        ).first_or_404()
+        return entity, entity.project_id
+    abort(404)
+
+
+@commissioning_bp.post("/evidence/<entity_type>/<int:entity_id>")
+@login_required
+def upload_evidence(entity_type, entity_id):
+    permissions = _ATTACHMENT_PERMISSIONS.get(entity_type)
+    if permissions is None:
+        abort(404)
+    entity, project_id = _attachment_entity(entity_type, entity_id)
+    if not any(has_permission(project_id, permission) for permission in permissions["upload"]):
+        abort(403)
+    metadata = store_commissioning_upload(
+        request.files.get("file"), company_name=current_user.company_name,
+        entity_type=entity_type, entity_id=entity_id, uploaded_by_id=current_user.id,
+    )
+    attachment = CommissioningAttachment(
+        company_name=current_user.company_name, entity_type=entity_type,
+        entity_id=entity_id, **metadata,
+    )
+    db.session.add(attachment)
+    try:
+        db.session.flush()
+        add_audit_event(current_user.company_name, "CommissioningAttachment", attachment.id,
+                        "EVIDENCE_UPLOADED",
+                        after={"entity_type": entity_type, "entity_id": entity_id,
+                               "filename": attachment.filename, "sha256": attachment.checksum})
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        stored_path = resolve_commissioning_upload(metadata["storage_key"])
+        stored_path.unlink(missing_ok=True)
+        raise
+    flash("مدرک با موفقیت بارگذاری شد.", "success")
+    if entity_type == "CheckSheet":
+        return redirect(url_for("commissioning.checksheet_detail", sheet_id=entity_id))
+    return redirect(url_for("commissioning.operations", project_id=project_id))
+
+
+@commissioning_bp.get("/evidence/<int:attachment_id>")
+@login_required
+def download_evidence(attachment_id):
+    attachment = CommissioningAttachment.query.filter_by(
+        id=attachment_id, company_name=current_user.company_name
+    ).first_or_404()
+    permissions = _ATTACHMENT_PERMISSIONS.get(attachment.entity_type)
+    if permissions is None:
+        abort(404)
+    _, project_id = _attachment_entity(attachment.entity_type, attachment.entity_id)
+    if not any(has_permission(project_id, permission) for permission in permissions["view"]):
+        abort(403)
+    path = resolve_commissioning_upload(attachment.storage_key)
+    response = send_file(path, mimetype=attachment.mime_type, as_attachment=True,
+                         download_name=attachment.filename, max_age=0)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @commissioning_bp.post("/projects/<int:project_id>/reports/snapshot")
