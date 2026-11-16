@@ -14,11 +14,21 @@ WORKDIR /app
 RUN apk upgrade --no-cache \
     && addgroup -S -g 10001 opera \
     && adduser -S -D -H -u 10001 -G opera opera
-# OPERA production uses PostgreSQL only. Remove SQLite's optional Python module
-# and the SQLite runtime package from this minimal Alpine image.
+# OPERA production uses PostgreSQL only. Remove Python's optional SQLite
+# extension, then regenerate the official image's runtime dependency set so
+# sqlite-libs is not retained as an orphaned Python runtime dependency.
 RUN find /usr/local/lib/python3.12 -type f -name '_sqlite3*.so' -delete \
-    && (apk info -e sqlite-libs >/dev/null 2>&1 && apk del sqlite-libs || true) \
-    && ! apk info -e sqlite-libs
+    && apk del .python-rundeps \
+    && apk add --no-cache pax-utils \
+    && runDeps="$(scanelf --needed --nobanner --recursive /usr/local \
+        | awk '{ gsub(/,/, "\\nso:", $2); print "so:" $2 }' \
+        | sort -u \
+        | xargs -r apk info --installed \
+        | sort -u)" \
+    && apk add --no-cache --virtual .python-rundeps $runDeps \
+    && apk del pax-utils \
+    && ! apk info -e sqlite-libs \
+    && ! python -c "import sqlite3"
 COPY --from=builder /opt/venv /opt/venv
 RUN ! python -c "import sqlite3" && python -c "import psycopg2, sqlalchemy; print('PostgreSQL runtime ready')"
 COPY . .
