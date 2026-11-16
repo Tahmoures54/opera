@@ -219,7 +219,7 @@ def checksheet_detail(sheet_id):
                            can_verify=has_permission(sheet.project_id, "checksheets.verify") or has_permission(sheet.project_id, "checksheets.manage"),
                            can_upload_attachments=(sheet.status != CheckSheetStatus.SIGNED_OFF and any(
                                has_permission(sheet.project_id, p)
-                               for p in ("checksheets.manage", "checksheets.create", "checksheets.fill"))))
+                               for p in ("checksheets.manage", "checksheets.create", "checksheets.fill", "checksheets.verify"))))
 
 
 @commissioning_bp.post("/checksheets/<int:sheet_id>/items")
@@ -651,7 +651,7 @@ def transition_handover(package_id):
 
 _ATTACHMENT_PERMISSIONS = {
     "CheckSheet": {
-        "upload": ("checksheets.manage", "checksheets.create", "checksheets.fill"),
+        "upload": ("checksheets.manage", "checksheets.create", "checksheets.fill", "checksheets.verify"),
         "view": ("checksheets.view", "checksheets.manage", "checksheets.create",
                  "checksheets.fill", "checksheets.verify", "checksheets.sign"),
     },
