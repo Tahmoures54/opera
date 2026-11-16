@@ -43,13 +43,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: materialhub
-          POSTGRES_USER: materialhub
-          POSTGRES_PASSWORD: materialhub
+          POSTGRES_DB: opera
+          POSTGRES_USER: opera
+          POSTGRES_PASSWORD: opera
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U materialhub -d materialhub"
+          --health-cmd "pg_isready -U opera -d opera"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
@@ -64,8 +64,8 @@ jobs:
           --health-retries 20
     env:
       FLASK_ENV: production
-      SECRET_KEY: ci-only-materialhub-secret-key-0123456789
-      DATABASE_URL: postgresql://materialhub:materialhub@127.0.0.1:5432/materialhub
+      SECRET_KEY: ci-only-opera-secret-key-0123456789
+      DATABASE_URL: postgresql://opera:opera@127.0.0.1:5432/opera
       RATELIMIT_STORAGE_URI: redis://127.0.0.1:6379/0
     steps:
       - uses: actions/checkout@v4
@@ -81,20 +81,20 @@ jobs:
         run: pytest -q tests/test_account_recovery_postgres.py
       - name: Verify forward upgrade from previous schema revision
         env:
-          DATABASE_URL: postgresql://materialhub:materialhub@127.0.0.1:5432/materialhub_upgrade
+          DATABASE_URL: postgresql://opera:opera@127.0.0.1:5432/opera_upgrade
         run: |
           python - <<'PY'
           import psycopg2
           connection = psycopg2.connect(
               dbname="postgres",
-              user="materialhub",
-              password="materialhub",
+              user="opera",
+              password="opera",
               host="127.0.0.1",
           )
           connection.autocommit = True
           try:
               with connection.cursor() as cursor:
-                  cursor.execute("CREATE DATABASE materialhub_upgrade")
+                  cursor.execute("CREATE DATABASE opera_upgrade")
           finally:
               connection.close()
           PY
@@ -103,15 +103,15 @@ jobs:
           flask --app wsgi db current
       - name: Verify PostgreSQL backup and isolated restore
         env:
-          PGPASSWORD: materialhub
+          PGPASSWORD: opera
         run: |
           docker run --rm --network host -e PGPASSWORD="$PGPASSWORD" -v "$RUNNER_TEMP:/backup" postgres:16-alpine sh -ec '
-            pg_dump -h 127.0.0.1 -U materialhub -d materialhub --format=custom -f /backup/materialhub-ci.dump
-            createdb -h 127.0.0.1 -U materialhub materialhub_restore_test
-            pg_restore -h 127.0.0.1 -U materialhub -d materialhub_restore_test --no-owner --no-privileges /backup/materialhub-ci.dump
-            restored_revision="$(psql -h 127.0.0.1 -U materialhub -d materialhub_restore_test -Atc "SELECT version_num FROM alembic_version")"
+            pg_dump -h 127.0.0.1 -U opera -d opera --format=custom -f /backup/opera-ci.dump
+            createdb -h 127.0.0.1 -U opera opera_restore_test
+            pg_restore -h 127.0.0.1 -U opera -d opera_restore_test --no-owner --no-privileges /backup/opera-ci.dump
+            restored_revision="$(psql -h 127.0.0.1 -U opera -d opera_restore_test -Atc "SELECT version_num FROM alembic_version")"
             test "$restored_revision" = "20261116_0019"
-            psql -h 127.0.0.1 -U materialhub -d materialhub_restore_test -Atc "SELECT count(*) FROM account_recovery_token" | grep -q "^0$"
+            psql -h 127.0.0.1 -U opera -d opera_restore_test -Atc "SELECT count(*) FROM account_recovery_token" | grep -q "^0$"
             echo "PostgreSQL dump/restore round trip passed."
           '
       - name: Smoke test production app, readiness and public funnel
@@ -153,7 +153,7 @@ jobs:
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: materialhub:ci
+          image-ref: opera:ci
           format: json
           output: trivy-report.json
           severity: HIGH,CRITICAL
