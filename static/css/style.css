@@ -1,0 +1,258 @@
+/* =========================================================
+   Legacy page styles — globals neutralized so they do not
+   fight the industrial shell in base.html / design-system.css
+   ========================================================= */
+
+/* Do not style body/header/nav globally — shell owns layout */
+body {
+    /* shell overrides margin/padding/background */
+}
+
+/* Scoped legacy nav (only when not inside shell sidebar) */
+.nav-links {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.hamburger {
+    display: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #0E7490;
+    background: none;
+    border: none;
+}
+
+/* Alerts */
+.alert {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+/* Forms */
+form {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+input, textarea, select {
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: #0E7490;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.15);
+}
+
+/* Prefer class-based buttons; avoid styling every <button> (breaks shell menu) */
+.button, .auth-btn, .submit-btn {
+    background: #0E7490;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background 0.15s ease;
+}
+
+.button:hover, .auth-btn:hover, .submit-btn:hover {
+    background: #0C637A;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #0E7490;
+    color: white;
+}
+
+/* Notifications */
+#notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    z-index: 2000;
+}
+
+/* Auth pages */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70vh;
+}
+
+.auth-box {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+    max-width: 420px;
+    width: 100%;
+    border: 1px solid #E2E8F0;
+}
+
+.auth-title {
+    text-align: center;
+    color: #0E7490;
+    font-size: 1.75em;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.auth-subtitle {
+    text-align: center;
+    color: #64748B;
+    font-size: 1em;
+    margin-bottom: 25px;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.9em;
+    color: #0F172A;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.input-group input, .input-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+.input-group input:focus, .input-group select:focus {
+    border-color: #0E7490;
+    box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.15);
+    outline: none;
+}
+
+.security-notice {
+    margin-top: 25px;
+    padding: 15px 20px;
+    background: #ECFEFF;
+    border-left: 4px solid #0E7490;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.security-notice h3 {
+    font-size: 1.1em;
+    color: #0E7490;
+    margin: 0 0 10px;
+    font-weight: 600;
+}
+
+.security-notice p {
+    font-size: 0.9em;
+    color: #475569;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.auth-link {
+    margin-top: 20px;
+    font-size: 0.95em;
+    color: #64748B;
+    text-align: center;
+}
+
+.auth-link a {
+    color: #0E7490;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-link a:hover {
+    color: #0C637A;
+}
+
+.register-footer {
+    margin-top: 30px;
+    text-align: center;
+    color: #64748B;
+    font-size: 0.9em;
+}
+
+.register-footer a {
+    color: #0E7490;
+    text-decoration: none;
+}
+
+/* Keep remaining legacy page-specific rules for older templates */
+.home-container { max-width: 1300px; margin: 0 auto; padding: 20px; }
+.dashboard-wrapper { max-width: 1400px; margin: 0 auto; }
+.admin-container { max-width: 1200px; margin: 20px auto; padding: 20px; }
+.supplier-dashboard { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}

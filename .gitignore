@@ -1,0 +1,21 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+instance/
+*.db
+*.sqlite
+*.sqlite3
+logs/
+coverage.xml
+htmlcov/
+
+# coverage.py raw data file
+.coverage
+
+# Local database backups (never commit production data)
+backups/

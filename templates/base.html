@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0E7490">
+  <link rel="canonical" href="{{ request.base_url }}">
+  <meta name="description" content="{% block meta_description %}MaterialHub — integrated material procurement, delivery, warehouse and intelligence platform for construction and EPC projects.{% endblock %}">
+  <meta property="og:title" content="MaterialHub{% block og_title %}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Control procurement, delivery, quality, warehouse and material traceability in one workspace.{% endblock %}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ request.base_url }}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="MaterialHub{% block twitter_title %}{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}Material operations for construction and EPC projects.{% endblock %}">
+  <title>MaterialHub{% block title %}{% endblock %}</title>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "MaterialHub",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "Material operations platform for construction and EPC projects, covering procurement, delivery, quality, warehouse and traceability."
+    }
+  </script>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/documentation.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/command-palette.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  {% block head %}{% endblock %}
+  <style>
+    :root {
+      --mh-teal: #0E7490;
+      --mh-teal-2: #0891B2;
+      --mh-ink: #0F172A;
+      --mh-muted: #64748B;
+      --mh-bg: #F1F5F9;
+      --mh-border: #CBD5E1;
+      --mh-card: #FFFFFF;
+      --mh-sidebar: #0B1622;
+      --mh-sidebar-2: #122033;
+      --mh-topbar-h: 64px;
+      --mh-sidebar-w: 248px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; height: 100%; }
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: var(--mh-bg) !important;
+      color: var(--mh-ink);
+      font-family: Inter, "Segoe UI", system-ui, sans-serif;
+      min-height: 100%;
+      height: 100%;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .mh-shell {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .mh-topbar {
+      height: var(--mh-topbar-h);
+      width: 100%;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--mh-border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 22px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+    .mh-brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      text-decoration: none;
+      min-width: 0;
+      flex-shrink: 0;
+    }
+    .mh-brand img { width: 36px; height: 36px; object-fit: contain; }
+    .mh-brand-mark {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(145deg, #0E7490, #0891B2);
+      display: grid; place-items: center; color: #fff;
+      font-weight: 900; font-size: 0.95rem; letter-spacing: -0.02em;
+      box-shadow: 0 2px 8px rgba(14, 116, 144, 0.25); flex-shrink: 0;
+    }
+    .mh-brand strong { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+    .mh-brand span {
+      display: block; font-size: 0.7rem; color: var(--mh-muted);
+      margin-top: 1px; font-weight: 500; white-space: nowrap;
+    }
+    .mh-menu {
+      border: 0; background: transparent; font-size: 1.1rem; color: #334155;
+      cursor: pointer; padding: 6px; border-radius: 8px; flex-shrink: 0;
+    }
+    .mh-menu:hover { background: #F1F5F9; }
+    .mh-top-actions {
+      margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .mh-pill {
+      padding: 7px 12px; border: 1px solid var(--mh-border); border-radius: 8px;
+      background: #fff; text-decoration: none; font-size: 0.84rem; font-weight: 600;
+      color: #334155; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .mh-pill:hover { background: #F8FAFC; border-color: #94A3B8; }
+    .mh-pill.primary { background: #0E7490; border-color: #0E7490; color: #fff; }
+    .mh-pill.primary:hover { background: #0C637A; border-color: #0C637A; }
+    .mh-avatar {
+      width: 34px; height: 34px; border-radius: 50%; background: #ECFEFF; color: #0E7490;
+      display: grid; place-items: center; font-weight: 800; font-size: 0.85rem;
+      border: 1px solid #A5F3FC; flex-shrink: 0;
+    }
+    .mh-public-nav {
+      display: flex; gap: 4px; margin-left: auto; align-items: center; flex-shrink: 0;
+    }
+    .mh-public-nav a {
+      padding: 7px 12px; text-decoration: none; color: #475569; border-radius: 8px;
+      font-size: 0.875rem; font-weight: 550; white-space: nowrap;
+    }
+    .mh-public-nav a:hover { background: #F1F5F9; color: #0F172A; }
+
+    .mh-body {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      width: 100%;
+    }
+    .mh-layout {
+      display: grid;
+      grid-template-columns: var(--mh-sidebar-w) minmax(0, 1fr);
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+    }
+    .mh-sidebar {
+      background: linear-gradient(180deg, #0B1622 0%, #122033 100%);
+      color: #94A3B8; padding: 16px 10px;
+      position: sticky; top: var(--mh-topbar-h);
+      height: calc(100vh - var(--mh-topbar-h));
+      height: calc(100dvh - var(--mh-topbar-h));
+      overflow-y: auto; overflow-x: hidden; align-self: start;
+    }
+    .mh-nav-label {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em;
+      color: #64748B; padding: 14px 12px 6px; font-weight: 700;
+    }
+    .mh-nav a {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px; margin: 2px 0;
+      border-radius: 8px; text-decoration: none; color: #94A3B8;
+      font-size: 0.875rem; font-weight: 500; transition: background 0.15s, color 0.15s;
+    }
+    .mh-nav a:hover, .mh-nav a.active {
+      background: rgba(14, 116, 144, 0.18); color: #E0F2FE;
+    }
+    .mh-nav i { width: 18px; text-align: center; font-size: 0.85rem; opacity: 0.9; }
+
+    .mh-content {
+      min-width: 0; width: 100%;
+      display: flex; flex-direction: column; flex: 1 1 auto;
+    }
+    .mh-flashes {
+      width: 100%; max-width: 1500px; margin: 16px auto 0; padding: 0 26px;
+    }
+    .mh-main {
+      width: 100%; max-width: 1500px; margin: 0 auto; padding: 26px; flex: 1 1 auto;
+    }
+
+    .mh-footer {
+      width: 100%;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, #0B1622 0%, #0A1220 100%);
+      color: #94A3B8;
+      position: relative;
+      overflow: hidden;
+    }
+    .mh-footer::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #0E7490 0%, #22D3EE 40%, #0891B2 70%, transparent 100%);
+    }
+    .mh-footer-inner {
+      max-width: 1500px; margin: 0 auto; padding: 40px 26px 28px;
+      display: grid; grid-template-columns: 1.55fr repeat(3, 1fr); gap: 36px 40px; position: relative;
+    }
+    .mh-footer-brand { padding-right: 12px; }
+    .mh-footer-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; text-decoration: none; }
+    .mh-footer-logo-mark {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(145deg, #0E7490, #0891B2);
+      display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 1rem;
+      box-shadow: 0 4px 14px rgba(14, 116, 144, 0.35); flex-shrink: 0;
+    }
+    .mh-footer-logo strong { display: block; color: #F1F5F9; font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; }
+    .mh-footer-logo span { display: block; font-size: 0.7rem; color: #64748B; font-weight: 500; margin-top: 1px; }
+    .mh-footer-brand > p { margin: 0 0 18px; font-size: 0.85rem; line-height: 1.6; color: #94A3B8; max-width: 300px; }
+    .mh-footer-cta {
+      display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 8px;
+      background: #0E7490; color: #fff !important; font-size: 0.84rem; font-weight: 650; text-decoration: none;
+      transition: background 0.15s;
+    }
+    .mh-footer-cta:hover { background: #0891B2; }
+    .mh-footer-col h4 { margin: 0 0 16px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748B; }
+    .mh-footer-col a { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.875rem; color: #CBD5E1; text-decoration: none; transition: color 0.15s, transform 0.15s; }
+    .mh-footer-col a:hover { color: #22D3EE; transform: translateX(3px); }
+    .mh-footer-col a i { width: 16px; font-size: 0.75rem; color: #475569; text-align: center; }
+    .mh-footer-col a:hover i { color: #22D3EE; }
+    .mh-footer-bottom {
+      border-top: 1px solid rgba(148, 163, 184, 0.12); max-width: 1500px; margin: 0 auto;
+      padding: 16px 26px 20px; display: flex; align-items: center; justify-content: space-between;
+      gap: 14px; flex-wrap: wrap; font-size: 0.78rem; color: #64748B; position: relative;
+    }
+    .mh-footer-tagline { font-size: 0.72rem; color: #475569; letter-spacing: 0.02em; }
+    .mh-sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 998; }
+    body.mh-sidebar-open .mh-sidebar-backdrop { display: block; }
+
+    @media (max-width: 950px) {
+      .mh-layout { grid-template-columns: 1fr; }
+      .mh-sidebar {
+        position: fixed; left: -280px; top: var(--mh-topbar-h);
+        width: var(--mh-sidebar-w); z-index: 999; transition: left 0.2s ease;
+        box-shadow: 12px 0 32px rgba(0, 0, 0, 0.25);
+        height: calc(100vh - var(--mh-topbar-h)); height: calc(100dvh - var(--mh-topbar-h));
+      }
+      body.mh-sidebar-open .mh-sidebar { left: 0; }
+      .mh-public-nav { display: none; }
+      .mh-main { padding: 18px; }
+      .mh-topbar { padding: 0 14px; }
+      .mh-flashes { padding: 0 18px; }
+      .mh-footer-inner { grid-template-columns: 1fr 1fr; padding: 32px 18px 22px; gap: 28px 24px; }
+      .mh-footer-brand { grid-column: 1 / -1; }
+      .mh-footer-bottom { padding: 14px 18px 18px; }
+    }
+    @media (max-width: 600px) {
+      :root { --mh-topbar-h: 58px; }
+      .mh-main { padding: 14px; }
+      .mh-flashes { padding: 0 14px; }
+      .mh-brand span { display: none; }
+      .mh-top-actions .mh-pill:not(.primary) { display: none; }
+      .mh-footer-inner { grid-template-columns: 1fr; padding: 28px 16px 18px; gap: 24px; }
+      .mh-footer-bottom { padding: 14px 16px 18px; flex-direction: column; align-items: flex-start; }
+    }
+
+    /* Dark mode shell */
+    [data-theme="dark"] body { color: var(--mh-text, #E2E8F0); }
+    [data-theme="dark"] .mh-topbar {
+      background: #0F172A !important;
+      border-bottom-color: #1E293B !important;
+    }
+    [data-theme="dark"] .mh-brand strong { color: #F1F5F9; }
+    [data-theme="dark"] .mh-brand span { color: #94A3B8; }
+    [data-theme="dark"] .mh-menu { color: #CBD5E1; }
+    [data-theme="dark"] .mh-menu:hover { background: #1E293B; }
+    [data-theme="dark"] .mh-pill {
+      background: #1E293B;
+      border-color: #334155;
+      color: #E2E8F0;
+    }
+    [data-theme="dark"] .mh-pill:hover { background: #334155; border-color: #475569; }
+    [data-theme="dark"] .mh-pill.primary { background: #0E7490; border-color: #0E7490; color: #fff; }
+    [data-theme="dark"] .mh-avatar { background: #164E63; color: #A5F3FC; border-color: #0E7490; }
+    [data-theme="dark"] .mh-public-nav a { color: #94A3B8; }
+    [data-theme="dark"] .mh-public-nav a:hover { background: #1E293B; color: #F1F5F9; }
+  </style>
+  <!-- Vercel Web Analytics -->
+  <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+  <script>
+    (function(){
+      try {
+        var t = localStorage.getItem('mh-theme');
+        if (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) t = 'dark';
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+<div class="mh-shell">
+
+  <header class="mh-topbar">
+    {% if current_user.is_authenticated %}
+      <button class="mh-menu" type="button" onclick="document.body.classList.toggle('mh-sidebar-open')" aria-label="Toggle navigation">
+        <i class="fas fa-bars"></i>
+      </button>
+    {% endif %}
+
+    <a class="mh-brand" href="{{ url_for('index') }}">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="" onerror="this.style.display='none'">
+      <div class="mh-brand-mark">M</div>
+      <div>
+        <strong>MaterialHub</strong>
+        <span>Material Operations Platform</span>
+      </div>
+    </a>
+
+    {% if not current_user.is_authenticated %}
+      <nav class="mh-public-nav">
+        <a href="{{ url_for('product_overview') }}">Product</a>
+        <a href="{{ url_for('growth.demo') }}">Demo</a>
+        <a href="{{ url_for('growth.pricing') }}">Pricing</a>
+        <a href="{{ url_for('auth.login') }}">Sign in</a>
+        <a class="mh-pill primary" href="{{ url_for('auth.register') }}">Get started</a>
+      </nav>
+    {% else %}
+      <div class="mh-top-actions">
+        <a class="mh-pill" href="{{ url_for('control_center.dashboard') }}">
+          <i class="fas fa-tachometer-alt"></i> Control Center
+        </a>
+        <a class="mh-pill" href="{{ url_for('intelligence.dashboard') }}">
+          <i class="fas fa-brain"></i> Intelligence
+        </a>
+        <a class="mh-avatar" title="{{ current_user.full_name }}" href="{{ url_for('role_workspace.my_workspace') }}">
+          {{ (current_user.full_name or 'U')[:1]|upper }}
+        </a>
+      </div>
+    {% endif %}
+  </header>
+
+  <div class="mh-body">
+    {% if current_user.is_authenticated %}
+      <div class="mh-sidebar-backdrop" onclick="document.body.classList.remove('mh-sidebar-open')"></div>
+      <div class="mh-layout">
+        <aside class="mh-sidebar">
+          <div class="mh-nav-label">Workspace</div>
+          <nav class="mh-nav">
+            <a href="{{ url_for('role_workspace.my_workspace') }}"><i class="fas fa-layer-group"></i> My Workspace</a>
+            <a href="{{ url_for('control_center.dashboard') }}"><i class="fas fa-chart-pie"></i> Control Center</a>
+            <a href="{{ url_for('intelligence.dashboard') }}"><i class="fas fa-brain"></i> Material Intelligence</a>
+            <a href="{{ url_for('operations_copilot.dashboard') }}"><i class="fas fa-robot"></i> Operations Copilot</a>
+            <a href="{{ url_for('material_reconciliation.dashboard') }}"><i class="fas fa-balance-scale"></i> Material Reconciliation</a>
+          </nav>
+          <div class="mh-nav-label">Operations</div>
+          <nav class="mh-nav">
+            <a href="{{ url_for('material_requisitions.material_requisitions') }}"><i class="fas fa-clipboard-list"></i> Requisitions</a>
+            <a href="{{ url_for('purchase_order.purchase_order') }}"><i class="fas fa-file-invoice-dollar"></i> Purchase Orders</a>
+            <a href="{{ url_for('delivery.delivery_order') }}"><i class="fas fa-truck"></i> Deliveries</a>
+            <a href="{{ url_for('warehouse.warehouse_operations') }}"><i class="fas fa-warehouse"></i> Warehouse</a>
+            <a href="{{ url_for('quality_control.quality_control') }}"><i class="fas fa-shield-alt"></i> Quality Control</a>
+          </nav>
+          <div class="mh-nav-label">Materials & Data</div>
+          <nav class="mh-nav">
+            <a href="{{ url_for('material_master.catalog') }}"><i class="fas fa-barcode"></i> Material Master</a>
+            <a href="{{ url_for('materials') }}"><i class="fas fa-boxes"></i> Supplier Materials</a>
+            <a href="{{ url_for('material_marketplace') }}"><i class="fas fa-store"></i> Marketplace</a>
+            <a href="{{ url_for('intelligence.traceability') }}"><i class="fas fa-qrcode"></i> Traceability</a>
+            <a href="{{ url_for('intelligence.excel_import') }}"><i class="fas fa-file-excel"></i> Excel Import</a>
+          </nav>
+          <div class="mh-nav-label">Management</div>
+          <nav class="mh-nav">
+            {% if current_user.access_level.value == 'project_manager' %}
+              <a href="{{ url_for('project_dashboard.dashboard') }}"><i class="fas fa-users-cog"></i> Project Team</a>
+            {% endif %}
+            {% if current_user.is_admin %}
+              <a href="{{ url_for('admin.admin') }}"><i class="fas fa-user-shield"></i> Administration</a>
+            {% endif %}
+            <a href="{{ url_for('reports.center') }}"><i class="fas fa-chart-bar"></i> Reports</a>
+            <a href="{{ url_for('reports.requests') }}"><i class="fas fa-share-alt"></i> Requests</a>
+          </nav>
+          <div class="mh-nav-label">Support</div>
+          <nav class="mh-nav">
+            <a href="{{ url_for('help.help') }}"><i class="fas fa-question-circle"></i> Help Center</a>
+            <a href="{{ url_for('auth.change_password') }}"><i class="fas fa-key"></i> Change Password</a>
+            <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Sign out</a>
+          </nav>
+        </aside>
+        <div class="mh-content">
+    {% else %}
+        <div class="mh-content">
+    {% endif %}
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <div class="mh-flashes">
+                {% for category, message in messages %}
+                  <div class="mh-alert mh-alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+
+          <main class="mh-main">
+            {% block content %}{% endblock %}
+          </main>
+
+        </div>
+
+    {% if current_user.is_authenticated %}
+      </div>
+    {% endif %}
+
+  </div>
+
+  <footer class="mh-footer">
+    <div class="mh-footer-inner">
+      <div class="mh-footer-brand">
+        <a class="mh-footer-logo" href="{{ url_for('index') }}">
+          <div class="mh-footer-logo-mark">M</div>
+          <div>
+            <strong>MaterialHub</strong>
+            <span>Material Operations Platform</span>
+          </div>
+        </a>
+        <p>Integrated material operations for construction and EPC — procurement, delivery, warehouse, quality and intelligence in one controlled workspace.</p>
+        {% if not current_user.is_authenticated %}
+          <a class="mh-footer-cta" href="{{ url_for('auth.register') }}">
+            <i class="fas fa-rocket"></i> Get started free
+          </a>
+        {% else %}
+          <a class="mh-footer-cta" href="{{ url_for('role_workspace.my_workspace') }}">
+            <i class="fas fa-layer-group"></i> Open workspace
+          </a>
+        {% endif %}
+      </div>
+
+      <div class="mh-footer-col">
+        <h4>Product</h4>
+        <a href="{{ url_for('product_overview') }}"><i class="fas fa-cube"></i> Overview</a>
+        <a href="{{ url_for('growth.demo') }}"><i class="fas fa-play-circle"></i> Demo</a>
+        <a href="{{ url_for('growth.pricing') }}"><i class="fas fa-tags"></i> Pricing</a>
+        <a href="{{ url_for('material_marketplace') }}"><i class="fas fa-store"></i> Marketplace</a>
+      </div>
+
+      <div class="mh-footer-col">
+        <h4>Help & Guides</h4>
+        <a href="{{ url_for('help.help') }}"><i class="fas fa-question-circle"></i> Help Center</a>
+        <a href="{{ url_for('help.getting_started') }}"><i class="fas fa-flag"></i> Getting Started</a>
+        <a href="{{ url_for('help.user_guide') }}"><i class="fas fa-book"></i> User Guide</a>
+        <a href="{{ url_for('help.about') }}"><i class="fas fa-info-circle"></i> About</a>
+      </div>
+
+      <div class="mh-footer-col">
+        <h4>Legal & Support</h4>
+        <a href="{{ url_for('privacy_policy') }}"><i class="fas fa-user-shield"></i> Privacy Policy</a>
+        <a href="{{ url_for('terms_of_service') }}"><i class="fas fa-file-contract"></i> Terms of Service</a>
+        <a href="{{ url_for('contact_support') }}"><i class="fas fa-headset"></i> Contact Support</a>
+        {% if not current_user.is_authenticated %}
+          <a href="{{ url_for('auth.login') }}"><i class="fas fa-sign-in-alt"></i> Sign in</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="mh-footer-bottom">
+      <span>© {{ current_year|default(2026) }} MaterialHub. All rights reserved.</span>
+<span class="mh-footer-tagline">Built for industrial material control</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register("{{ url_for('static', filename='service-worker.js') }}").catch(function () {});
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.mh-sidebar a') && window.innerWidth < 951) {
+      document.body.classList.remove('mh-sidebar-open');
+    }
+  });
+</script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+<script src="{{ url_for('static', filename='js/workspace.js') }}"></script>
+<script src="{{ url_for('static', filename='js/command-palette.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

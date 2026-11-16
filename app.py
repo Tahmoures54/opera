@@ -1,0 +1,495 @@
+import logging
+import os
+import sys
+import json
+import time
+import uuid
+from flask import Flask, render_template, redirect, url_for, flash, request, Response, session
+from flask_login import login_required, current_user
+from extensions import db, migrate, login_manager, csrf, limiter
+from config.config import config_by_name
+from data.country_codes import COUNTRY_NAMES_BY_CODE
+
+_OTEL_PROVIDER_CONFIGURED = False
+_OTEL_SQLALCHEMY_INSTRUMENTED = False
+
+
+def _request_id():
+    candidate = request.headers.get('X-Request-ID', '').strip()
+    if candidate and len(candidate) <= 128 and all(c.isalnum() or c in '-_.' for c in candidate):
+        return candidate
+    return uuid.uuid4().hex
+
+
+class JsonFormatter(logging.Formatter):
+    """Emit one structured JSON object per application log record."""
+    def format(self, record):
+        payload = {
+            'timestamp': self.formatTime(record, '%Y-%m-%dT%H:%M:%S%z'),
+            'level': record.levelname,
+            'logger': record.name,
+            'message': record.getMessage(),
+        }
+        for key in ('request_id', 'user_id', 'duration_ms', 'status_code', 'method', 'path'):
+            value = getattr(record, key, None)
+            if value is not None:
+                payload[key] = value
+        if record.exc_info:
+            payload['exception'] = self.formatException(record.exc_info)
+        return json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+
+
+def _configure_observability(app):
+    """Configure JSON logging and optional OpenTelemetry instrumentation.
+
+    Note: this must run after all module imports have completed.
+    ``Resource.create()`` spins up a short-lived ThreadPoolExecutor and
+    joins it; doing that while the interpreter import lock is still held
+    (i.e. during ``import app``) can deadlock against background threads
+    that need the import lock (observed under coverage tracing, where
+    every traced import performs an importlib lookup). See
+    ``_ensure_observability`` in ``create_app`` for the deferred call.
+    """
+    level = getattr(logging, app.config.get('LOG_LEVEL', 'INFO'), logging.INFO)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(level)
+    handler.setFormatter(JsonFormatter())
+    app.logger.handlers = [handler]
+    app.logger.setLevel(level)
+    app.logger.propagate = False
+
+    try:
+        from opentelemetry import trace
+        from opentelemetry.instrumentation.flask import FlaskInstrumentor
+        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        endpoint = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT')
+        global _OTEL_PROVIDER_CONFIGURED, _OTEL_SQLALCHEMY_INSTRUMENTED
+        if not _OTEL_PROVIDER_CONFIGURED:
+            provider = TracerProvider(
+                resource=Resource.create(
+                    {'service.name': os.getenv('OTEL_SERVICE_NAME', 'materialhub')}
+                )
+            )
+            if endpoint:
+                from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+                provider.add_span_processor(
+                    BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint))
+                )
+            trace.set_tracer_provider(provider)
+            _OTEL_PROVIDER_CONFIGURED = True
+
+        if not app.extensions.get('materialhub_otel_flask'):
+            FlaskInstrumentor().instrument_app(app)
+            app.extensions['materialhub_otel_flask'] = True
+
+        if not _OTEL_SQLALCHEMY_INSTRUMENTED:
+            with app.app_context():
+                SQLAlchemyInstrumentor().instrument(engine=db.engine)
+            _OTEL_SQLALCHEMY_INSTRUMENTED = True
+    except Exception as exc:
+        app.logger.warning('OpenTelemetry initialization skipped: %s', exc)
+
+
+def create_app(config_name=None):
+    """Application factory."""
+    if config_name is None:
+        config_name = os.getenv('FLASK_ENV')
+        if not config_name:
+            config_name = 'production' if os.getenv('VERCEL_ENV') == 'production' else 'development'
+        elif os.getenv('VERCEL_ENV') == 'production':
+            config_name = 'production'
+
+    app = Flask(__name__, instance_relative_config=True)
+    config_class = config_by_name.get(config_name, config_by_name['default'])
+    app.config.from_object(config_class)
+    if config_class is config_by_name['production']:
+        config_class.validate()
+
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
+
+    @app.before_request
+    def _ensure_observability():
+        # Deferred to the first request (after all imports finished) to
+        # avoid the import-lock/ThreadPoolExecutor deadlock described on
+        # _configure_observability.
+        if not app.extensions.get('materialhub_observability'):
+            _configure_observability(app)
+            app.extensions['materialhub_observability'] = True
+
+    @app.before_request
+    def _csrf_token_from_json():
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and request.is_json:
+            payload = request.get_json(silent=True) or {}
+            token = payload.get('csrf_token')
+            if token:
+                request.environ['HTTP_X_CSRFTOKEN'] = str(token)
+
+    csrf.init_app(app)
+    limiter.init_app(app)
+
+    try:
+        from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, Histogram, generate_latest
+        metrics_registry = CollectorRegistry()
+        request_counter = Counter(
+            'materialhub_http_requests_total',
+            'HTTP requests',
+            ['method', 'route', 'status'],
+            registry=metrics_registry,
+        )
+        request_duration = Histogram(
+            'materialhub_http_request_duration_seconds',
+            'HTTP request duration',
+            ['method', 'route'],
+            registry=metrics_registry,
+        )
+    except Exception:
+        metrics_registry = request_counter = request_duration = None
+        generate_latest = CONTENT_TYPE_LATEST = None
+
+    @app.get('/metrics')
+    def metrics():
+        if generate_latest is None or metrics_registry is None:
+            return {'status': 'metrics_unavailable'}, 503
+        return Response(
+            generate_latest(metrics_registry),
+            mimetype=CONTENT_TYPE_LATEST,
+        )
+
+    @app.before_request
+    def _start_request_observability():
+        request.environ['materialhub.request_started'] = time.perf_counter()
+        from flask import g
+        g.request_id = _request_id()
+
+    @app.after_request
+    def _finish_request_observability(response):
+        from flask import g
+        duration_ms = round((time.perf_counter() - request.environ.get('materialhub.request_started', time.perf_counter())) * 1000, 2)
+        response.headers['X-Request-ID'] = getattr(g, 'request_id', _request_id())
+        route_template = request.url_rule.rule if request.url_rule else 'unmatched'
+        if request_counter is not None:
+            request_counter.labels(request.method, route_template, str(response.status_code)).inc()
+            request_duration.labels(request.method, route_template).observe(duration_ms / 1000)
+        app.logger.info(
+            'request completed',
+            extra={
+                'request_id': response.headers['X-Request-ID'],
+                'user_id': getattr(current_user, 'id', None) if current_user.is_authenticated else None,
+                'duration_ms': duration_ms,
+                'status_code': response.status_code,
+                'method': request.method,
+                # Log the Flask route template, never raw paths containing recovery tokens or identifiers.
+                'path': route_template,
+            },
+        )
+        return response
+
+    @app.after_request
+    def add_security_headers(response):
+        if request.endpoint == 'auth.reset_totp_with_token':
+            # Recovery URLs contain bearer tokens and pages display a new TOTP secret.
+            response.headers['Cache-Control'] = 'no-store'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Referrer-Policy'] = 'no-referrer'
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        response.headers.setdefault(
+            'Content-Security-Policy',
+            "default-src 'self'; base-uri 'self'; object-src 'none'; "
+            "frame-ancestors 'self'; img-src 'self' data:; "
+            "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
+        )
+        if app.config.get('SESSION_COOKIE_SECURE'):
+            response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+        return response
+
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
+    from forms.material_forms import MaterialMarketplaceForm, AddMaterialForm
+    from models import SupplierMaterial, User, AccessLevel
+    import models_commissioning  # register OPERA ORM tables for migrations/create_all
+    import models_intelligence  # register vNext intelligence tables
+
+    from blueprints.auth import auth_bp
+    from blueprints.supplier import supplier_bp
+    from blueprints.help import help_bp
+    from blueprints.material_requisition import material_requisition_bp
+    from blueprints.purchase_order import purchase_order_bp
+    from blueprints.quality_control import quality_control_bp
+    from blueprints.delivery import delivery_bp
+    from blueprints.warehouse import warehouse_bp
+    from blueprints.project_dashboard import project_dashboard_bp
+    from blueprints.report import report_bp
+    from blueprints.reports import reports_bp
+    from blueprints.admin import admin_bp
+    from blueprints.control_center import control_center_bp
+    from blueprints.growth import growth_bp
+    from blueprints.health import health_bp
+    from blueprints.intelligence import intelligence_bp
+    from blueprints.operations_copilot import operations_copilot_bp
+    from blueprints.material_reconciliation import material_reconciliation_bp
+    from blueprints.material_master import material_master_bp
+    from role_workspace import role_workspace_bp
+    from blueprints.commissioning import commissioning_bp
+
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(supplier_bp, url_prefix='/supplier')
+    app.register_blueprint(help_bp, url_prefix='/help')
+    app.register_blueprint(material_requisition_bp, url_prefix='/material_requisitions')
+    app.register_blueprint(purchase_order_bp, url_prefix='/purchase_order')
+    app.register_blueprint(quality_control_bp, url_prefix='/quality_control')
+    app.register_blueprint(delivery_bp, url_prefix='/delivery')
+    app.register_blueprint(warehouse_bp, url_prefix='/warehouse')
+    app.register_blueprint(project_dashboard_bp, url_prefix='/project_dashboard')
+    app.register_blueprint(report_bp, url_prefix='/report')
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(control_center_bp)
+    app.register_blueprint(intelligence_bp)
+    app.register_blueprint(operations_copilot_bp)
+    app.register_blueprint(material_reconciliation_bp)
+    app.register_blueprint(material_master_bp)
+    app.register_blueprint(role_workspace_bp)
+    app.register_blueprint(commissioning_bp)
+    app.register_blueprint(growth_bp)
+    app.register_blueprint(health_bp)
+
+    # Development/test convenience only. Production schema changes are managed by Flask-Migrate.
+    if not app.config.get('IS_PRODUCTION'):
+        with app.app_context():
+            try:
+                db.create_all()
+                app.logger.info("Development database tables ensured.")
+            except Exception as e:
+                app.logger.error(f"Development database initialization failed: {e}")
+    @login_manager.user_loader
+    def load_user(user_id):
+        user = db.session.get(User, int(user_id))
+        if user is None:
+            return None
+        try:
+            session_version = int(session.get('auth_version', 0))
+        except (TypeError, ValueError):
+            return None
+        if session_version != int(user.auth_version or 0):
+            return None
+        # Legacy sessions map to version 0; recovery increments the user's
+        # version, causing every previously issued session to fail closed.
+        if 'auth_version' not in session:
+            session['auth_version'] = session_version
+        return user
+
+    @app.before_request
+    def enforce_trial_access():
+        """Keep expired trial accounts on the public pricing/activation path."""
+        if app.config.get('TESTING') or not current_user.is_authenticated or current_user.is_admin:
+            return None
+
+        if current_user.subscription_status == 'active' or current_user.trial_active:
+            return None
+
+        allowed_endpoints = {
+            'growth.pricing',
+            'growth.contact',
+            'growth.demo',
+            'auth.logout',
+        }
+        if request.endpoint in allowed_endpoints:
+            return None
+
+        flash('Your 45-day free trial has ended. Choose a plan to continue using MaterialHub.', 'warning')
+        return redirect(url_for('growth.pricing'))
+
+    @app.route('/')
+    def index():
+        if current_user.is_authenticated:
+            return redirect(url_for('role_workspace.my_workspace'))
+        return render_template('marketing/landing.html')
+
+    @app.get('/robots.txt')
+    def robots_txt():
+        sitemap = url_for('sitemap_xml', _external=True)
+        return Response(
+            f"User-agent: *\\nAllow: /\\nDisallow: /admin\\nDisallow: /control-center\\nDisallow: /api/\\nSitemap: {sitemap}\\n",
+            mimetype='text/plain',
+        )
+
+    @app.get('/sitemap.xml')
+    def sitemap_xml():
+        public_endpoints = [
+            'index', 'product_overview', 'growth.demo', 'growth.pricing',
+            'growth.contact', 'help.getting_started', 'help.user_guide', 'help.about',
+        ]
+        urls = ''.join(
+            f'<url><loc>{url_for(endpoint, _external=True)}</loc></url>'
+            for endpoint in public_endpoints
+        )
+        xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'
+        return Response(xml, mimetype='application/xml')
+
+    @app.route('/overview')
+    def product_overview():
+        # Keep the legacy product URL as a compatibility alias.
+        # The public landing page at / is the single canonical home page.
+        return redirect(url_for('index'))
+
+    @app.route('/dashboard')
+    @login_required
+    def dashboard():
+        return redirect(url_for('control_center.dashboard'))
+
+    @app.route('/getting-started')
+    def getting_started_alias():
+        return redirect(url_for('help.getting_started'))
+
+    @app.route('/user-guide')
+    def user_guide_alias():
+        return redirect(url_for('help.user_guide'))
+
+    @app.route('/about')
+    def about_alias():
+        return redirect(url_for('help.about'))
+
+    @app.route('/register')
+    def register_alias():
+        return redirect(url_for('auth.register'))
+
+    @app.route('/login')
+    def login_alias():
+        return redirect(url_for('auth.login'))
+
+    @app.route('/inventory')
+    @login_required
+    def inventory():
+        return render_template('warehouse/inventory.html')
+
+    @app.route('/material_marketplace', methods=['GET', 'POST'])
+    def material_marketplace():
+        form = MaterialMarketplaceForm()
+        query = SupplierMaterial.query
+        if form.validate_on_submit():
+            search_query = form.search.data
+            country_code = form.country.data
+            if search_query:
+                query = query.filter(SupplierMaterial.material_name.ilike(f'%{search_query}%'))
+            if country_code:
+                query = query.filter(SupplierMaterial.country_code == country_code)
+        materials = query.order_by(SupplierMaterial.updated_at.desc()).all()
+        return render_template(
+            'procurement/material_marketplace.html',
+            form=form,
+            materials=materials,
+            COUNTRY_NAMES_BY_CODE=COUNTRY_NAMES_BY_CODE
+        )
+
+    @app.route('/add_material', methods=['GET', 'POST'])
+    @login_required
+    def add_material():
+        if current_user.access_level != AccessLevel.supplier:
+            flash('Only suppliers can add materials.', 'danger')
+            return redirect(url_for('material_marketplace'))
+        form = AddMaterialForm()
+        if form.validate_on_submit():
+            material = SupplierMaterial(
+                user_id=current_user.id,
+                material_name=form.material_name.data,
+                material_type=form.category.data,
+                price=form.unit_price.data,
+                available_qty=form.available_quantity.data,
+                unit=form.unit_of_measure.data,
+                delivery_time_days=7,
+                country_code=current_user.country,
+                company_name=current_user.company_name
+            )
+            db.session.add(material)
+            db.session.commit()
+            flash('Material added successfully!', 'success')
+            return redirect(url_for('material_marketplace'))
+        return render_template('procurement/add_material.html', form=form)
+
+    @app.route('/edit_material/<int:material_id>', methods=['GET', 'POST'])
+    @login_required
+    def edit_material(material_id):
+        if current_user.access_level != AccessLevel.supplier:
+            flash('Only suppliers can edit materials.', 'danger')
+            return redirect(url_for('material_marketplace'))
+        material = SupplierMaterial.query.get_or_404(material_id)
+        if material.user_id != current_user.id:
+            flash('You can only edit your own materials.', 'danger')
+            return redirect(url_for('material_marketplace'))
+        form = AddMaterialForm()
+        if request.method == 'GET':
+            form.material_name.data = material.material_name
+            form.description.data = material.material_name
+            form.category.data = material.material_type
+            form.unit_price.data = material.price
+            form.available_quantity.data = material.available_qty
+            form.unit_of_measure.data = material.unit
+        if form.validate_on_submit():
+            material.material_name = form.material_name.data
+            material.material_type = form.category.data
+            material.price = form.unit_price.data
+            material.available_qty = form.available_quantity.data
+            material.unit = form.unit_of_measure.data
+            material.country_code = current_user.country
+            db.session.commit()
+            flash('Material updated successfully!', 'success')
+            return redirect(url_for('material_marketplace'))
+        return render_template('procurement/edit_material.html', form=form, material=material)
+
+    @app.route('/materials')
+    @login_required
+    def materials():
+        query = SupplierMaterial.query
+        if not current_user.is_admin:
+            query = query.filter_by(company_name=current_user.company_name)
+        materials = query.order_by(SupplierMaterial.updated_at.desc()).all()
+        return render_template('procurement/materials.html', materials=materials)
+
+    @app.route('/tender')
+    @login_required
+    def tender():
+        return render_template('procurement/tender.html')
+
+    @app.route('/privacy_policy')
+    def privacy_policy():
+        return render_template('legal/privacy_policy.html')
+
+    @app.route('/terms_of_service')
+    def terms_of_service():
+        return render_template('legal/terms_of_service.html')
+
+    @app.route('/contact_support')
+    def contact_support():
+        return render_template('support/contact_support.html')
+
+    from errors import page_not_found, internal_server_error, forbidden
+    app.register_error_handler(404, page_not_found)
+    app.register_error_handler(500, internal_server_error)
+    app.register_error_handler(403, forbidden)
+
+    app.logger.info("MaterialHub application created successfully.")
+    return app
+
+
+# NOTE: the WSGI app object is created in `wsgi.py` (Gunicorn entry point).
+# It is intentionally NOT created at import time here, so that `import app`
+# stays side-effect free (safe under coverage, multiprocessing, re-imports).
+# The Flask CLI still works because it auto-detects the `create_app` factory.
+
+if __name__ == '__main__':
+    _app = create_app()
+    if _app.config.get('IS_PRODUCTION'):
+        raise RuntimeError('Do not run MaterialHub with Flask development server in production. Use Gunicorn.')
+    _app.run(host='0.0.0.0', port=5000, debug=_app.config.get('DEBUG', False))  # nosec B104  # Dev-only entry point; production uses Gunicorn (wsgi.py)

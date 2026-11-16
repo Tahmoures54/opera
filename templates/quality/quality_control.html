@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="qc-page">
+  <header class="qc-hero">
+    <div>
+      <div class="qc-eyebrow">QUALITY MANAGEMENT</div>
+      <h1><i class="fas fa-shield-check me-2"></i>Quality Control</h1>
+      <p>Plan inspections, record results and move accepted items through the project workflow.</p>
+    </div>
+    <div class="qc-hero-actions">
+      {% set access = (current_user.access_level|string|lower) %}
+      {% if current_user.is_admin or 'quality' in access or 'project_manager' in access %}
+      <button class="btn btn-light qc-primary" data-bs-toggle="modal" data-bs-target="#addQCModal">
+        <i class="fas fa-plus me-2"></i>New Inspection
+      </button>
+      {% endif %}
+      <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#helpModal">
+        <i class="fas fa-circle-question me-2"></i>How it works
+      </button>
+      <button class="btn btn-outline-light" id="exportCSV">
+        <i class="fas fa-file-export me-2"></i>Export
+      </button>
+    </div>
+  </header>
+
+  <div id="notifications" class="qc-notifications"></div>
+
+  <section class="qc-kpis">
+    <div class="qc-kpi"><span class="kpi-icon"><i class="fas fa-clipboard-list"></i></span><div><small>Total</small><strong id="kpiTotal">0</strong></div></div>
+    <div class="qc-kpi"><span class="kpi-icon"><i class="fas fa-clock"></i></span><div><small>Pending</small><strong id="kpiPending">0</strong></div></div>
+    <div class="qc-kpi"><span class="kpi-icon"><i class="fas fa-circle-check"></i></span><div><small>Inspected</small><strong id="kpiInspected">0</strong></div></div>
+    <div class="qc-kpi"><span class="kpi-icon"><i class="fas fa-circle-xmark"></i></span><div><small>Rejected</small><strong id="kpiRejected">0</strong></div></div>
+  </section>
+
+  <section class="qc-panel">
+    <div class="qc-toolbar">
+      <div>
+        <h2>Inspection Register</h2>
+        <p>Search by inspection, item, PO or project.</p>
+      </div>
+      <div class="qc-filters">
+        <div class="input-group qc-search">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input id="qcSearch" class="form-control" placeholder="Search inspections...">
+        </div>
+        <select id="qcStatusFilter" class="form-select">
+          <option value="">All statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Inspected">Inspected</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+      </div>
+    </div>
+    <div id="loadingIndicator" class="qc-loading d-none"><i class="fas fa-spinner fa-spin me-2"></i>Loading inspections...</div>
+    <div id="inspectionsList" class="qc-grid"></div>
+  </section>
+
+  <div class="qc-footer-nav">
+    <a href="{{ url_for('project_dashboard.dashboard') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+    <span>Signed in as {{ current_user.full_name or 'User' }}</span>
+  </div>
+</div>
+
+<!-- New Inspection Wizard -->
+<div class="modal fade" id="addQCModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content qc-modal">
+      <div class="modal-header">
+        <div>
+          <div class="wizard-eyebrow">NEW QUALITY INSPECTION</div>
+          <h5 class="modal-title">Create Inspection</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="wizard-progress">
+        <div class="wizard-step active" data-step="1"><span>1</span><b>Source</b></div>
+        <div class="wizard-line"></div>
+        <div class="wizard-step" data-step="2"><span>2</span><b>Inspection</b></div>
+        <div class="wizard-line"></div>
+        <div class="wizard-step" data-step="3"><span>3</span><b>Result</b></div>
+        <div class="wizard-line"></div>
+        <div class="wizard-step" data-step="4"><span>4</span><b>Review</b></div>
+      </div>
+      <div class="modal-body">
+        <form id="add-qc-form">
+          <input type="hidden" id="newInspectionId">
+          <div class="wizard-pane active" data-pane="1">
+            <div class="pane-title"><i class="fas fa-box-open"></i><div><h3>What are we inspecting?</h3><p>Start with the item and its project reference.</p></div></div>
+            <div class="row g-3">
+              <div class="col-md-6"><label>Item Code <span>*</span></label><input id="qcItemCode" class="form-control" required placeholder="e.g. MAT-00125"></div>
+              <div class="col-md-6"><label>PO Number <span>*</span></label><input id="qcPoNo" class="form-control" required placeholder="e.g. PO-2026-0042"></div>
+              <div class="col-12"><label>Material Description <span>*</span></label><input id="qcDescription" class="form-control" required placeholder="Material / equipment description"></div>
+              <div class="col-md-6"><label>Project Number <span>*</span></label><input id="qcProjectNo" class="form-control" required placeholder="Project reference"></div>
+            </div>
+          </div>
+          <div class="wizard-pane" data-pane="2">
+            <div class="pane-title"><i class="fas fa-microscope"></i><div><h3>Inspection details</h3><p>Capture who, when and how the inspection was performed.</p></div></div>
+            <div class="row g-3">
+              <div class="col-md-6"><label>Inspection Date <span>*</span></label><input id="qcDate" type="date" class="form-control" required></div>
+              <div class="col-md-6"><label>Inspector</label><input id="qcInspector" class="form-control" placeholder="Inspector name"></div>
+              <div class="col-md-6"><label>Inspection Level</label><select id="qcLevel" class="form-select"><option value="">Select level</option><option>Level 1</option><option>Level 2</option><option>Level 3</option></select></div>
+              <div class="col-md-6"><label>Inspection Agency</label><select id="qcAgency" class="form-select"><option value="">Select agency</option><option>TUV</option><option>SGS</option><option>Bureau Veritas</option><option>Other</option></select></div>
+            </div>
+          </div>
+          <div class="wizard-pane" data-pane="3">
+            <div class="pane-title"><i class="fas fa-flask"></i><div><h3>Record the result</h3><p>Set the inspection status and document the result.</p></div></div>
+            <div class="row g-3">
+              <div class="col-md-6"><label>Inspection Status <span>*</span></label><select id="qcStatus" class="form-select" required><option value="Pending">Pending</option><option value="Inspected">Inspected</option><option value="Rejected">Rejected</option></select></div>
+              <div class="col-md-6"><label>Defective Quantity</label><input id="qcDefectiveQty" type="number" min="0" step="any" value="0" class="form-control"></div>
+              <div class="col-12"><label>Test Results</label><input id="qcTestResults" class="form-control" placeholder="e.g. Pass, Fail, dimensional check passed..."></div>
+              <div class="col-12"><label>Remarks</label><textarea id="qcRemarks" class="form-control" rows="4" placeholder="Notes, NCR reference, observations..."></textarea></div>
+            </div>
+          </div>
+          <div class="wizard-pane" data-pane="4">
+            <div class="pane-title"><i class="fas fa-clipboard-check"></i><div><h3>Review & create</h3><p>Confirm the inspection before saving it.</p></div></div>
+            <div id="qcReview" class="qc-review"></div>
+            <div class="qc-review-note"><i class="fas fa-circle-info"></i> You can edit the inspection later without re-entering the basic project information.</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer wizard-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <div>
+          <button type="button" class="btn btn-outline-primary d-none" id="qcPrev">Back</button>
+          <button type="button" class="btn btn-primary" id="qcNext">Continue</button>
+          <button type="button" class="btn btn-primary d-none" id="submit-qc"><i class="fas fa-check me-2"></i>Create Inspection</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Inspection -->
+<div class="modal fade" id="editQCModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content qc-modal">
+    <div class="modal-header"><div><div class="wizard-eyebrow">INSPECTION DETAILS</div><h5 class="modal-title">Edit Inspection</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <form id="edit-qc-form">
+        <input type="hidden" id="editInspectionId">
+        <div class="row g-3">
+          <div class="col-md-6"><label>Inspection ID</label><input id="editIdDisplay" class="form-control" readonly></div>
+          <div class="col-md-6"><label>Status</label><select id="editStatus" class="form-select"><option>Pending</option><option>Inspected</option><option>Rejected</option></select></div>
+          <div class="col-md-6"><label>Item Code</label><input id="editItemCode" class="form-control"></div>
+          <div class="col-md-6"><label>PO Number</label><input id="editPoNo" class="form-control"></div>
+          <div class="col-12"><label>Material Description</label><input id="editDescription" class="form-control"></div>
+          <div class="col-md-6"><label>Project Number</label><input id="editProjectNo" class="form-control"></div>
+          <div class="col-md-6"><label>Inspection Date</label><input id="editDate" type="date" class="form-control"></div>
+          <div class="col-md-6"><label>Inspector</label><input id="editInspector" class="form-control"></div>
+          <div class="col-md-6"><label>Inspection Level</label><select id="editLevel" class="form-select"><option value="">Select level</option><option>Level 1</option><option>Level 2</option><option>Level 3</option></select></div>
+          <div class="col-md-6"><label>Inspection Agency</label><select id="editAgency" class="form-select"><option value="">Select agency</option><option>TUV</option><option>SGS</option><option>Bureau Veritas</option><option>Other</option></select></div>
+          <div class="col-md-6"><label>Defective Quantity</label><input id="editDefectiveQty" type="number" min="0" step="any" class="form-control"></div>
+          <div class="col-12"><label>Test Results</label><input id="editTestResults" class="form-control"></div>
+          <div class="col-12"><label>Remarks</label><textarea id="editRemarks" class="form-control" rows="4"></textarea></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="update-qc">Save Changes</button></div>
+  </div></div>
+</div>
+
+<!-- Approval -->
+<div class="modal fade" id="approveQCModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content qc-modal">
+    <div class="modal-header"><div><div class="wizard-eyebrow">WORKFLOW DECISION</div><h5 class="modal-title">Review Inspection</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="approval-summary"><strong id="approvalInspectionId"></strong><span id="approvalStage"></span></div>
+      <label>Decision</label><select id="approvalStatus" class="form-select mb-3"><option>Pending</option><option>Approved</option><option>Rejected</option></select>
+      <label>Comments</label><textarea id="approvalComments" class="form-control" rows="4" placeholder="Reason or approval note"></textarea>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="submit-approval">Save Decision</button></div>
+  </div></div>
+</div>
+
+<!-- Help -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content qc-modal">
+    <div class="modal-header"><div><div class="wizard-eyebrow">QUICK GUIDE</div><h5 class="modal-title">Quality Control in 3 steps</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div class="help-grid">
+      <div><span>01</span><h4>Register</h4><p>Create an inspection with the item, PO and project. The system generates the Inspection ID automatically.</p></div>
+      <div><span>02</span><h4>Inspect</h4><p>Record date, inspector, level, agency, test result and defects. Keep technical detail with the inspection record.</p></div>
+      <div><span>03</span><h4>Review</h4><p>Quality users maintain records; authorized project managers can review workflow decisions.</p></div>
+    </div><div class="help-note"><i class="fas fa-file-import"></i><div><strong>Bulk data</strong><p>The existing CSV import/export API remains available for controlled bulk operations.</p></div></div></div>
+    <div class="modal-footer"><button class="btn btn-primary" data-bs-dismiss="modal">Got it</button></div>
+  </div></div>
+</div>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
+<style>
+.qc-page{max-width:1500px;margin:0 auto;padding:28px 24px 40px;color:#172033}
+.qc-hero{border-radius:24px;padding:30px 32px;display:flex;justify-content:space-between;gap:24px;align-items:center;background:linear-gradient(135deg,#12345b,#176b87);color:#fff;box-shadow:0 18px 50px rgba(18,52,91,.18)}
+.qc-eyebrow,.wizard-eyebrow{font-size:.72rem;letter-spacing:.16em;font-weight:800;opacity:.78}
+.qc-hero h1{font-size:2rem;margin:.4rem 0 .35rem;font-weight:800}.qc-hero p{margin:0;opacity:.86}.qc-hero-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.qc-primary{font-weight:700}
+.qc-notifications{position:fixed;top:20px;right:20px;z-index:2000}.qc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:20px 0}
+.qc-kpi{background:#fff;border:1px solid #e7ebf0;border-radius:18px;padding:18px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 24px rgba(20,34,50,.05)}.kpi-icon{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:#eef5f8;color:#176b87}.qc-kpi small{display:block;color:#7a8493;font-weight:600}.qc-kpi strong{font-size:1.65rem;line-height:1.1}
+.qc-panel{background:#fff;border:1px solid #e7ebf0;border-radius:22px;box-shadow:0 10px 30px rgba(20,34,50,.05);overflow:hidden}.qc-toolbar{padding:22px 24px;border-bottom:1px solid #edf0f3;display:flex;justify-content:space-between;gap:18px;align-items:center}.qc-toolbar h2{font-size:1.2rem;margin:0 0 3px;font-weight:800}.qc-toolbar p{margin:0;color:#7a8493;font-size:.9rem}.qc-filters{display:flex;gap:10px}.qc-search{width:300px}.qc-loading{padding:28px;text-align:center;color:#6c7785}.qc-grid{padding:22px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.inspection-card{border:1px solid #e5e9ee;border-radius:18px;padding:19px;position:relative;background:linear-gradient(180deg,#fff,#fbfcfd);transition:.2s}.inspection-card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(20,34,50,.08)}.card-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.inspection-id{font-weight:800;color:#12345b;font-size:1.05rem}.status-pill{border-radius:999px;padding:5px 10px;font-size:.72rem;font-weight:800;background:#eef2f5}.status-pending{background:#fff5d8;color:#8b6500}.status-inspected{background:#e4f7ec;color:#16723e}.status-rejected{background:#fde8e8;color:#a52a2a}.card-desc{font-weight:650;margin:12px 0 10px;min-height:42px}.card-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;color:#697585;font-size:.82rem}.card-meta b{display:block;color:#a0a8b3;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em}.card-actions{border-top:1px solid #edf0f3;margin-top:14px;padding-top:12px;display:flex;gap:8px}.card-actions button{flex:1}
+.qc-footer-nav{display:flex;justify-content:space-between;align-items:center;margin-top:18px;color:#7a8493;font-size:.85rem}.qc-modal{border:0;border-radius:22px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.18)}.qc-modal .modal-header{background:#f7fafc;border-bottom:1px solid #e7ebf0;padding:22px 24px}.qc-modal .modal-title{font-weight:800;margin-top:3px}.wizard-progress{display:flex;align-items:center;padding:18px 28px;background:#fff;border-bottom:1px solid #edf0f3}.wizard-step{display:flex;align-items:center;gap:8px;color:#a2aab4;font-size:.8rem;white-space:nowrap}.wizard-step span{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#eef1f4;font-weight:800}.wizard-step.active,.wizard-step.done{color:#176b87}.wizard-step.active span,.wizard-step.done span{background:#176b87;color:#fff}.wizard-line{height:1px;background:#e2e7eb;flex:1;margin:0 12px}.wizard-pane{display:none}.wizard-pane.active{display:block}.pane-title{display:flex;gap:14px;align-items:flex-start;margin-bottom:22px}.pane-title>i{font-size:1.35rem;color:#176b87;background:#eef5f8;padding:12px;border-radius:13px}.pane-title h3{font-size:1.15rem;margin:0 0 4px;font-weight:800}.pane-title p{margin:0;color:#7a8493;font-size:.9rem}.qc-modal label{font-size:.82rem;font-weight:750;margin-bottom:7px;color:#3a4553}.qc-modal label span{color:#d44}.qc-modal .form-control,.qc-modal .form-select{min-height:46px;border-color:#dfe5ea;border-radius:11px}.qc-modal textarea.form-control{min-height:105px}.wizard-footer{justify-content:space-between}.wizard-footer>div{display:flex;gap:8px}.qc-review{display:grid;grid-template-columns:1fr 1fr;gap:10px}.review-item{border:1px solid #e7ebf0;border-radius:12px;padding:12px}.review-item small{display:block;color:#8993a0;font-size:.68rem;text-transform:uppercase;font-weight:800}.review-item strong{display:block;margin-top:3px;word-break:break-word}.qc-review-note,.help-note{margin-top:16px;padding:13px 15px;border-radius:12px;background:#f2f7f9;color:#566675;font-size:.82rem;display:flex;gap:10px}.approval-summary{display:flex;justify-content:space-between;padding:14px;background:#f5f8fa;border-radius:12px;margin-bottom:18px}.help-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.help-grid>div{border:1px solid #e7ebf0;border-radius:16px;padding:18px}.help-grid span{font-weight:900;color:#176b87}.help-grid h4{font-weight:800;margin:10px 0 5px}.help-grid p,.help-note p{margin:0;color:#6c7785;font-size:.85rem}
+@media(max-width:1050px){.qc-grid{grid-template-columns:repeat(2,1fr)}.qc-kpis{grid-template-columns:repeat(2,1fr)}.qc-hero{align-items:flex-start;flex-direction:column}.qc-hero-actions{justify-content:flex-start}}
+@media(max-width:700px){.qc-page{padding:14px}.qc-hero{padding:22px;border-radius:18px}.qc-hero h1{font-size:1.5rem}.qc-toolbar{align-items:stretch;flex-direction:column}.qc-filters{flex-direction:column}.qc-search{width:100%}.qc-grid{grid-template-columns:1fr;padding:14px}.qc-kpis{grid-template-columns:1fr 1fr}.qc-footer-nav{flex-direction:column;align-items:flex-start;gap:10px}.wizard-progress{padding:14px}.wizard-step b{display:none}.wizard-line{margin:0 7px}.qc-review,.help-grid{grid-template-columns:1fr}}
+</style>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+$(function(){
+  const csrfToken='{{ csrf_token() }}';
+  const access='{{ current_user.access_level|string|lower }}'.replace('accesslevel.','');
+  let cache=[], step=1;
+
+  function esc(v){return $('<div>').text(v==null?'':String(v)).html();}
+  function val(id){return $(id).val()||'';}
+  function notify(msg,type='success'){const cls=type==='error'?'danger':type;$('#notifications').html('<div class="alert alert-'+cls+' shadow-sm">'+esc(msg)+'</div>');setTimeout(()=>$('#notifications').empty(),3500);}
+  function loading(on){$('#loadingIndicator').toggleClass('d-none',!on);}
+  function setStep(n){
+    step=n;
+    $('.wizard-pane').removeClass('active');$('.wizard-pane[data-pane="'+n+'"]').addClass('active');
+    $('.wizard-step').each(function(){const s=+$(this).data('step');$(this).toggleClass('active',s===n).toggleClass('done',s<n);});
+    $('#qcPrev').toggleClass('d-none',n===1);$('#qcNext').toggleClass('d-none',n===4);$('#submit-qc').toggleClass('d-none',n!==4);
+    if(n===4) buildReview();
+  }
+  function validateStep(n){
+    if(n===1 && (!val('#qcItemCode').trim()||!val('#qcPoNo').trim()||!val('#qcDescription').trim()||!val('#qcProjectNo').trim())){notify('Please complete the item, PO and project information.','error');return false;}
+    if(n===2 && !val('#qcDate')){notify('Please select the inspection date.','error');return false;}
+    return true;
+  }
+  function buildReview(){
+    const items=[['Inspection ID',val('#newInspectionId')],['Item Code',val('#qcItemCode')],['PO Number',val('#qcPoNo')],['Project Number',val('#qcProjectNo')],['Description',val('#qcDescription')],['Inspection Date',val('#qcDate')],['Inspector',val('#qcInspector')||'—'],['Level',val('#qcLevel')||'—'],['Agency',val('#qcAgency')||'—'],['Status',val('#qcStatus')],['Defective Qty',val('#qcDefectiveQty')||'0'],['Test Results',val('#qcTestResults')||'—']];
+    $('#qcReview').html(items.map(x=>'<div class="review-item"><small>'+esc(x[0])+'</small><strong>'+esc(x[1])+'</strong></div>').join(''));
+  }
+  function resetWizard(){
+    $('#add-qc-form')[0].reset();$('#qcDate').val(new Date().toISOString().slice(0,10));$('#qcDefectiveQty').val(0);setStep(1);
+    $.get('/quality_control/api/generate_inspection_id').done(d=>$('#newInspectionId').val(d.inspection_id||'')).fail(()=>$('#newInspectionId').val('Pending'));
+  }
+
+  function render(){
+    const q=val('#qcSearch').trim().toLowerCase(), status=val('#qcStatusFilter');
+    const rows=cache.filter(r=>{
+      const hay=[r.inspection_id,r.item_code,r.material_description,r.po_no,r.project_no].join(' ').toLowerCase();
+      return (!q||hay.includes(q))&&(!status||String(r.inspection_status||'')===status);
+    });
+    $('#kpiTotal').text(cache.length);
+    $('#kpiPending').text(cache.filter(r=>String(r.inspection_status||'').toLowerCase()==='pending').length);
+    $('#kpiInspected').text(cache.filter(r=>String(r.inspection_status||'').toLowerCase()==='inspected').length);
+    $('#kpiRejected').text(cache.filter(r=>String(r.inspection_status||'').toLowerCase()==='rejected').length);
+    if(!rows.length){$('#inspectionsList').html('<div class="text-center text-muted py-5" style="grid-column:1/-1"><i class="fas fa-clipboard-check fa-2x mb-3"></i><div>No inspections match your filters.</div></div>');return;}
+    $('#inspectionsList').html(rows.map(r=>{
+      const st=String(r.inspection_status||'Pending'), slug=st.toLowerCase();
+      const canEdit=access.includes('quality')||access.includes('admin');
+      const canApprove=access.includes('project_manager')||access.includes('project manager')||access.includes('admin');
+      return '<article class="inspection-card"><div class="card-top"><div class="inspection-id">'+esc(r.inspection_id||'—')+'</div><span class="status-pill status-'+esc(slug)+'">'+esc(st)+'</span></div>'+
+      '<div class="card-desc">'+esc(r.material_description||'No description')+'</div><div class="card-meta">'+
+      '<div><b>Item</b>'+esc(r.item_code||'—')+'</div><div><b>PO</b>'+esc(r.po_no||'—')+'</div><div><b>Project</b>'+esc(r.project_no||'—')+'</div><div><b>Date</b>'+esc(r.inspection_date||'—')+'</div></div>'+
+      '<div class="card-actions"><a class="btn btn-sm btn-outline-secondary" target="_blank" href="/quality_control/report/'+encodeURIComponent(r.inspection_id||'')+'"><i class="fas fa-file-lines me-1"></i>Report</a>'+
+      (canEdit?'<button class="btn btn-sm btn-outline-primary edit-qc" data-id="'+esc(r.inspection_id)+'"><i class="fas fa-pen me-1"></i>Edit</button><button class="btn btn-sm btn-outline-danger delete-qc" data-id="'+esc(r.inspection_id)+'"><i class="fas fa-trash"></i></button>':'')+
+      (canApprove?'<button class="btn btn-sm btn-primary approve-qc" data-id="'+esc(r.inspection_id)+'"><i class="fas fa-check me-1"></i>Review</button>':'')+
+      '</div></article>';
+    }).join('');
+  }
+
+  function load(){
+    loading(true);
+    $.ajax({url:'/quality_control/api/inspections',type:'GET',headers:{'X-CSRFToken':csrfToken}})
+      .done(d=>{cache=Array.isArray(d)?d:[];render();})
+      .fail(x=>notify(x.responseJSON?.error||'Could not load quality inspections.','error'))
+      .always(()=>loading(false));
+  }
+
+  $('#qcNext').on('click',function(){if(validateStep(step))setStep(Math.min(4,step+1));});
+  $('#qcPrev').on('click',function(){setStep(Math.max(1,step-1));});
+  $('#addQCModal').on('show.bs.modal',resetWizard);
+  $('#submit-qc').on('click',function(){
+    const row={inspection_id:val('#newInspectionId'),item_code:val('#qcItemCode').trim(),material_description:val('#qcDescription').trim(),po_no:val('#qcPoNo').trim(),inspection_status:val('#qcStatus')||'Pending',test_results:val('#qcTestResults').trim()||null,inspection_level:val('#qcLevel')||null,inspection_agency:val('#qcAgency')||null,inspection_date:val('#qcDate'),project_no:val('#qcProjectNo').trim(),inspector:val('#qcInspector').trim()||null,defective_quantity:parseFloat(val('#qcDefectiveQty'))||0,remarks:val('#qcRemarks').trim()||null,workflow_status:'QualityControl'};
+    if(!validateStep(1)||!validateStep(2))return;
+    $(this).prop('disabled',true);loading(true);
+    $.ajax({url:'/quality_control/api/inspections',type:'POST',contentType:'application/json',headers:{'X-CSRFToken':csrfToken},data:JSON.stringify([row])})
+      .done(r=>{$('#addQCModal').modal('hide');notify(r.message||'Inspection created successfully.');load();})
+      .fail(x=>notify(x.responseJSON?.error||'Failed to create inspection.','error'))
+      .always(()=>{$('#submit-qc').prop('disabled',false);loading(false);});
+  });
+
+  $(document).on('click','.edit-qc',function(){
+    const r=cache.find(x=>String(x.inspection_id)===String($(this).data('id')));if(!r)return;
+    $('#editInspectionId').val(r.inspection_id);$('#editIdDisplay').val(r.inspection_id);$('#editStatus').val(r.inspection_status||'Pending');$('#editItemCode').val(r.item_code||'');$('#editPoNo').val(r.po_no||'');$('#editDescription').val(r.material_description||'');$('#editProjectNo').val(r.project_no||'');$('#editDate').val(r.inspection_date||'');$('#editInspector').val(r.inspector||'');$('#editLevel').val(r.inspection_level||'');$('#editAgency').val(r.inspection_agency||'');$('#editDefectiveQty').val(r.defective_quantity||0);$('#editTestResults').val(r.test_results||'');$('#editRemarks').val(r.remarks||'');
+    $('#editQCModal').modal('show');
+  });
+  $('#update-qc').on('click',function(){
+    const id=val('#editInspectionId');const row={inspection_id:id,item_code:val('#editItemCode'),material_description:val('#editDescription'),po_no:val('#editPoNo'),inspection_status:val('#editStatus'),test_results:val('#editTestResults')||null,inspection_level:val('#editLevel')||null,inspection_agency:val('#editAgency')||null,inspection_date:val('#editDate'),project_no:val('#editProjectNo'),inspector:val('#editInspector')||null,defective_quantity:parseFloat(val('#editDefectiveQty'))||0,remarks:val('#editRemarks')||null};
+    $.ajax({url:'/quality_control/api/inspections/'+encodeURIComponent(id),type:'PUT',contentType:'application/json',headers:{'X-CSRFToken':csrfToken},data:JSON.stringify(row)}).done(r=>{$('#editQCModal').modal('hide');notify(r.message||'Inspection updated.');load();}).fail(x=>notify(x.responseJSON?.error||'Failed to update inspection.','error'));
+  });
+  $(document).on('click','.delete-qc',function(){const id=$(this).data('id');if(!confirm('Delete inspection '+id+'?'))return;$.ajax({url:'/quality_control/api/inspections/'+encodeURIComponent(id),type:'DELETE',headers:{'X-CSRFToken':csrfToken}}).done(r=>{notify(r.message||'Inspection deleted.');load();}).fail(x=>notify(x.responseJSON?.error||'Failed to delete inspection.','error'));});
+  $(document).on('click','.approve-qc',function(){const r=cache.find(x=>String(x.inspection_id)===String($(this).data('id')));if(!r)return;$('#approvalInspectionId').text(r.inspection_id||'—');$('#approvalStage').text(r.workflow_status||'QualityControl');$('#approvalStatus').val('Pending');$('#approvalComments').val('');$('#approveQCModal').modal('show');});
+  $('#submit-approval').on('click',function(){const data={inspection_id:$('#approvalInspectionId').text(),workflow_status:val('#approvalStage'),approval_status:val('#approvalStatus'),comments:val('#approvalComments'),csrf_token:csrfToken};$.ajax({url:'/quality_control/api/approve',type:'POST',contentType:'application/json',headers:{'X-CSRFToken':csrfToken},data:JSON.stringify(data)}).done(r=>{$('#approveQCModal').modal('hide');notify(r.message||'Decision saved.');load();}).fail(x=>notify(x.responseJSON?.error||'Failed to save decision.','error'));});
+  $('#qcSearch,#qcStatusFilter').on('input change',render);
+  $('#exportCSV').on('click',function(){window.location.href='/quality_control/api/export_csv';});
+  load();
+});
+</script>
+{% endblock %}
