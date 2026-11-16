@@ -10,6 +10,16 @@ OPERA is an independently implemented commissioning and start-up workspace that 
 - Check-sheet revision policy: a signed-off check sheet and its items are immutable through ORM flush operations. Corrections are represented by a new check sheet revision.
 - Database: revision `20261116_0019` creates only the 16 OPERA tables and is chained after `20261017_0018`.
 
+## Operational routes added in the productization branch
+
+- `GET /commissioning/projects/<project_id>/operations` — operational control center
+- Project membership assignment and deactivation, scoped to the same company
+- Check-sheet creation, item management, issue, result entry, two-party sign-off and revision creation
+- Punch creation and controlled status transitions with immutable history
+- Witness/Hold/Review scheduling, attendance and release; item-level witness links
+- Handover package lifecycle: MC certification, RF certification, RFSU and operations acceptance
+- Project progress snapshot based on signed-off check sheets and verified/waived Punch items
+
 ## Initial routes
 
 - `GET /commissioning/` — tenant-scoped project dashboard
@@ -54,7 +64,7 @@ It refuses to overwrite an existing project with the same tenant and project cod
 
 ## Phase 1 scope boundaries
 
-Check-sheet execution/sign-off workflows, Punch lifecycle operations, witness scheduling, handover acceptance, progress calculations, reports, imports/exports, and mobile APIs are not implemented in this foundation phase. The initial dashboard and structure CRUD are the available UI surface.
+The productization branch adds browser workflows for check-sheet execution/sign-off, Punch lifecycle, witness scheduling/release, handover gates and progress snapshots. Advanced capabilities such as bulk imports/exports, document/evidence storage UI, detailed discipline-specific report packs, mobile APIs, configurable workflow templates and external-system integrations remain future scope. The current sign-off is an authenticated electronic acknowledgement, not a qualified cryptographic digital signature.
 
 ## Validation performed
 
