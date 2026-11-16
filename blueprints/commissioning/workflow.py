@@ -692,10 +692,14 @@ def upload_evidence(entity_type, entity_id):
     if permissions is None:
         abort(404)
     entity, project_id = _attachment_entity(entity_type, entity_id)
-    if entity_type == "CheckSheet" and entity.status == CheckSheetStatus.SIGNED_OFF:
-        abort(409, description="Signed-off check sheets are immutable; create a new revision to add evidence")
     if not any(has_permission(project_id, permission) for permission in permissions["upload"]):
         abort(403)
+    if entity_type == "CheckSheet" and entity.status == CheckSheetStatus.SIGNED_OFF:
+        abort(409, description="Signed-off check sheets are immutable; create a new revision to add evidence")
+    if entity_type == "PunchItem" and entity.status in (PunchStatus.VERIFIED, PunchStatus.WAIVED):
+        abort(409, description="Verified or waived Punch items are immutable")
+    if entity_type == "HandoverPackage" and entity.status == HandoverStatus.ACCEPTED:
+        abort(409, description="Accepted handover packages are immutable")
     metadata = store_commissioning_upload(
         request.files.get("file"), company_name=current_user.company_name,
         entity_type=entity_type, entity_id=entity_id, uploaded_by_id=current_user.id,
