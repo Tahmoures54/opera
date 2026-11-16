@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %} — Contact Support{% endblock %}
-{% block meta_description %}Contact MaterialHub support for product questions, implementation guidance, account help and material-control workflows.{% endblock %}
+{% block meta_description %}Contact OPERA for commissioning workflows, project onboarding, account help and implementation guidance.{% endblock %}
 {% block content %}
 <style>
   .support-page{max-width:1180px;margin:0 auto;padding:2rem 1rem 4rem}
@@ -29,15 +29,15 @@
 
 <div class="support-page">
   <section class="support-hero">
-    <span class="support-kicker">MaterialHub Support</span>
-    <h1>When material control matters, getting help should be simple.</h1>
-    <p>Ask about your workspace, workflows, reports, reconciliation, trial, or implementation. Tell us what you are trying to control and we will help you find the clearest next step.</p>
+    <span class="support-kicker">OPERA Support</span>
+    <h1>When commissioning control matters, getting help should be simple.</h1>
+    <p>Ask about your project workspace, check sheets, Punch List, Witness/Hold points, handover, trial or implementation. Tell us what your project needs and we will help you find the next step.</p>
   </section>
 
   <div class="support-grid">
     <section class="support-card">
       <h2>Contact the team</h2>
-      <p class="mh-muted">For product questions, implementation guidance, account help or a focused demo.</p>
+      <p class="mh-muted">For OPERA questions, project onboarding, account help or a focused workflow walkthrough.</p>
       <form method="post" class="support-form" style="margin-top:1.25rem">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Name
@@ -50,9 +50,9 @@
           <input name="company" maxlength="160" autocomplete="organization" placeholder="Company or project team">
         </label>
         <label>How can we help?
-          <textarea name="message" rows="6" maxlength="4000" placeholder="For example: We want to compare engineering MR quantities with workshop receipts and identify shortages."></textarea>
+          <textarea name="message" rows="6" maxlength="4000" placeholder="For example: We need separate QC verification, client sign-off and MC readiness tracking across several subsystems."></textarea>
         </label>
-        <button class="btn btn-primary" type="submit">Send to MaterialHub</button>
+        <button class="btn btn-primary" type="submit">Send to OPERA</button>
       </form>
     </section>
 
@@ -63,13 +63,13 @@
           <strong>Help Center</strong><span>Workflows, common questions and product guidance.</span>
         </a>
         <a class="support-link" href="{{ url_for('help.user_guide_fa') }}">
-          <strong>راهنمای فارسی</strong><span>راهنمای عملی MaterialHub به زبان فارسی.</span>
+          <strong>راهنمای فارسی</strong><span>راهنمای عملی OPERA برای پیش‌راه‌اندازی و کمیسیونینگ.</span>
         </a>
         <a class="support-link" href="{{ url_for('help.user_guide') }}">
-          <strong>User Guide</strong><span>A practical guide from MR through warehouse reconciliation.</span>
+          <strong>User Guide</strong><span>A practical guide from project setup through commissioning and handover.</span>
         </a>
         <a class="support-link" href="{{ url_for('growth.demo') }}">
-          <strong>Interactive Demo</strong><span>Walk through a realistic material-control scenario.</span>
+          <strong>Interactive Demo</strong><span>Walk through an illustrative commissioning lifecycle.</span>
         </a>
         <a class="support-link" href="{{ url_for('growth.pricing') }}">
           <strong>Plans & Trial</strong><span>Review the 45-day trial and current plans.</span>
@@ -84,7 +84,7 @@
   <section class="support-card" style="margin-top:1.25rem">
     <h2>A simple support path</h2>
     <div class="support-steps">
-      <div class="support-step"><b>1 · Tell us</b>Describe the operational problem in plain language.</div>
+      <div class="support-step"><b>1 · Tell us</b>Describe the commissioning or handover problem in plain language.</div>
       <div class="support-step"><b>2 · Give context</b>Share the project/workflow and the result you need.</div>
       <div class="support-step"><b>3 · Move forward</b>We can point you to the right workflow, guide or demo.</div>
     </div>
