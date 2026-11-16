@@ -8,7 +8,6 @@ import uuid
 from pathlib import Path
 
 from flask import abort, current_app
-from werkzeug.utils import secure_filename
 
 # Deliberately narrow allow-list. Executable and active-content formats are rejected.
 _ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".csv"}
@@ -35,8 +34,12 @@ def store_commissioning_upload(file_storage, *, company_name: str, entity_type: 
     if file_storage is None or not file_storage.filename:
         abort(400, description="Choose an evidence file")
 
-    filename = secure_filename(Path(file_storage.filename).name)
-    if not filename or len(filename) > 255:
+    raw_filename = str(file_storage.filename).replace("\\\\", "/")
+    filename = "".join(
+        character for character in raw_filename.rsplit("/", 1)[-1]
+        if character.isprintable() and character not in "/\\\\"
+    ).strip()
+    if not filename or filename in {".", ".."} or len(filename) > 255:
         abort(400, description="Invalid file name")
     extension = Path(filename).suffix.lower()
     if extension not in _ALLOWED_EXTENSIONS:
