@@ -229,14 +229,18 @@ def update_checksheet_item(sheet_id, item_id):
     sheet = _sheet(sheet_id)
     if not (has_permission(sheet.project_id, "checksheets.fill") or has_permission(sheet.project_id, "checksheets.manage")):
         abort(403)
-    if sheet.status not in (CheckSheetStatus.ISSUED, CheckSheetStatus.IN_PROGRESS):
-        abort(409, description="Only issued sheets may be completed")
+    if sheet.status not in (CheckSheetStatus.ISSUED, CheckSheetStatus.IN_PROGRESS, CheckSheetStatus.REJECTED):
+        abort(409, description="Only issued or rejected sheets may be completed")
     item = CheckSheetItem.query.filter_by(
         id=item_id, company_name=sheet.company_name, check_sheet_id=sheet.id
     ).first_or_404()
     old = item.result_status.value
     item.actual_result = (request.form.get("actual_result") or "").strip() or None
     item.result_status = _enum(ItemResultStatus, _required("result_status", 20), "result")
+    if item.result_status in (ItemResultStatus.OK, ItemResultStatus.NOK) and not item.actual_result:
+        abort(400, description="Actual result is required for OK/NOK items")
+    # Any rework invalidates a previous QC verification.
+    item.verified_by_id, item.verified_at = None, None
     item.remarks = (request.form.get("remarks") or "").strip() or None
     item.operator_id = current_user.id
     sheet.status = CheckSheetStatus.IN_PROGRESS
@@ -298,12 +302,13 @@ def sign_checksheet(sheet_id):
     if not items or any(i.result_status in (ItemResultStatus.PENDING, ItemResultStatus.NOK) for i in items):
         abort(409, description="All check sheet items must be completed without NOK results")
     if any(i.witness_required for i in items):
-        required_ids = [i.id for i in items if i.witness_required]
-        released = {w.check_sheet_item_id for w in WitnessPoint.query.filter_by(
-            company_name=sheet.company_name, check_sheet_id=sheet.id, status=WitnessStatus.RELEASED
-        ).all()}
-        if any(iid not in released for iid in required_ids):
-            abort(409, description="Required witness points must be released before sign-off")
+        for required_item in (item for item in items if item.witness_required):
+            points = WitnessPoint.query.filter_by(
+                company_name=sheet.company_name, check_sheet_id=sheet.id,
+                check_sheet_item_id=required_item.id,
+            ).all()
+            if not points or any(point.status != WitnessStatus.RELEASED for point in points):
+                abort(409, description="Every required witness point must be released before sign-off")
     if has_permission(sheet.project_id, "checksheets.sign"):
         if sheet.signed_by_client_id and sheet.signed_by_client_id != current_user.id:
             abort(409, description="Client signature already recorded")
