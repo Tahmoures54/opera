@@ -14,6 +14,7 @@
 - Evidence attachment upload/download screens and a production object-storage backend are not included in this build.
 - Import/export templates, mobile/offline client, external scheduling integrations and configurable workflow templates remain future work.
 - A real project acceptance test with separate contractor, QC, client and operations accounts is still required.
+- The production image is PostgreSQL-only and omits Python's optional SQLite runtime; SQLite remains available for local development and tests.
 - Production migration, backup/restore rehearsal, deployment secrets and HTTPS configuration must be completed in the target environment.
 
 ## Release rule
