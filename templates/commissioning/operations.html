@@ -51,6 +51,7 @@
         <form method="post" action="{{ url_for('commissioning.create_witness', project_id=project.id) }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="col-md-5"><select class="form-select" name="check_sheet_id" required><option value="">چک‌شیت</option>{% for sheet in sheets %}<option value="{{ sheet.id }}">{{ sheet.sheet_number }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><select class="form-select" name="check_sheet_item_id"><option value="">کل چک‌شیت</option>{% for item in witness_items %}<option value="{{ item.id }}">#{{ item.sequence }} — {{ item.description|truncate(50) }}</option>{% endfor %}</select></div>
           <div class="col-md-3"><select class="form-select" name="type">{% for item in witness_types %}<option value="{{ item.value }}">{{ item.value }}</option>{% endfor %}</select></div>
           <div class="col-md-4"><input class="form-control" name="notified_party" placeholder="طرف مطلع‌شونده"></div>
           <div class="col-md-6"><input class="form-control" type="datetime-local" name="scheduled_at" required></div>
