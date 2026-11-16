@@ -171,3 +171,72 @@ def test_viewer_cannot_transition_punch_status(client, app, opera_setup):
         data={"status": "IN_PROGRESS"},
     )
     assert response.status_code == 403
+
+
+def test_checksheet_evidence_upload_download_and_tenant_isolation(client, app, opera_setup, tmp_path):
+    from io import BytesIO
+    from models import User
+    from models_commissioning import CommissioningAttachment
+
+    app.config["OPERA_UPLOAD_DIR"] = str(tmp_path)
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-C-00001", sheet_type=CheckSheetType.COMM_C,
+            title="Evidence upload test", created_by_id=manager.id,
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        sheet_id = sheet.id
+    _login(client, manager)
+    response = client.post(
+        f"/commissioning/evidence/CheckSheet/{sheet_id}",
+        data={"file": (BytesIO(b"%PDF-1.7\\nOPERA test evidence"), "test-evidence.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 302
+    with app.app_context():
+        attachment = CommissioningAttachment.query.filter_by(
+            company_name="Contractor A", entity_type="CheckSheet", entity_id=sheet_id
+        ).one()
+        attachment_id = attachment.id
+        assert attachment.file_size > 0
+        assert len(attachment.checksum) == 64
+        stored_path = tmp_path / attachment.storage_key
+        assert stored_path.is_file()
+    response = client.get(f"/commissioning/evidence/{attachment_id}")
+    assert response.status_code == 200
+    assert response.data.startswith(b"%PDF-1.7")
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    with app.app_context():
+        outsider = db.session.get(User, opera_setup["outsider"])
+    _login(client, outsider)
+    response = client.get(f"/commissioning/evidence/{attachment_id}")
+    assert response.status_code == 404
+
+
+def test_evidence_upload_rejects_mismatched_file_content(client, app, opera_setup, tmp_path):
+    from io import BytesIO
+    from models import User
+
+    app.config["OPERA_UPLOAD_DIR"] = str(tmp_path)
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-C-00002", sheet_type=CheckSheetType.COMM_C,
+            title="Invalid evidence test", created_by_id=manager.id,
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        sheet_id = sheet.id
+    _login(client, manager)
+    response = client.post(
+        f"/commissioning/evidence/CheckSheet/{sheet_id}",
+        data={"file": (BytesIO(b"this is not a PDF"), "fake.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 400
