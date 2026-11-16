@@ -13,9 +13,9 @@ OPERA is built on the proven Flask, SQLAlchemy, Alembic, authentication, TOTP an
 - Project → System → Subsystem → Equipment hierarchy.
 - Project-scoped membership and OPERA roles, independent from legacy account roles.
 - Pre-commissioning A/B, commissioning C and functional-test check sheets.
-- Sequential numbering, item-level results, issue workflow and two-party sign-off.
+- Sequential numbering, item-level results, independent QC verification, issue/rejection workflow and two-party sign-off.
 - Signed-off check sheets are immutable; corrections create a new revision.
-- Punch A/B/C/D, assignment, closure, verification and controlled waiver with history.
+- Punch A/B/C/D, project-member assignment, closure, independent verification and controlled waiver with history.
 - Witness, Hold and Review point scheduling, attendance and release.
 - MC / RF certification, RFSU and operations acceptance gates.
 - Progress snapshots and project audit evidence.
@@ -73,7 +73,7 @@ The OPERA foundation migration is 20261116_0019, chained after the inherited sch
 |---|---|
 | Commissioning Manager | Project setup, membership, workflow administration and MC/RF management |
 | Commissioning Engineer | Check-sheet preparation/execution and punch raising |
-| QC Inspector | Punch verification and witness attendance |
+| QC Inspector | Independent check-sheet verification, Punch verification and witness attendance |
 | Client Representative | Client-side check-sheet sign-off |
 | Operations Lead | Operations acceptance of handover |
 | Viewer | Read-only access granted by project membership |
