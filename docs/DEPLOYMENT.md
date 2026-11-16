@@ -38,3 +38,9 @@ The backup script creates a PostgreSQL dump and a separate archive of the eviden
 
 ## Production acceptance
 Production acceptance requires successful real-environment verification of TLS, PostgreSQL, Redis, migrations, authentication/2FA/RBAC, tenant isolation, Excel import/export, backup/restore, monitoring and graceful shutdown.
+
+## Vercel and production boundary
+
+The Git-linked Vercel project may be used for preview builds, but it is not the production runtime for this release. OPERA evidence uploads require persistent private storage, which the Docker Compose production stack provides through the `opera_uploads` volume. Vercel function filesystems are not a substitute for that persistent evidence store.
+
+Database migrations must never run as part of a Vercel build. The repository therefore leaves Vercel's build command to its normal framework detection. For production, use the Docker Compose deployment above and apply migrations only after a verified backup. A Vercel production deployment would require separately configured PostgreSQL credentials, a strong `SECRET_KEY`, durable object storage, and an explicit migration/release process.
