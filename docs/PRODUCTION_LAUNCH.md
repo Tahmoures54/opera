@@ -1,179 +1,118 @@
-# MaterialHub — Production Launch Guide
+# OPERA — Production Launch Guide
 
-**Version target:** v1.1.0+  
-**Last updated:** 2026-10-18
+**Product:** OPERA Commissioning, Pre-Commissioning & Start-up  
+**Schema head:** 20261116_0019
 
-This document is the single checklist to take MaterialHub from “code ready” to “live with real users and real data”.
+This guide describes the production deployment of OPERA. It deliberately contains no shared demo credentials and no automatic demo-user seeding.
 
----
+## 1. Production architecture
 
-## 1. Architecture (final)
-
-```
+```text
 Internet
-   │
-   ▼
-Nginx (TLS termination, ports 80/443)
-   │  private Docker network
-   ▼
-Gunicorn × 3 workers  →  Flask (wsgi:app)
-   │
-   ├── PostgreSQL 16 (persistent volume)
-   └── Redis 7 (rate-limit + session support)
+  |
+Nginx (TLS, ports 80/443)
+  |
+Gunicorn / Flask OPERA
+  |-- PostgreSQL 16 (private network, persistent volume)
+  |-- Redis 7 (rate-limit storage)
+  '-- Docker secrets (database password and TLS key material)
 ```
 
----
+## 2. Pre-flight
 
-## 2. Pre-flight checklist
+### Environment and secrets
+1. Copy `.env.prod.example` to `.env.prod`.
+2. Generate a unique Flask secret:
+   ```bash
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+3. Create secret files; never commit them:
+   ```bash
+   mkdir -p secrets
+   openssl rand -base64 48 > secrets/postgres_password
+   # Install the real TLS certificate and private key as:
+   # secrets/tls_cert
+   # secrets/tls_key
+   chmod 600 secrets/postgres_password secrets/tls_key
+   ```
+4. Set a unique production database name and user in `.env.prod`.
+5. Set the canonical HTTPS origin in `PUBLIC_BASE_URL`.
+6. Configure SMTP only if account-recovery email is enabled. Use a verified `MAIL_FROM`.
+7. Confirm `FLASK_ENV=production`, `SESSION_COOKIE_SECURE=true`, and Redis-backed rate limiting.
 
-### Secrets & environment
-- [ ] Copy `.env.prod.example` → `.env.prod`
-- [ ] Generate `SECRET_KEY` (≥ 32 bytes):
-  ```bash
-  python -c "import secrets; print(secrets.token_hex(32))"
-  ```
-- [ ] Create `secrets/` directory (never commit it):
-  ```bash
-  mkdir -p secrets
-  openssl rand -base64 32 > secrets/postgres_password
-  # place real TLS cert/key:
-  # secrets/tls_cert   (fullchain.pem)
-  # secrets/tls_key    (privkey.pem)
-  ```
-- [ ] Set `POSTGRES_DB` and `POSTGRES_USER` in `.env.prod`
-- [ ] Confirm `FLASK_ENV=production`
-- [ ] Set `PUBLIC_BASE_URL` to the canonical HTTPS origin (never derive recovery links from request Host headers)
-- [ ] Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME` / `SMTP_PASSWORD` if required by the provider, and verified `MAIL_FROM`
-- [ ] Send and receive a real recovery email in staging before enabling customer accounts
+### Domain and TLS
+- Point DNS A/AAAA records to the deployment host.
+- Install a valid certificate and key in the Docker secret paths above.
+- Verify Nginx TLS configuration before exposing ports 80/443.
 
-### Domain & TLS
-- [ ] DNS A/AAAA records point to the server
-- [ ] Valid certificate (Let’s Encrypt or commercial)
-- [ ] Nginx config in `nginx/nginx.conf` references the secrets
+### Database and migration
+- Confirm `flask --app wsgi db heads` reports exactly one head: `20261116_0019`.
+- Review the full Alembic chain. OPERA migration `20261116_0019` creates OPERA-owned tables and follows the inherited `20261017_0018` revision.
+- Take a verified backup before upgrading any existing database.
+- Test the migration on a staging copy first. Never stamp an existing database until its actual schema has been inspected.
 
-### Database
-- [ ] Review Alembic history (`migrations/versions/`) and confirm one head (`20261017_0018` for this branch)
-- [ ] Run `flask db upgrade` on a staging copy before production; do not stamp an existing database until its schema has been verified
-- [ ] If the DB already exists outside Alembic, stamp the correct baseline first
-- [ ] Plan first backup immediately after migrate
-
----
-
-## 3. Deploy commands
+## 3. Deploy
 
 ```bash
-# Build
-docker compose -f docker-compose.production.yml build
-
-# Start
-docker compose -f docker-compose.production.yml up -d
-
-# Watch
-docker compose -f docker-compose.production.yml ps
-docker compose -f docker-compose.production.yml logs -f web
-
-# Migrate (after services healthy)
-docker compose -f docker-compose.production.yml exec web flask db upgrade
-
-# Optional: load demo data (ONLY for staging / first demo environment)
-docker compose -f docker-compose.production.yml exec -e SEED_DEMO=1 web \
-  python scripts/seed_demo.py
+cp .env.prod.example .env.prod
+# Edit .env.prod and install secret files before continuing.
+./scripts/prod_up.sh build
+./scripts/prod_up.sh up
+./scripts/prod_up.sh migrate
+./scripts/prod_up.sh status
 ```
 
----
+The production helper intentionally has no demo-seed command. Do not seed sample accounts or predictable passwords into production.
 
-## 4. Health & smoke tests
+## 4. Health checks
 
 ```bash
 curl -fsS https://YOUR_DOMAIN/health/live
 curl -fsS https://YOUR_DOMAIN/health/ready
-# expect HTTP 200 both
-
-# metrics (Prometheus scrape)
-curl -fsS https://YOUR_DOMAIN/metrics | head
+curl -fsS https://YOUR_DOMAIN/metrics
 ```
 
-Manual smoke:
-1. Open landing page → `/` or marketing routes
-2. Register or login with demo accounts (if seeded)
-3. Confirm 2FA flow
-4. Walk one full path: MR → Tender/PO → Delivery → QC → Warehouse
-5. Verify tenant isolation (two companies cannot see each other’s data)
+All public routes must use HTTPS. Confirm HSTS, secure cookies, JSON logs, request IDs and Redis connectivity.
 
----
+## 5. Staging acceptance scenario
 
-## 5. Demo accounts (after `seed_demo.py`)
+Use separate real accounts for the following project roles:
+1. Commissioning Manager
+2. Commissioning Engineer
+3. QC Inspector
+4. Client Representative
+5. Operations Lead
 
-| Role             | Email                     | Password                 |
-|------------------|---------------------------|--------------------------|
-| Project Manager  | pm@pge.demo               | Demo@MaterialHub2026!    |
-| Purchase         | purchase@pge.demo         | Demo@MaterialHub2026!    |
-| Quality          | qc@pge.demo               | Demo@MaterialHub2026!    |
-| Warehouse        | warehouse@pge.demo        | Demo@MaterialHub2026!    |
-| Supplier         | sales@caspiansteel.demo   | Demo@MaterialHub2026!    |
+Run one full scenario:
+1. Create a project, system and subsystem.
+2. Assign members and confirm that users from another organization cannot access the project.
+3. Create and issue a check sheet; record actual results.
+4. Verify OK/N/A items with a QC user different from the operator.
+5. Schedule a required Witness/Hold point, record notification, attendance and release.
+6. Record contractor and client sign-offs using two different users.
+7. Confirm that the signed-off check sheet and its items cannot be edited; create a new revision for corrections.
+8. Raise, assign, close and verify Punch items. Confirm Category A/B items block MC.
+9. Complete MC, RF, RFSU and operations acceptance gates.
+10. Save a progress snapshot and verify the audit trail.
 
-**Change all passwords and rotate TOTP before giving access to real customers.**
+The electronic sign-off in this release is an authenticated, auditable acknowledgement. It is not a qualified PKI signature or a legal digital-signature certificate.
 
----
+## 6. Backups and recovery
 
-## 6. User-acquisition readiness
+- Schedule `bash scripts/backup_postgres.sh` daily.
+- Copy encrypted backups off-host and retain their SHA-256 files.
+- Test restores into a new isolated database using `bash scripts/restore_postgres.sh BACKUP.dump opera_restore_test`.
+- Never restore over the production database.
+- Document the rollback image and database recovery process. Do not automatically downgrade the Alembic schema.
 
-Already present:
-- `/demo`, `/pricing`, `/contact` (growth blueprint)
-- Marketing templates under `templates/marketing/`
-- ContactInquiry model + persistence
+## 7. Go-live gate
 
-Recommended next steps (product):
-1. Improve landing page copy & CTA (Request Demo)
-2. Add email/Telegram notification when a ContactInquiry is created
-3. Publish a 2-minute product video or Loom
-4. SEO: title, description, Open Graph tags
-5. Free-trial or “Start with demo data” onboarding path
+Production launch is approved only when:
+- [ ] Latest GitHub Actions run is fully green (quality, PostgreSQL integration, Docker and Trivy).
+- [ ] Staging migration and acceptance scenario pass.
+- [ ] Backup and isolated restore are verified.
+- [ ] HTTPS, secure cookies, Redis, logs, monitoring and alerts are verified.
+- [ ] Organization and project role boundaries are tested.
+- [ ] Operations owner signs off on the workflow and handover rules.
 
----
-
-## 7. Operational checklist (first week)
-
-- [ ] Schedule `bash scripts/backup_postgres.sh` daily and copy encrypted backups off-host
-- [ ] Test restore to a new isolated database with `bash scripts/restore_postgres.sh backups/FILE.dump materialhub_restore_test`
-- [ ] Keep backup files out of Git; verify checksum and retention policy
-- [ ] Alert on `/health/ready` returning non-200
-- [ ] Alert on 5xx rate and authentication failures
-- [ ] Log retention policy (JSON logs to stdout → collector)
-- [ ] Document rollback: previous image + no automatic migration downgrade
-- [ ] Rotate `SECRET_KEY` and Postgres password after any suspected leak
-
----
-
-## 8. Go-live decision
-
-You may declare production live when **all** of the following are true:
-
-1. TLS valid and HSTS active  
-2. PostgreSQL + Redis healthy  
-3. Migrations applied and baseline confirmed  
-4. Login + 2FA + RBAC tested with real roles  
-5. At least one end-to-end business workflow completed  
-6. Backup + restore verified  
-7. Monitoring/alerting in place  
-8. Demo or real seed data present for first users  
-
----
-
-## Quick reference commands
-
-```bash
-# Restart only the app
-docker compose -f docker-compose.production.yml restart web
-
-# Shell into app
-docker compose -f docker-compose.production.yml exec web bash
-
-# View recent logs
-docker compose -f docker-compose.production.yml logs --tail=200 web nginx
-
-# Scale workers later (edit command in compose or use gunicorn config)
-```
-
-For detailed security policy see `SECURITY.md`.  
-For the original hardening report see `PRODUCTION_READINESS_REPORT.md`.
+No production migration, demo seed or deployment is performed by this repository change.
