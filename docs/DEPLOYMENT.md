@@ -1,7 +1,7 @@
 # Production Deployment Guide
 
 ## Architecture
-Internet traffic terminates at Nginx. Nginx forwards traffic to Gunicorn/Flask over the private Docker network. PostgreSQL and Redis are internal services.
+Internet traffic terminates at Nginx. Nginx forwards traffic to Gunicorn/Flask over the private Docker network. PostgreSQL and Redis are internal services. Evidence files are stored in a dedicated persistent Docker volume mounted at `/app/instance/uploads`; they are never served from a public static directory.
 
 ## Required configuration
 Copy .env.prod.example to a real .env.prod file and fill in production values.
@@ -34,7 +34,7 @@ Do not automatically downgrade database migrations. Use a reviewed migration or 
 ## Backups
 Back up PostgreSQL on a schedule appropriate to business requirements. A backup is not operationally valid until a restore has been tested.
 
-At minimum test schema restoration, representative business data, application startup, login/2FA, and MR/RFQ/PO/Delivery/QC/Warehouse workflow.
+The backup script creates a PostgreSQL dump and a separate archive of the evidence volume, each with a SHA-256 file. Restore both as a matched pair. At minimum test schema restoration, representative commissioning records, evidence download, application startup, login/2FA, and a full commissioning workflow.
 
 ## Production acceptance
 Production acceptance requires successful real-environment verification of TLS, PostgreSQL, Redis, migrations, authentication/2FA/RBAC, tenant isolation, Excel import/export, backup/restore, monitoring and graceful shutdown.
