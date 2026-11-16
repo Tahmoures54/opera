@@ -70,7 +70,7 @@ def _configure_observability(app):
         if not _OTEL_PROVIDER_CONFIGURED:
             provider = TracerProvider(
                 resource=Resource.create(
-                    {'service.name': os.getenv('OTEL_SERVICE_NAME', 'materialhub')}
+                    {'service.name': os.getenv('OTEL_SERVICE_NAME', 'opera')}
                 )
             )
             if endpoint:
@@ -308,13 +308,13 @@ def create_app(config_name=None):
         if request.endpoint in allowed_endpoints:
             return None
 
-        flash('Your 45-day free trial has ended. Choose a plan to continue using MaterialHub.', 'warning')
+        flash('Your 45-day free trial has ended. Choose a plan to continue using OPERA.', 'warning')
         return redirect(url_for('growth.pricing'))
 
     @app.route('/')
     def index():
         if current_user.is_authenticated:
-            return redirect(url_for('role_workspace.my_workspace'))
+            return redirect(url_for('commissioning.dashboard'))
         return render_template('marketing/landing.html')
 
     @app.get('/robots.txt')
@@ -347,7 +347,7 @@ def create_app(config_name=None):
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        return redirect(url_for('control_center.dashboard'))
+        return redirect(url_for('commissioning.dashboard'))
 
     @app.route('/getting-started')
     def getting_started_alias():
@@ -479,7 +479,7 @@ def create_app(config_name=None):
     app.register_error_handler(500, internal_server_error)
     app.register_error_handler(403, forbidden)
 
-    app.logger.info("MaterialHub application created successfully.")
+    app.logger.info("OPERA application created successfully.")
     return app
 
 

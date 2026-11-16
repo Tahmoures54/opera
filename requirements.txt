@@ -7,14 +7,14 @@ Flask-Migrate==4.0.7
 python-dotenv==1.2.2
 pyotp==2.9.0
 qrcode[pil]==7.4.2
-Pillow==12.3.0
+Pillow==13.0.0
 phonenumbers==8.13.43
 Werkzeug==3.1.9
 SQLAlchemy==2.0.32
 pytz==2024.1
 email-validator==2.2.0
 Gunicorn==22.0.0
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.11
 
 openpyxl==3.1.5
 python-barcode==0.15.1
@@ -23,8 +23,8 @@ argon2-cffi==25.1.0
 cryptography==50.0.1
 redis==8.1.0
 prometheus-client==0.22.1
-opentelemetry-api==1.38.0
-opentelemetry-sdk==1.38.0
-opentelemetry-instrumentation-flask==0.59b0
-opentelemetry-instrumentation-sqlalchemy==0.59b0
-opentelemetry-exporter-otlp-proto-http==1.38.0
+opentelemetry-api==1.45.2
+opentelemetry-sdk==1.45.2
+opentelemetry-instrumentation-flask==0.66b2
+opentelemetry-instrumentation-sqlalchemy==0.66b2
+opentelemetry-exporter-otlp-proto-http==1.45.2

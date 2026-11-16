@@ -41,9 +41,8 @@ def test_project_code_is_unique_per_company(app):
     _project("Contractor A")
     _project("Contractor B")
     db.session.commit()
-    _project("Contractor A")
     with pytest.raises(IntegrityError):
-        db.session.commit()
+        _project("Contractor A")
     db.session.rollback()
 
 

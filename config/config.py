@@ -122,7 +122,7 @@ class Config:
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
     else:
         SQLALCHEMY_DATABASE_URI = (
-            f'sqlite:///{os.path.join(INSTANCE_DIR, "materialhub.db")}'
+            f'sqlite:///{os.path.join(INSTANCE_DIR, "opera.db")}'
         )
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -168,7 +168,7 @@ class Config:
 
     # Security
     WTF_CSRF_SSL_STRICT = IS_PRODUCTION
-    SESSION_COOKIE_NAME = os.getenv('SESSION_COOKIE_NAME', 'materialhub_session')
+    SESSION_COOKIE_NAME = os.getenv('SESSION_COOKIE_NAME', 'opera_session')
 
     # Logging
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')

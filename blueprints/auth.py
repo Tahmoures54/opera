@@ -36,13 +36,13 @@ def home():
     """Render the home page and redirect authenticated users based on their role."""
     if current_user.is_authenticated:
         if current_user.is_admin:
-            return redirect(url_for('role_workspace.my_workspace'))
+            return redirect(url_for('commissioning.dashboard'))
         elif current_user.access_level == AccessLevel.supplier:
-            return redirect(url_for('role_workspace.my_workspace'))
+            return redirect(url_for('commissioning.dashboard'))
         elif current_user.access_level == AccessLevel.project_manager:
-            return redirect(url_for('role_workspace.my_workspace'))
+            return redirect(url_for('commissioning.dashboard'))
         else:
-            return redirect(url_for('role_workspace.my_workspace'))
+            return redirect(url_for('commissioning.dashboard'))
     return render_template('dashboard/home.html', current_year=datetime.now().year)
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -109,7 +109,7 @@ def register():
             # Generate URI and QR code
             totp_uri = pyotp.totp.TOTP(totp_secret).provisioning_uri(
                 name=form.company_email.data,
-                issuer_name="MaterialHub"
+                issuer_name="OPERA"
             )
             qr_code = generate_qr_code(totp_uri)
             db.session.add(user)
@@ -229,7 +229,7 @@ def login():
                     session['auth_version'] = int(user.auth_version or 0)
                     logger.info("User logged in (user_id=%s)", user.id)
                     flash('Login successful!', 'success')
-                    return redirect(url_for('role_workspace.my_workspace'))
+                    return redirect(url_for('commissioning.dashboard'))
                 else:
                     logger.warning("Login rejected because authenticator verification failed")
                     flash('Unable to sign in with those details. Check your email and authenticator code or contact support.', 'danger')

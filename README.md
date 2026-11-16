@@ -1,252 +1,106 @@
-# MaterialHub
+# OPERA — Commissioning, Pre-Commissioning & Start-up
 
-**MaterialHub** is a Flask-based web application for managing the full material supply chain in engineering and industrial projects.
+**OPERA** is a project-scoped commissioning and start-up management platform for EPC, industrial and construction projects. It provides controlled project/system/subsystem structure, check-sheet execution, punch management, witness/hold points, Mechanical Completion (MC), Ready for Start-up (RFSU), handover and progress evidence.
 
-It covers material requisitions, purchase orders, quality control, deliveries, warehouse operations, supplier marketplace, and tenders — with role-based access and two-factor authentication.
+OPERA is built on the proven Flask, SQLAlchemy, Alembic, authentication, TOTP and tenant-security foundation inherited from MaterialHub. MaterialHub is an internal platform foundation; OPERA is the product presented to users.
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Flask](https://img.shields.io/badge/Flask-3.0-green)
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Flask](https://img.shields.io/badge/Flask-3.x-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-![Status](https://img.shields.io/badge/Status-v1.1.0-success)
 
----
+## Product capabilities
 
-## Features
+- Project → System → Subsystem → Equipment hierarchy.
+- Project-scoped membership and OPERA roles, independent from legacy account roles.
+- Pre-commissioning A/B, commissioning C and functional-test check sheets.
+- Sequential numbering, item-level results, independent QC verification, issue/rejection workflow and two-party sign-off.
+- Signed-off check sheets are immutable; corrections create a new revision.
+- Punch A/B/C/D, project-member assignment, closure, independent verification and controlled waiver with history.
+- Witness, Hold and Review point scheduling, attendance and release.
+- MC / RF certification, RFSU and operations acceptance gates.
+- Progress snapshots and project audit evidence.
+- Tenant-scoped database constraints and authorization checks.
 
-- **Role-based access control**  
-  Project Manager · Engineering · Purchase · Quality · Delivery · Warehouse · Supplier
-
-- **Material Requisition** workflow with approvals  
-- **Purchase Orders** linked to requisitions  
-- **Quality Control** inspections  
-- **Delivery** tracking  
-- **Warehouse** inventory management  
-- **Inbound receiving**: Packing List → Goods Receipt → Receipt Lines → OS&D discrepancy workflow  
-- **Supplier Material Marketplace**  
-- **Tender & Bid** system  
-- **Two-factor authentication** (TOTP / Microsoft Authenticator)  
-- Basic inventory & delivery risk analysis  
-
----
-
-## Quick Start
-
-### 1. Clone
+## Quick start
 
 ```bash
-git clone https://github.com/Tahmoures54/MaterialHub.git
-cd MaterialHub
-```
-
-### 2. Virtual Environment
-
-```bash
-python -m venv venv
-source venv/bin/activate          # Linux / macOS
-# venv\Scripts\activate           # Windows
-```
-
-### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Environment
-
-```bash
+git clone https://github.com/Tahmoures54/opera.git
+cd opera
+python -m venv .venv
+# Linux/macOS
+source .venv/bin/activate
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
+pip install -r requirements-dev.txt
 cp .env.example .env
 ```
 
-Edit `.env` and set a strong `SECRET_KEY`:
-
-```env
-SECRET_KEY=your-very-long-random-secret-key
-FLASK_ENV=development
-```
-
-Generate a secure key:
+Set a unique SECRET_KEY and a database URL in .env. For local development, SQLite is supported; PostgreSQL is recommended for shared and production deployments.
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-### 5. Run
-
-```bash
+flask --app wsgi db upgrade
 python app.py
 ```
 
-Open → [http://127.0.0.1:5000](http://127.0.0.1:5000)
+Open http://127.0.0.1:5000 and sign in using an existing OPERA-enabled account. The account's company boundary is reused as the OPERA tenant boundary.
 
-Guests land on the public product page. After sign-in, users are routed to their role workspace.
+## Database and upgrade
 
----
-
-## Production Launch
-
-For a full production deployment (Nginx + Gunicorn + PostgreSQL + Redis + TLS):
-
-1. Read **[docs/PRODUCTION_LAUNCH.md](docs/PRODUCTION_LAUNCH.md)** — complete checklist.
-2. Copy `.env.prod.example` → `.env.prod` and set a strong `SECRET_KEY`.
-3. Create Docker secrets under `secrets/` (postgres password + TLS cert/key).
-4. Run:
-   ```bash
-   ./scripts/prod_up.sh build
-   ./scripts/prod_up.sh up
-   ./scripts/prod_up.sh migrate
-   # optional demo data (staging only):
-   ./scripts/prod_up.sh seed
-   ```
-
-See also `PRODUCTION_READINESS_REPORT.md` and `SECURITY.md`.
-
----
-
-## Docker (Recommended)
+Always back up the database before upgrading. Apply schema changes with:
 
 ```bash
-cp .env.example .env
-# Set SECRET_KEY in .env
-
-docker-compose up --build
+flask --app wsgi db heads
+flask --app wsgi db upgrade
 ```
 
-- App: http://localhost:5000  
-- PostgreSQL: port 5432
+The OPERA foundation migration is 20261116_0019, chained after the inherited schema revision 20261017_0018. It creates OPERA-owned tables only. Do not run downgrade against production without a verified backup and an approved rollback plan.
 
----
+## Project onboarding
 
-## Environment Variables
+1. Sign in as an organization administrator or project manager.
+2. Open OPERA Commissioning and create a project.
+3. Define systems and subsystems in the project structure.
+4. Open Operations and assign project members their OPERA roles.
+5. Create check sheets and add inspection items.
+6. Issue the check sheet, record actual results and required witness releases.
+7. Record separate contractor and client sign-offs. A signed-off sheet is immutable.
+8. Raise and resolve punch items. Category A/B punch items block MC certification.
+9. Create subsystem handover packages and progress snapshots.
 
-| Variable     | Required | Description                                      |
-|--------------|----------|--------------------------------------------------|
-| SECRET_KEY   | **Yes**  | Flask secret key                                 |
-| DATABASE_URL | No       | PostgreSQL URL (defaults to SQLite)              |
-| FLASK_ENV    | No       | `development` or `production`                    |
-| LOG_LEVEL    | No       | `DEBUG` / `INFO` / `WARNING` / `ERROR`           |
-| ADMIN_EMAIL  | No       | Email that becomes admin on registration         |
-| PUBLIC_BASE_URL | Required for recovery | Trusted HTTPS site origin used in recovery links |
-| SMTP_HOST / SMTP_PORT | Required for recovery | SMTP server; STARTTLS (587) or implicit TLS (465) |
-| SMTP_USERNAME / SMTP_PASSWORD | Optional by server | SMTP authentication credentials; never commit secrets |
-| MAIL_FROM | Required for recovery | Verified sender address for recovery messages |
+## OPERA roles
 
-Health checks: `GET /health`, `GET /health/live`, `GET /health/ready`.
+| Role | Primary responsibilities |
+|---|---|
+| Commissioning Manager | Project setup, membership, workflow administration and MC/RF management |
+| Commissioning Engineer | Check-sheet preparation/execution and punch raising |
+| QC Inspector | Independent check-sheet verification, Punch verification and witness attendance |
+| Client Representative | Client-side check-sheet sign-off |
+| Operations Lead | Operations acceptance of handover |
+| Viewer | Read-only access granted by project membership |
 
----
+Membership roles are project-scoped and do not alter the inherited account role.
 
-## Project Structure
+## Security and operational notes
 
-```
-MaterialHub/
-├── blueprints/          # Feature modules
-├── config/              # App configuration
-├── data/                # Static data (country codes)
-├── forms/               # WTForms
-├── migrations/          # Alembic schema history
-├── static/              # CSS, JS, images
-├── templates/           # Jinja2 templates
-├── ai_analysis.py       # Rule-based analysis helpers
-├── app.py               # Application factory
-├── models.py            # SQLAlchemy models
-├── extensions.py        # Flask extensions
-├── utils.py             # Shared helpers
-├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
-```
+- All OPERA records are scoped to the signed-in user's company.
+- State-changing browser forms use Flask-WTF CSRF protection.
+- Role checks are enforced server-side; hiding a UI action is not treated as authorization.
+- Check-sheet sign-off is an authenticated electronic acknowledgement, not a qualified cryptographic certificate or legally accredited digital signature.
+- Audit records, signatures, Punch history and check-sheet revision records are append-only through ORM safeguards.
+- Production deployment requires HTTPS, PostgreSQL, a strong secret, backups, monitored migrations and a configured storage policy for evidence attachments.
+- Never commit .env, passwords, TOTP secrets or recovery codes.
 
----
+## CI and validation
 
-## Database Migrations
+GitHub Actions runs Ruff, Mypy, pytest, Bandit, pip-audit, PostgreSQL integration checks, migration checks, backup/restore verification and Docker image scanning. A green unit-test job alone is not production-readiness evidence; review every workflow job before release.
 
-The repository ships a linear Alembic chain from the initial baseline through the current inbound receiving, OS&D, QC and inventory revisions. Always verify the actual head with `flask db heads` before a release. A fresh database is ready with:
+## Documentation
 
-```bash
-flask db upgrade
-```
-
-Existing databases created before this history was introduced can be stamped
-at the state they match and then upgraded:
-
-```bash
-flask db stamp 20260920_0001   # schema already matches the post-hardening state
-flask db upgrade
-```
-
-New schema changes:
-
-```bash
-flask db migrate -m "describe the change"
-flask db upgrade
-```
-
----
-
-
-## Operational receiving and traceability
-
-Warehouse receiving follows an explicit document chain:
-
-```
-Packing List → Goods Receipt → OS&D → QC → Warehouse → Transaction / Traceability
-```
-
-Warehouse issue operations preserve the cumulative inbound quantity and reduce only the available balance. This keeps reconciliation and audit history stable.
-
-Operational reports are available for Packing Lists, Goods Receipts, OS&D, receiving records and material traceability, with tenant-scoped access.
-
-## Security Notes
-
-- Never commit `.env` or recovery codes.
-- Always use a strong random `SECRET_KEY` in production.
-- Prefer PostgreSQL for any real deployment.
-- TOTP (2FA) is required for login. TOTP recovery email is disabled until `PUBLIC_BASE_URL`, `SMTP_HOST`, and `MAIL_FROM` are configured. The public response does not confirm whether an account exists or whether delivery succeeded.
-
----
+- [OPERA Phase 1 architecture and migration notes](docs/OPERA_PHASE1.md)
+- [Production launch checklist](docs/PRODUCTION_LAUNCH.md)
+- [Security policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-## Contributing
-
-1. Fork the repository  
-2. Create a feature branch (`git checkout -b feature/your-feature`)  
-3. Commit your changes  
-4. Open a Pull Request  
-
----
-
-**MaterialHub v1.1.0** — material supply-chain management for engineering and industrial projects.
-
-## Documentation & Template Architecture
-
-The UI templates are now organized by business domain instead of a single flat folder:
-
-- `templates/auth/` — authentication and account pages
-- `templates/dashboard/` — home, control center and role dashboards
-- `templates/procurement/` — requisitions, marketplace, RFQ/tender, quotes and purchase orders
-- `templates/warehouse/` — inventory, delivery and warehouse execution
-- `templates/quality/` — quality control
-- `templates/intelligence/` — traceability, Excel import and material intelligence
-- `templates/reports/` — reporting pages
-- `templates/admin/` — administration
-- `templates/help/` — Help Center, User Guide, Getting Started and About
-- `templates/legal/` — privacy and terms
-- `templates/support/` — support contact
-- `templates/errors/` — 404/403/500 pages
-
-### In-app documentation
-- `/help` — Help Center
-- `/getting-started` — quick onboarding
-- `/user-guide` — complete operating guide
-- `/about` — product overview
-
-The same documentation is also available in `docs_USER_GUIDE.md` and `PRODUCT_OVERVIEW.md`.
-
-## OPERA Commissioning Workspace
-
-MaterialHub now includes the Phase 1 foundation for OPERA, an independently designed commissioning and start-up workspace. After applying database migrations and signing in, open `/commissioning/` to create a project and its systems/subsystems. See [docs/OPERA_PHASE1.md](docs/OPERA_PHASE1.md) for architecture decisions, role boundaries, seed instructions, and validation status.
+MIT — see LICENSE.

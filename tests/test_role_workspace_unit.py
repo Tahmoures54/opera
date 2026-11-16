@@ -50,7 +50,7 @@ def test_role_aliases_cover_operational_roles():
 
 def test_login_uses_role_aware_workspace():
     source = (ROOT / "blueprints" / "auth.py").read_text(encoding="utf-8")
-    assert "role_workspace.my_workspace" in source
+    assert "commissioning.dashboard" in source
 
 
 def test_live_kpi_api_is_used_by_workspaces():

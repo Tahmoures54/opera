@@ -45,7 +45,8 @@ def test_liveness_and_readiness(client):
 def test_public_landing_page(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Know what you need" in response.data
+    assert b"OPERA" in response.data
+    assert b"Commissioning" in response.data
 
 
 def test_growth_pages_are_registered(client):
