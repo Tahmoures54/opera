@@ -195,7 +195,9 @@ def checksheet_detail(sheet_id):
         company_name=sheet.company_name, check_sheet_id=sheet.id
     ).order_by(CheckSheetItem.sequence).all()
     return render_template("commissioning/checksheet_detail.html", sheet=sheet, items=items,
-                           results=list(ItemResultStatus), can_fill=has_permission(sheet.project_id, "checksheets.fill") or has_permission(sheet.project_id, "checksheets.manage"))
+                           results=list(ItemResultStatus),
+                           can_fill=has_permission(sheet.project_id, "checksheets.fill") or has_permission(sheet.project_id, "checksheets.manage"),
+                           can_verify=has_permission(sheet.project_id, "checksheets.verify") or has_permission(sheet.project_id, "checksheets.manage"))
 
 
 @commissioning_bp.post("/checksheets/<int:sheet_id>/items")
@@ -236,11 +238,31 @@ def update_checksheet_item(sheet_id, item_id):
     item.result_status = _enum(ItemResultStatus, _required("result_status", 20), "result")
     item.remarks = (request.form.get("remarks") or "").strip() or None
     item.operator_id = current_user.id
-    if item.result_status == ItemResultStatus.OK:
-        item.verified_by_id, item.verified_at = current_user.id, datetime.utcnow()
     sheet.status = CheckSheetStatus.IN_PROGRESS
     add_audit_event(sheet.company_name, "CheckSheetItem", item.id, "CHECKSHEET_ITEM_RESULT",
                     before={"result": old}, after={"result": item.result_status.value})
+    db.session.commit()
+    return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
+
+
+@commissioning_bp.post("/checksheets/<int:sheet_id>/items/<int:item_id>/verify")
+@login_required
+def verify_checksheet_item(sheet_id, item_id):
+    sheet = _sheet(sheet_id)
+    if not (has_permission(sheet.project_id, "checksheets.verify") or has_permission(sheet.project_id, "checksheets.manage")):
+        abort(403)
+    if sheet.status not in (CheckSheetStatus.ISSUED, CheckSheetStatus.IN_PROGRESS):
+        abort(409, description="Only an issued sheet can be verified")
+    item = CheckSheetItem.query.filter_by(
+        id=item_id, company_name=sheet.company_name, check_sheet_id=sheet.id
+    ).first_or_404()
+    if item.result_status not in (ItemResultStatus.OK, ItemResultStatus.NA):
+        abort(409, description="Only OK or N/A items can be verified")
+    if item.operator_id == current_user.id:
+        abort(409, description="Independent verification must be performed by another user")
+    item.verified_by_id, item.verified_at = current_user.id, datetime.utcnow()
+    add_audit_event(sheet.company_name, "CheckSheetItem", item.id, "CHECKSHEET_ITEM_VERIFIED",
+                    after={"verified_by_id": current_user.id})
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
 
