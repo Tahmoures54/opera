@@ -291,9 +291,10 @@ def test_signed_off_checksheet_rejects_new_evidence(client, app, opera_setup, tm
             system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
             sheet_number="FLOW-01-C-00004", sheet_type=CheckSheetType.COMM_C,
             title="Signed-off evidence immutability", created_by_id=manager.id,
-            status=CheckSheetStatus.SIGNED_OFF,
         )
         db.session.add(sheet)
+        db.session.commit()
+        sheet.status = CheckSheetStatus.SIGNED_OFF
         db.session.commit()
         sheet_id = sheet.id
         manager_id = manager.id
