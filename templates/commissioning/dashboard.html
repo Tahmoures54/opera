@@ -3,12 +3,12 @@
 {% block content %}
 <div class="container-fluid py-4" dir="rtl">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-    <div><span class="text-muted small">MaterialHub / OPERA</span><h1 class="h3 mb-1">مدیریت راه‌اندازی و پیش‌راه‌اندازی</h1><p class="text-muted mb-0">Integrated Commissioning &amp; Start-up Management</p></div>
+    <div><span class="text-muted small">OPERA Platform</span><h1 class="h3 mb-1">مدیریت راه‌اندازی و پیش‌راه‌اندازی</h1><p class="text-muted mb-0">Integrated Commissioning &amp; Start-up Management</p></div>
     {% if can_create_project %}<a class="btn btn-primary" href="{{ url_for('commissioning.create_project') }}">+ ایجاد پروژه</a>{% endif %}
   </div>
   <div class="row g-3 mb-4">
     <div class="col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">پروژه‌های ثبت‌شده</div><div class="display-6">{{ projects|length }}</div></div></div></div>
-    <div class="col-md-8"><div class="card h-100"><div class="card-body"><strong>OPERA</strong><p class="text-muted mb-0 mt-2">محیط مدیریت ساختار پروژه، چک‌شیت‌ها، Punch List، نقاط بازرسی و بسته‌های تحویل. قابلیت‌های اجرایی در فازهای بعدی فعال می‌شوند.</p></div></div></div>
+    <div class="col-md-8"><div class="card h-100"><div class="card-body"><strong>OPERA</strong><p class="text-muted mb-0 mt-2">محیط مدیریت ساختار پروژه، چک‌شیت‌ها، Punch List، نقاط بازرسی و بسته‌های تحویل. گردش‌کارهای اجرایی کمیسیونینگ، کنترل Punch، نقاط بازرسی و تحویل در فضای عملیات پروژه مدیریت می‌شوند.</p></div></div></div>
   </div>
   <div class="card"><div class="card-header bg-white"><strong>پروژه‌ها / Projects</strong></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>کد</th><th>نام پروژه</th><th>کارفرما</th><th>پیمانکار</th><th>وضعیت</th><th></th></tr></thead><tbody>
   {% for project in projects %}<tr><td class="fw-semibold">{{ project.project_code }}</td><td>{{ project.name }}</td><td>{{ project.client or '—' }}</td><td>{{ project.contractor or '—' }}</td><td>{{ project.status.value }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">ساختار پروژه</a></td></tr>
