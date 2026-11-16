@@ -84,6 +84,7 @@ def test_operations_dashboard_is_available_to_project_member(client, opera_setup
 def test_membership_cannot_cross_company_boundary(client, opera_setup):
     from models import User
     with client.application.app_context():
+        with app.app_context():
         manager = db.session.get(User, opera_setup["manager"])
     _login(client, manager)
     response = client.post(
