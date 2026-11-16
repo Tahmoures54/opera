@@ -96,7 +96,8 @@ def test_membership_cannot_cross_company_boundary(client, opera_setup):
 
 def test_checksheet_two_party_signoff_and_immutable_revision(client, app, opera_setup):
     from models import User
-    manager = db.session.get(User, opera_setup["manager"])
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
     _login(client, manager)
     response = client.post(
         f"/commissioning/projects/{opera_setup['project']}/checksheets/new",
