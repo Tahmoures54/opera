@@ -33,12 +33,12 @@ def _check_redis():
 
 @health_bp.get("/health")
 def health():
-    return jsonify({"status": "ok", "service": "materialhub", "check": "basic"})
+    return jsonify({"status": "ok", "service": "opera", "check": "basic"})
 
 
 @health_bp.get("/health/live")
 def live():
-    return jsonify({"status":"ok","service":"materialhub","check":"liveness"})
+    return jsonify({"status":"ok","service":"opera","check":"liveness"})
 
 
 @health_bp.get("/health/ready")
