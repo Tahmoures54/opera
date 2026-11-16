@@ -28,7 +28,7 @@ from models_commissioning import (
 
 def main():
     parser = argparse.ArgumentParser(description="Seed an OPERA commissioning demo project")
-    parser.add_argument("--company", required=True, help="Existing MaterialHub company_name")
+    parser.add_argument("--company", required=True, help="Existing organization company_name")
     parser.add_argument("--user-id", required=True, type=int, help="Existing user ID in that company")
     parser.add_argument("--project-code", default="OPERA-DEMO")
     args = parser.parse_args()
