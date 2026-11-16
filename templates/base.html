@@ -343,9 +343,6 @@
           </nav>
           <div class="mh-nav-label">Account</div>
           <nav class="mh-nav">
-            {% if current_user.is_admin %}
-              <a href="{{ url_for('admin.admin') }}"><i class="fas fa-user-shield"></i> Administration</a>
-            {% endif %}
             <a href="{{ url_for('help.help') }}"><i class="fas fa-question-circle"></i> Help Center</a>
             <a href="{{ url_for('auth.change_password') }}"><i class="fas fa-key"></i> Change Password</a>
             <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Sign out</a>
