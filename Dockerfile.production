@@ -32,7 +32,9 @@ RUN find /usr/local/lib/python3.12 -type f -name '_sqlite3*.so' -delete \
 COPY --from=builder /opt/venv /opt/venv
 RUN ! python -c "import sqlite3" && python -c "import psycopg2, sqlalchemy; print('PostgreSQL runtime ready')"
 COPY . .
-RUN chmod 0555 /app/docker/entrypoint.sh && chown -R opera:opera /app
+RUN mkdir -p /app/instance/uploads \
+    && chmod 0555 /app/docker/entrypoint.sh \
+    && chown -R opera:opera /app
 USER opera
 EXPOSE 8000
 STOPSIGNAL SIGTERM
