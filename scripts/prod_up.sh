@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# MaterialHub production helper
-# Usage: ./scripts/prod_up.sh [build|up|migrate|seed|status|logs]
+# OPERA production helper
+# Usage: ./scripts/prod_up.sh [build|up|migrate|status|logs]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -32,9 +32,6 @@ case "$cmd" in
   migrate)
     $COMPOSE exec web flask db upgrade
     ;;
-  seed)
-    $COMPOSE exec -e SEED_DEMO=1 web python scripts/seed_demo.py
-    ;;
   status)
     $COMPOSE ps
     echo
@@ -44,7 +41,7 @@ case "$cmd" in
     $COMPOSE logs --tail=100 -f web nginx
     ;;
   *)
-    echo "Usage: $0 {build|up|migrate|seed|status|logs}"
+    echo "Usage: $0 {build|up|migrate|status|logs}"
     exit 1
     ;;
 esac
