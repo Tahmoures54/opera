@@ -15,6 +15,20 @@
   </tbody></table></div></div>
   {% if sheet.status.value in ['ISSUED','IN_PROGRESS'] %}
   <div class="card card-body mt-3"><form method="post" action="{{ url_for('commissioning.reject_checksheet', sheet_id=sheet.id) }}" class="mb-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="form-label">رد چک‌شیت (کارفرما)</label><input class="form-control mb-2" name="reason" placeholder="دلیل رد" required><button class="btn btn-outline-danger">رد چک‌شیت</button></form><h2 class="h6">امضای الکترونیکی دوطرفه</h2><p class="small text-muted">امضا با نشست احراز هویت‌شده ثبت می‌شود؛ امضای کارفرما و پیمانکار باید توسط دو کاربر مجزا انجام شود.</p><form method="post" action="{{ url_for('commissioning.sign_checksheet', sheet_id=sheet.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success">ثبت امضای من</button></form><div class="mt-2 small">امضای کارفرما: {{ sheet.signed_by_client_id or 'در انتظار' }} · امضای پیمانکار: {{ sheet.signed_by_contractor_id or 'در انتظار' }}</div></div>
+  <section class="card card-body mt-3">
+    <h2 class="h6">مدارک و پیوست‌های چک‌شیت</h2>
+    {% if can_upload_attachments %}
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='CheckSheet', entity_id=sheet.id) }}" class="d-flex flex-wrap gap-2 mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input class="form-control" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv" required>
+      <button class="btn btn-outline-primary">بارگذاری مدرک</button>
+    </form>
+    {% endif %}
+    <ul class="mb-0">{% for attachment in attachments %}
+      <li><a href="{{ url_for('commissioning.download_evidence', attachment_id=attachment.id) }}">{{ attachment.filename }}</a>
+      <small class="text-muted">— {{ (attachment.file_size / 1024)|round(1) }} KB · {{ attachment.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</small></li>
+    {% else %}<li class="text-muted">هنوز مدرکی بارگذاری نشده است.</li>{% endfor %}</ul>
+  </section>
   {% elif sheet.status.value == 'SIGNED_OFF' %}
   <form method="post" action="{{ url_for('commissioning.revise_checksheet', sheet_id=sheet.id) }}" class="card card-body mt-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="form-label">دلیل ایجاد Revision جدید</label><input class="form-control mb-2" name="reason" required><button class="btn btn-outline-primary align-self-start">ایجاد Revision جدید</button></form>
   {% endif %}
