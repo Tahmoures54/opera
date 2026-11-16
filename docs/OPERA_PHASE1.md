@@ -14,7 +14,7 @@ OPERA is an independently implemented commissioning and start-up workspace that 
 
 - `GET /commissioning/projects/<project_id>/operations` — operational control center
 - Project membership assignment and deactivation, scoped to the same company
-- Check-sheet creation, item management, issue, result entry, two-party sign-off and revision creation
+- Check-sheet creation, item management, issue/rejection, result entry, independent QC verification, two-party sign-off and revision creation
 - Punch creation and controlled status transitions with immutable history
 - Witness/Hold/Review scheduling, attendance and release; item-level witness links
 - Handover package lifecycle: MC certification, RF certification, RFSU and operations acceptance
