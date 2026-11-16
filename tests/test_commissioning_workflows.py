@@ -31,8 +31,9 @@ def opera_setup(app):
         manager = _user("Contractor A", "opera-flow-manager@example.com", "Manager")
         client_rep = _user("Contractor A", "opera-flow-client@example.com", "Client")
         viewer = _user("Contractor A", "opera-flow-viewer@example.com", "Viewer")
+        qc = _user("Contractor A", "opera-flow-qc@example.com", "QC Inspector")
         outsider = _user("Contractor B", "opera-flow-outsider@example.com", "Outsider")
-        db.session.add_all([manager, client_rep, viewer, outsider])
+        db.session.add_all([manager, client_rep, viewer, qc, outsider])
         db.session.flush()
         project = CommissioningProject(
             company_name="Contractor A", project_code="FLOW-01", name="Workflow Project",
@@ -59,11 +60,13 @@ def opera_setup(app):
                 user_id=client_rep.id, role=MembershipRole.CLIENT_REPRESENTATIVE, is_active=True),
             CommissioningMembership(company_name="Contractor A", project_id=project.id,
                 user_id=viewer.id, role=MembershipRole.VIEWER, is_active=True),
+            CommissioningMembership(company_name="Contractor A", project_id=project.id,
+                user_id=qc.id, role=MembershipRole.QC_INSPECTOR, is_active=True),
         ])
         db.session.commit()
         return {
             "manager": manager.id, "client": client_rep.id, "viewer": viewer.id,
-            "outsider": outsider.id, "project": project.id, "system": system.id,
+            "qc": qc.id, "outsider": outsider.id, "project": project.id, "system": system.id,
             "subsystem": subsystem.id,
         }
 
@@ -119,6 +122,14 @@ def test_checksheet_two_party_signoff_and_immutable_revision(client, app, opera_
         data={"actual_result": "Clockwise", "result_status": "OK"},
     )
     assert response.status_code == 302
+    with app.app_context():
+        qc_user = db.session.get(User, opera_setup["qc"])
+    _login(client, qc_user)
+    response = client.post(f"/commissioning/checksheets/{sheet_id}/items/{item_id}/verify")
+    assert response.status_code == 302
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+    _login(client, manager)
     response = client.post(f"/commissioning/checksheets/{sheet_id}/sign")
     assert response.status_code == 302
     with app.app_context():
