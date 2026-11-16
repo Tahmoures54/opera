@@ -25,6 +25,12 @@ def _login(client, user):
         session["_fresh"] = True
 
 
+def _login_id(client, user_id):
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+
 @pytest.fixture
 def opera_setup(app):
     with app.app_context():
@@ -190,7 +196,9 @@ def test_checksheet_evidence_upload_download_and_tenant_isolation(client, app, o
         db.session.add(sheet)
         db.session.commit()
         sheet_id = sheet.id
-    _login(client, manager)
+        manager_id = manager.id
+    _login_id(client, manager_id)
+    assert client.get(f"/commissioning/checksheets/{sheet_id}").status_code == 200
     response = client.post(
         f"/commissioning/evidence/CheckSheet/{sheet_id}",
         data={"file": (BytesIO(b"%PDF-1.7\\nOPERA test evidence"), "test-evidence.pdf")},
@@ -212,7 +220,8 @@ def test_checksheet_evidence_upload_download_and_tenant_isolation(client, app, o
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     with app.app_context():
         outsider = db.session.get(User, opera_setup["outsider"])
-    _login(client, outsider)
+        outsider_id = outsider.id
+    _login_id(client, outsider_id)
     response = client.get(f"/commissioning/evidence/{attachment_id}")
     assert response.status_code == 404
 
@@ -233,7 +242,8 @@ def test_evidence_upload_rejects_mismatched_file_content(client, app, opera_setu
         db.session.add(sheet)
         db.session.commit()
         sheet_id = sheet.id
-    _login(client, manager)
+        manager_id = manager.id
+    _login_id(client, manager_id)
     response = client.post(
         f"/commissioning/evidence/CheckSheet/{sheet_id}",
         data={"file": (BytesIO(b"this is not a PDF"), "fake.pdf")},
@@ -258,7 +268,8 @@ def test_viewer_cannot_upload_evidence(client, app, opera_setup, tmp_path):
         db.session.add(sheet)
         db.session.commit()
         sheet_id = sheet.id
-    _login(client, viewer)
+        viewer_id = viewer.id
+    _login_id(client, viewer_id)
     response = client.post(
         f"/commissioning/evidence/CheckSheet/{sheet_id}",
         data={"file": (BytesIO(b"%PDF-1.7\\nrestricted"), "restricted.pdf")},
