@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - عملیات پروژه{% endblock %}
+{% block content %}
+<div class="container-fluid py-4" dir="rtl">
+  <div class="d-flex justify-content-between flex-wrap gap-2 mb-4">
+    <div><a href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">بازگشت به ساختار پروژه</a><h1 class="h3 mt-2">{{ project.name }} — عملیات کمیسیونینگ</h1><div class="text-muted">{{ project.project_code }}</div></div>
+    <div class="d-flex gap-2 align-items-start"><span class="badge bg-primary">پیشرفت چک‌شیت: {{ progress }}%</span><span class="badge bg-secondary">Punch باز: {{ punch_open }}</span></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">چک‌شیت امضاشده</div><div class="display-6">{{ signed }}/{{ total }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Punch باز</div><div class="display-6">{{ punch_open }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">نقاط بازرسی</div><div class="display-6">{{ witnesses|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">بسته‌های تحویل</div><div class="display-6">{{ packages|length }}</div></div></div></div>
+  </div>
+  <div class="row g-4">
+    <div class="col-xl-6">
+      <section class="card mb-4"><div class="card-header fw-bold">اعضای پروژه و نقش‌ها</div><div class="card-body">
+        <form method="post" action="{{ url_for('commissioning.add_member', project_id=project.id) }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-md-6"><select class="form-select" name="user_id" required><option value="">انتخاب کاربر سازمان</option>{% for user in users %}<option value="{{ user.id }}">{{ user.full_name }} — {{ user.company_email }}</option>{% endfor %}</select></div>
+          <div class="col-md-4"><select class="form-select" name="role" required>{% for role in roles %}<option value="{{ role.value }}">{{ role.value }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><button class="btn btn-primary w-100">تخصیص</button></div>
+        </form>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>کاربر</th><th>نقش</th><th></th></tr></thead><tbody>{% for member in members %}<tr><td>{{ member.user_id }}</td><td>{{ member.role.value }}</td><td><form method="post" action="{{ url_for('commissioning.deactivate_member', project_id=project.id, membership_id=member.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">حذف دسترسی</button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted">عضوی تخصیص نیافته است.</td></tr>{% endfor %}</tbody></table></div>
+      </div></section>
+      <section class="card mb-4"><div class="card-header fw-bold">ایجاد Check Sheet</div><div class="card-body">
+        <form method="post" action="{{ url_for('commissioning.create_checksheet', project_id=project.id) }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-md-6"><input class="form-control" name="title" placeholder="عنوان چک‌شیت" required maxlength="200"></div>
+          <div class="col-md-3"><select class="form-select" name="sheet_type">{% for item in sheet_types %}<option value="{{ item.value }}">{{ item.value }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><select class="form-select" name="subsystem_id" required><option value="">زیرسیستم</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
+          <div class="col-12"><button class="btn btn-primary">ایجاد چک‌شیت</button></div>
+        </form>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>شماره</th><th>عنوان</th><th>Rev</th><th>وضعیت</th><th></th></tr></thead><tbody>{% for sheet in sheets %}<tr><td>{{ sheet.sheet_number }}</td><td>{{ sheet.title }}</td><td>{{ sheet.revision }}</td><td>{{ sheet.status.value }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.checksheet_detail', sheet_id=sheet.id) }}">جزئیات</a></td></tr>{% else %}<tr><td colspan="5" class="text-muted">چک‌شیتی ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+      </div></section>
+      <section class="card mb-4"><div class="card-header fw-bold">ثبت Punch List</div><div class="card-body">
+        <form method="post" action="{{ url_for('commissioning.create_punch', project_id=project.id) }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-md-4"><select class="form-select" name="subsystem_id" required><option value="">زیرسیستم</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><select class="form-select" name="category">{% for item in punch_categories %}<option value="{{ item.value }}">Category {{ item.value }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><select class="form-select" name="severity">{% for item in punch_severities %}<option value="{{ item.value }}">{{ item.value }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><input class="form-control" type="date" name="target_closure_date"></div>
+          <div class="col-12"><textarea class="form-control" name="description" placeholder="شرح مغایرت یا نقص" required></textarea></div>
+          <div class="col-12"><button class="btn btn-outline-primary">ثبت Punch</button></div>
+        </form>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>شماره</th><th>دسته</th><th>شرح</th><th>وضعیت</th><th>تغییر وضعیت</th></tr></thead><tbody>{% for punch in punches %}<tr><td>{{ punch.punch_number }}</td><td>{{ punch.category.value }}</td><td>{{ punch.description }}</td><td>{{ punch.status.value }}</td><td><form method="post" action="{{ url_for('commissioning.transition_punch', punch_id=punch.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select class="form-select form-select-sm" name="status"><option value="IN_PROGRESS">در حال انجام</option><option value="CLOSED">بسته‌شده</option><option value="VERIFIED">تأیید</option><option value="WAIVED">معاف</option></select><input class="form-control form-control-sm" name="reason" placeholder="علت معافیت"><button class="btn btn-sm btn-primary">ثبت</button></form></td></tr>{% else %}<tr><td colspan="5" class="text-muted">Punch ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+      </div></section>
+    </div>
+    <div class="col-xl-6">
+      <section class="card mb-4"><div class="card-header fw-bold">Witness / Hold Point</div><div class="card-body">
+        <form method="post" action="{{ url_for('commissioning.create_witness', project_id=project.id) }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-md-5"><select class="form-select" name="check_sheet_id" required><option value="">چک‌شیت</option>{% for sheet in sheets %}<option value="{{ sheet.id }}">{{ sheet.sheet_number }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><select class="form-select" name="type">{% for item in witness_types %}<option value="{{ item.value }}">{{ item.value }}</option>{% endfor %}</select></div>
+          <div class="col-md-4"><input class="form-control" name="notified_party" placeholder="طرف مطلع‌شونده"></div>
+          <div class="col-md-6"><input class="form-control" type="datetime-local" name="scheduled_at" required></div>
+          <div class="col-md-6"><button class="btn btn-outline-primary">برنامه‌ریزی نقطه بازرسی</button></div>
+        </form>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>چک‌شیت</th><th>نوع</th><th>زمان</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody>{% for witness in witnesses %}<tr><td>{{ witness.check_sheet_id }}</td><td>{{ witness.type.value }}</td><td>{{ witness.scheduled_at }}</td><td>{{ witness.status.value }}</td><td><form method="post" action="{{ url_for('commissioning.transition_witness', witness_id=witness.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if witness.status.value in ['PLANNED','NOTIFIED'] %}<input type="hidden" name="status" value="ATTENDED"><input class="form-control form-control-sm" name="result" placeholder="نتیجه" required><button class="btn btn-sm btn-primary">ثبت حضور</button>{% elif witness.status.value == 'ATTENDED' %}<input type="hidden" name="status" value="RELEASED"><button class="btn btn-sm btn-success">آزادسازی</button>{% endif %}</form></td></tr>{% else %}<tr><td colspan="5" class="text-muted">نقطه بازرسی ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+      </div></section>
+      <section class="card mb-4"><div class="card-header fw-bold">Mechanical Completion / Handover</div><div class="card-body">
+        <form method="post" action="{{ url_for('commissioning.create_handover', project_id=project.id) }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-md-5"><input class="form-control" name="package_number" placeholder="شماره بسته تحویل" required></div>
+          <div class="col-md-5"><select class="form-select" name="subsystem_id" required><option value="">زیرسیستم</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><button class="btn btn-primary">ایجاد</button></div>
+        </form>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>بسته</th><th>وضعیت</th><th>گام بعدی</th></tr></thead><tbody>{% for package in packages %}<tr><td>{{ package.package_number }}</td><td>{{ package.status.value }}</td><td><form method="post" action="{{ url_for('commissioning.transition_handover', package_id=package.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if package.status.value == 'DRAFT' %}<input type="hidden" name="status" value="MC_CERTIFIED">{% elif package.status.value == 'MC_CERTIFIED' %}<input type="hidden" name="status" value="RF_CERTIFIED">{% elif package.status.value == 'RF_CERTIFIED' %}<input type="hidden" name="status" value="RFSU">{% elif package.status.value == 'RFSU' %}<input type="hidden" name="status" value="ACCEPTED">{% endif %}{% if package.status.value in ['DRAFT','MC_CERTIFIED'] %}<input class="form-control form-control-sm" name="certificate_number" placeholder="شماره گواهی" required>{% endif %}{% if package.status.value in ['DRAFT','MC_CERTIFIED','RF_CERTIFIED','RFSU'] %}<button class="btn btn-sm btn-outline-primary">اجرای مرحله</button>{% endif %}</form></td></tr>{% else %}<tr><td colspan="3" class="text-muted">بسته تحویلی ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+      </div></section>
+      <section class="card"><div class="card-header fw-bold">گزارش پیشرفت</div><div class="card-body"><p>پیشرفت وزنی فعلی بر اساس چک‌شیت‌های امضاشده: {{ progress }}%</p><form method="post" action="{{ url_for('commissioning.create_progress_snapshot', project_id=project.id) }}" class="d-flex gap-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input class="form-control" type="date" name="snapshot_date"><button class="btn btn-outline-primary">ثبت Snapshot</button></form></div></section>
+    </div>
+  </div>
+</div>
+{% endblock %}
