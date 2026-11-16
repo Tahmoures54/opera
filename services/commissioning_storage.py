@@ -71,6 +71,8 @@ def store_commissioning_upload(file_storage, *, company_name: str, entity_type: 
                 size += len(chunk)
                 if size > limit:
                     abort(413, description="Evidence file exceeds the upload limit")
+                if extension in (".txt", ".csv") and b"\\x00" in chunk:
+                    abort(400, description="Text evidence cannot contain binary data")
                 if len(prefix) < 32:
                     prefix += chunk[:32 - len(prefix)]
                 digest.update(chunk)
