@@ -1,44 +1,34 @@
-# MaterialHub — Enhancement Notes
+# OPERA Changelog
 
-## v1.1 — Product hardening
+All notable OPERA product changes are recorded here. OPERA is an independent commissioning and start-up product. It reuses shared infrastructure from the original MaterialHub codebase, but MaterialHub is not the product identity.
 
-Operational fixes that make the existing MaterialHub modules actually usable end-to-end.
+## [Unreleased] — 2026-11-16
 
-### Added
-- Executive dashboard with live KPI cards for open MRs, pending POs, in-transit deliveries, low-stock items and open tenders.
-- Role-aware workspace landing pages with priority and approval status.
-- Fast-action navigation for requisitions, purchasing, warehouse, delivery, quality and suppliers.
-- JSON API: `GET /api/overview` for dashboards and future mobile integrations.
-- Health endpoint: `GET /health` for deployment monitoring.
-- Security response headers and configurable session security.
-- Production-oriented `.env.example` and a local `.env` with a generated secret.
-- Responsive executive UI designed for desktop and tablet field-office use.
+### Product identity and architecture
+- Established OPERA as a standalone product for EPC, industrial and construction commissioning projects.
+- Retained the inherited Flask application factory, SQLAlchemy/Alembic database, authentication, TOTP, CSRF and tenant-security foundation.
+- Reused the existing company boundary as the OPERA tenant boundary; no duplicate tenant or authentication system was introduced.
+- Added OPERA-specific navigation, Persian landing page, help content and release documentation.
 
-### Competitive direction
-MaterialHub is positioned around a construction/EPC-specific material lifecycle: **Need → MR → Approval → Tender → PO → Delivery → QC → Warehouse → Availability**.
+### Commissioning workflows
+- Added project-scoped membership and OPERA roles, independent of inherited account roles.
+- Added Project → System → Subsystem → Equipment structure.
+- Added check-sheet preparation, issue/rejection, item results, independent QC verification, contractor/client sign-off and immutable revisions.
+- Added Punch List assignment, controlled status transitions, independent verification, waiver history and MC A/B gates.
+- Added Witness, Hold and Review point scheduling, notification, attendance and release.
+- Added MC, RF, RFSU, operations acceptance/rejection and progress snapshots.
+- Added OPERA audit evidence and tenant-scoped authorization checks.
 
-The product direction intentionally combines strengths seen in Procore Materials (supply-chain visibility, field receiving, inventory), Autodesk Forma/Construction Cloud (single source of truth and integrations), and Oracle Procurement (procure-to-pay, sourcing and supplier management), while keeping MaterialHub focused on material operations rather than becoming an overly broad enterprise suite.
+### Production and security
+- Added PostgreSQL production configuration, Docker Compose deployment, Gunicorn, Nginx TLS, Redis-backed rate limiting, health checks and operational scripts.
+- Added PostgreSQL backup and isolated restore procedures and a production launch checklist.
+- Removed the legacy shared-password demo seeder; production startup never seeds demo accounts.
+- Added an OPERA production image that omits Python's optional SQLite module and SQLite runtime package; SQLite remains available for local development and tests.
+- Upgraded vulnerable Pillow and OpenTelemetry dependencies.
+- Added CI gates for Ruff, Mypy, pytest with coverage, Bandit, pip-audit, PostgreSQL migrations and recovery tests, backup/restore, production smoke tests, Docker build and Trivy scanning.
 
-## [Unreleased] — Production launch package (2026-09-20)
-
-### Added
-- `scripts/seed_demo.py` — safe multi-tenant demo data (users, projects, MR, PO, delivery, inventory, tender, bid, contact inquiry). Gated by `SEED_DEMO=1`.
-- `scripts/prod_up.sh` — one-command helper for build / up / migrate / seed / status / logs.
-- `docs/PRODUCTION_LAUNCH.md` — complete production go-live checklist and runbook.
-- Expanded `.env.prod.example` with Redis rate-limit, cookie and optional OTEL settings.
-- README section pointing to production launch docs.
-
-### Notes
-- Demo accounts use password `Demo@MaterialHub2026!` and pre-confirmed TOTP for convenience. Rotate before real users.
-- Seed refuses to run if users already exist unless `--force` is passed.
-
-
-## [Unreleased] - 2026-11-16
-
-### Added
-- Introduced the OPERA commissioning foundation with 16 tenant-scoped SQLAlchemy models, project-scoped memberships, audit/signature/attachment records, and signed-off check-sheet immutability guards.
-- Added the initial OPERA project, system, and subsystem CRUD workspace under `/commissioning/`, reusing MaterialHub authentication, CSRF, database, and design system.
-- Added Alembic revision `20261116_0019` for the OPERA foundation tables without altering existing MaterialHub tables.
-- Added model tests for tenant-local uniqueness, hierarchy metadata, memberships, Punch records, and signed-off item immutability.
-- Added tenant-scoped, atomic CheckSheet and Punch number allocation using MaterialHub’s existing `document_sequence` table.
-- Added an explicitly gated OPERA demo seed script that requires an existing same-company user and creates the agreed 1-system, 2-subsystem, 3-equipment, 5-checksheet, 8-punch dataset.
+### Known release limitations
+- Electronic sign-off is an authenticated, auditable acknowledgement, not a qualified PKI signature.
+- Evidence attachment upload/download screens and production object storage are not included.
+- A real staging acceptance test with separate contractor, QC, client and operations accounts is required before go-live.
+- Production deployment still requires operator-provided domain, TLS certificate, database password, Flask secret, SMTP (if used), monitoring and a verified backup policy.
