@@ -8,7 +8,6 @@ from flask import Flask, render_template, redirect, url_for, flash, request, Res
 from flask_login import login_required, current_user
 from extensions import db, migrate, login_manager, csrf, limiter
 from config.config import config_by_name
-from data.country_codes import COUNTRY_NAMES_BY_CODE
 
 _OTEL_PROVIDER_CONFIGURED = False
 _OTEL_SQLALCHEMY_INSTRUMENTED = False
@@ -81,7 +80,7 @@ def _configure_observability(app):
             trace.set_tracer_provider(provider)
             _OTEL_PROVIDER_CONFIGURED = True
 
-        if not app.extensions.get('materialhub_otel_flask'):
+        if not app.extensions.get('opera_otel_flask'):
             FlaskInstrumentor().instrument_app(app)
             app.extensions['materialhub_otel_flask'] = True
 
@@ -117,7 +116,7 @@ def create_app(config_name=None):
         # Deferred to the first request (after all imports finished) to
         # avoid the import-lock/ThreadPoolExecutor deadlock described on
         # _configure_observability.
-        if not app.extensions.get('materialhub_observability'):
+        if not app.extensions.get('opera_observability'):
             _configure_observability(app)
             app.extensions['materialhub_observability'] = True
 
@@ -136,13 +135,13 @@ def create_app(config_name=None):
         from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, Histogram, generate_latest
         metrics_registry = CollectorRegistry()
         request_counter = Counter(
-            'materialhub_http_requests_total',
+            'opera_http_requests_total',
             'HTTP requests',
             ['method', 'route', 'status'],
             registry=metrics_registry,
         )
         request_duration = Histogram(
-            'materialhub_http_request_duration_seconds',
+            'opera_http_request_duration_seconds',
             'HTTP request duration',
             ['method', 'route'],
             registry=metrics_registry,
@@ -162,7 +161,7 @@ def create_app(config_name=None):
 
     @app.before_request
     def _start_request_observability():
-        request.environ['materialhub.request_started'] = time.perf_counter()
+        request.environ['opera.request_started'] = time.perf_counter()
         from flask import g
         g.request_id = _request_id()
 
@@ -216,54 +215,63 @@ def create_app(config_name=None):
     except AttributeError:
         pass
 
-    from forms.material_forms import MaterialMarketplaceForm, AddMaterialForm
-    from models import SupplierMaterial, User, AccessLevel
+    from models import User
     import models_commissioning  # register OPERA ORM tables for migrations/create_all
-    import models_intelligence  # register vNext intelligence tables
 
     from blueprints.auth import auth_bp
-    from blueprints.supplier import supplier_bp
     from blueprints.help import help_bp
-    from blueprints.material_requisition import material_requisition_bp
-    from blueprints.purchase_order import purchase_order_bp
-    from blueprints.quality_control import quality_control_bp
-    from blueprints.delivery import delivery_bp
-    from blueprints.warehouse import warehouse_bp
-    from blueprints.project_dashboard import project_dashboard_bp
-    from blueprints.report import report_bp
-    from blueprints.reports import reports_bp
-    from blueprints.admin import admin_bp
-    from blueprints.control_center import control_center_bp
     from blueprints.growth import growth_bp
     from blueprints.health import health_bp
-    from blueprints.intelligence import intelligence_bp
-    from blueprints.operations_copilot import operations_copilot_bp
-    from blueprints.material_reconciliation import material_reconciliation_bp
-    from blueprints.material_master import material_master_bp
-    from role_workspace import role_workspace_bp
     from blueprints.commissioning import commissioning_bp
 
+    # OPERA always exposes its own product surface and shared identity services.
+    # Legacy MaterialHub business modules stay available only behind an explicit
+    # opt-in; they are not part of the OPERA production product surface.
     app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(supplier_bp, url_prefix='/supplier')
     app.register_blueprint(help_bp, url_prefix='/help')
-    app.register_blueprint(material_requisition_bp, url_prefix='/material_requisitions')
-    app.register_blueprint(purchase_order_bp, url_prefix='/purchase_order')
-    app.register_blueprint(quality_control_bp, url_prefix='/quality_control')
-    app.register_blueprint(delivery_bp, url_prefix='/delivery')
-    app.register_blueprint(warehouse_bp, url_prefix='/warehouse')
-    app.register_blueprint(project_dashboard_bp, url_prefix='/project_dashboard')
-    app.register_blueprint(report_bp, url_prefix='/report')
-    app.register_blueprint(reports_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(control_center_bp)
-    app.register_blueprint(intelligence_bp)
-    app.register_blueprint(operations_copilot_bp)
-    app.register_blueprint(material_reconciliation_bp)
-    app.register_blueprint(material_master_bp)
-    app.register_blueprint(role_workspace_bp)
-    app.register_blueprint(commissioning_bp)
     app.register_blueprint(growth_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(commissioning_bp)
+
+    if app.config.get('ENABLE_LEGACY_MODULES', False):
+        from data.country_codes import COUNTRY_NAMES_BY_CODE
+        from forms.material_forms import MaterialMarketplaceForm, AddMaterialForm
+        from models import SupplierMaterial, AccessLevel
+        import models_intelligence  # register legacy intelligence ORM tables
+
+        from blueprints.supplier import supplier_bp
+        from blueprints.material_requisition import material_requisition_bp
+        from blueprints.purchase_order import purchase_order_bp
+        from blueprints.quality_control import quality_control_bp
+        from blueprints.delivery import delivery_bp
+        from blueprints.warehouse import warehouse_bp
+        from blueprints.project_dashboard import project_dashboard_bp
+        from blueprints.report import report_bp
+        from blueprints.reports import reports_bp
+        from blueprints.admin import admin_bp
+        from blueprints.control_center import control_center_bp
+        from blueprints.intelligence import intelligence_bp
+        from blueprints.operations_copilot import operations_copilot_bp
+        from blueprints.material_reconciliation import material_reconciliation_bp
+        from blueprints.material_master import material_master_bp
+        from role_workspace import role_workspace_bp
+
+        app.register_blueprint(supplier_bp, url_prefix='/supplier')
+        app.register_blueprint(material_requisition_bp, url_prefix='/material_requisitions')
+        app.register_blueprint(purchase_order_bp, url_prefix='/purchase_order')
+        app.register_blueprint(quality_control_bp, url_prefix='/quality_control')
+        app.register_blueprint(delivery_bp, url_prefix='/delivery')
+        app.register_blueprint(warehouse_bp, url_prefix='/warehouse')
+        app.register_blueprint(project_dashboard_bp, url_prefix='/project_dashboard')
+        app.register_blueprint(report_bp, url_prefix='/report')
+        app.register_blueprint(reports_bp)
+        app.register_blueprint(admin_bp, url_prefix='/admin')
+        app.register_blueprint(control_center_bp)
+        app.register_blueprint(intelligence_bp)
+        app.register_blueprint(operations_copilot_bp)
+        app.register_blueprint(material_reconciliation_bp)
+        app.register_blueprint(material_master_bp)
+        app.register_blueprint(role_workspace_bp)
 
     # Development/test convenience only. Production schema changes are managed by Flask-Migrate.
     if not app.config.get('IS_PRODUCTION'):
@@ -369,98 +377,99 @@ def create_app(config_name=None):
     def login_alias():
         return redirect(url_for('auth.login'))
 
-    @app.route('/inventory')
-    @login_required
-    def inventory():
-        return render_template('warehouse/inventory.html')
+    if app.config.get('ENABLE_LEGACY_MODULES', False):
+        @app.route('/inventory')
+        @login_required
+        def inventory():
+            return render_template('warehouse/inventory.html')
 
-    @app.route('/material_marketplace', methods=['GET', 'POST'])
-    def material_marketplace():
-        form = MaterialMarketplaceForm()
-        query = SupplierMaterial.query
-        if form.validate_on_submit():
-            search_query = form.search.data
-            country_code = form.country.data
-            if search_query:
-                query = query.filter(SupplierMaterial.material_name.ilike(f'%{search_query}%'))
-            if country_code:
-                query = query.filter(SupplierMaterial.country_code == country_code)
-        materials = query.order_by(SupplierMaterial.updated_at.desc()).all()
-        return render_template(
-            'procurement/material_marketplace.html',
-            form=form,
-            materials=materials,
-            COUNTRY_NAMES_BY_CODE=COUNTRY_NAMES_BY_CODE
-        )
-
-    @app.route('/add_material', methods=['GET', 'POST'])
-    @login_required
-    def add_material():
-        if current_user.access_level != AccessLevel.supplier:
-            flash('Only suppliers can add materials.', 'danger')
-            return redirect(url_for('material_marketplace'))
-        form = AddMaterialForm()
-        if form.validate_on_submit():
-            material = SupplierMaterial(
-                user_id=current_user.id,
-                material_name=form.material_name.data,
-                material_type=form.category.data,
-                price=form.unit_price.data,
-                available_qty=form.available_quantity.data,
-                unit=form.unit_of_measure.data,
-                delivery_time_days=7,
-                country_code=current_user.country,
-                company_name=current_user.company_name
+        @app.route('/material_marketplace', methods=['GET', 'POST'])
+        def material_marketplace():
+            form = MaterialMarketplaceForm()
+            query = SupplierMaterial.query
+            if form.validate_on_submit():
+                search_query = form.search.data
+                country_code = form.country.data
+                if search_query:
+                    query = query.filter(SupplierMaterial.material_name.ilike(f'%{search_query}%'))
+                if country_code:
+                    query = query.filter(SupplierMaterial.country_code == country_code)
+            materials = query.order_by(SupplierMaterial.updated_at.desc()).all()
+            return render_template(
+                'procurement/material_marketplace.html',
+                form=form,
+                materials=materials,
+                COUNTRY_NAMES_BY_CODE=COUNTRY_NAMES_BY_CODE
             )
-            db.session.add(material)
-            db.session.commit()
-            flash('Material added successfully!', 'success')
-            return redirect(url_for('material_marketplace'))
-        return render_template('procurement/add_material.html', form=form)
 
-    @app.route('/edit_material/<int:material_id>', methods=['GET', 'POST'])
-    @login_required
-    def edit_material(material_id):
-        if current_user.access_level != AccessLevel.supplier:
-            flash('Only suppliers can edit materials.', 'danger')
-            return redirect(url_for('material_marketplace'))
-        material = SupplierMaterial.query.get_or_404(material_id)
-        if material.user_id != current_user.id:
-            flash('You can only edit your own materials.', 'danger')
-            return redirect(url_for('material_marketplace'))
-        form = AddMaterialForm()
-        if request.method == 'GET':
-            form.material_name.data = material.material_name
-            form.description.data = material.material_name
-            form.category.data = material.material_type
-            form.unit_price.data = material.price
-            form.available_quantity.data = material.available_qty
-            form.unit_of_measure.data = material.unit
-        if form.validate_on_submit():
-            material.material_name = form.material_name.data
-            material.material_type = form.category.data
-            material.price = form.unit_price.data
-            material.available_qty = form.available_quantity.data
-            material.unit = form.unit_of_measure.data
-            material.country_code = current_user.country
-            db.session.commit()
-            flash('Material updated successfully!', 'success')
-            return redirect(url_for('material_marketplace'))
-        return render_template('procurement/edit_material.html', form=form, material=material)
+        @app.route('/add_material', methods=['GET', 'POST'])
+        @login_required
+        def add_material():
+            if current_user.access_level != AccessLevel.supplier:
+                flash('Only suppliers can add materials.', 'danger')
+                return redirect(url_for('material_marketplace'))
+            form = AddMaterialForm()
+            if form.validate_on_submit():
+                material = SupplierMaterial(
+                    user_id=current_user.id,
+                    material_name=form.material_name.data,
+                    material_type=form.category.data,
+                    price=form.unit_price.data,
+                    available_qty=form.available_quantity.data,
+                    unit=form.unit_of_measure.data,
+                    delivery_time_days=7,
+                    country_code=current_user.country,
+                    company_name=current_user.company_name
+                )
+                db.session.add(material)
+                db.session.commit()
+                flash('Material added successfully!', 'success')
+                return redirect(url_for('material_marketplace'))
+            return render_template('procurement/add_material.html', form=form)
 
-    @app.route('/materials')
-    @login_required
-    def materials():
-        query = SupplierMaterial.query
-        if not current_user.is_admin:
-            query = query.filter_by(company_name=current_user.company_name)
-        materials = query.order_by(SupplierMaterial.updated_at.desc()).all()
-        return render_template('procurement/materials.html', materials=materials)
+        @app.route('/edit_material/<int:material_id>', methods=['GET', 'POST'])
+        @login_required
+        def edit_material(material_id):
+            if current_user.access_level != AccessLevel.supplier:
+                flash('Only suppliers can edit materials.', 'danger')
+                return redirect(url_for('material_marketplace'))
+            material = SupplierMaterial.query.get_or_404(material_id)
+            if material.user_id != current_user.id:
+                flash('You can only edit your own materials.', 'danger')
+                return redirect(url_for('material_marketplace'))
+            form = AddMaterialForm()
+            if request.method == 'GET':
+                form.material_name.data = material.material_name
+                form.description.data = material.material_name
+                form.category.data = material.material_type
+                form.unit_price.data = material.price
+                form.available_quantity.data = material.available_qty
+                form.unit_of_measure.data = material.unit
+            if form.validate_on_submit():
+                material.material_name = form.material_name.data
+                material.material_type = form.category.data
+                material.price = form.unit_price.data
+                material.available_qty = form.available_quantity.data
+                material.unit = form.unit_of_measure.data
+                material.country_code = current_user.country
+                db.session.commit()
+                flash('Material updated successfully!', 'success')
+                return redirect(url_for('material_marketplace'))
+            return render_template('procurement/edit_material.html', form=form, material=material)
 
-    @app.route('/tender')
-    @login_required
-    def tender():
-        return render_template('procurement/tender.html')
+        @app.route('/materials')
+        @login_required
+        def materials():
+            query = SupplierMaterial.query
+            if not current_user.is_admin:
+                query = query.filter_by(company_name=current_user.company_name)
+            materials = query.order_by(SupplierMaterial.updated_at.desc()).all()
+            return render_template('procurement/materials.html', materials=materials)
+
+        @app.route('/tender')
+        @login_required
+        def tender():
+            return render_template('procurement/tender.html')
 
     @app.route('/privacy_policy')
     def privacy_policy():
@@ -491,5 +500,5 @@ def create_app(config_name=None):
 if __name__ == '__main__':
     _app = create_app()
     if _app.config.get('IS_PRODUCTION'):
-        raise RuntimeError('Do not run MaterialHub with Flask development server in production. Use Gunicorn.')
+        raise RuntimeError('Do not run OPERA with Flask development server in production. Use Gunicorn.')
     _app.run(host='0.0.0.0', port=5000, debug=_app.config.get('DEBUG', False))  # nosec B104  # Dev-only entry point; production uses Gunicorn (wsgi.py)
