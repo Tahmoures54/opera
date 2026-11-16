@@ -81,9 +81,9 @@ def _configure_observability(app):
             trace.set_tracer_provider(provider)
             _OTEL_PROVIDER_CONFIGURED = True
 
-        if not app.extensions.get('opera_otel_flask'):
+        if not app.extensions.get('materialhub_otel_flask'):
             FlaskInstrumentor().instrument_app(app)
-            app.extensions['opera_otel_flask'] = True
+            app.extensions['materialhub_otel_flask'] = True
 
         if not _OTEL_SQLALCHEMY_INSTRUMENTED:
             with app.app_context():
@@ -117,9 +117,9 @@ def create_app(config_name=None):
         # Deferred to the first request (after all imports finished) to
         # avoid the import-lock/ThreadPoolExecutor deadlock described on
         # _configure_observability.
-        if not app.extensions.get('opera_observability'):
+        if not app.extensions.get('materialhub_observability'):
             _configure_observability(app)
-            app.extensions['opera_observability'] = True
+            app.extensions['materialhub_observability'] = True
 
     @app.before_request
     def _csrf_token_from_json():
@@ -136,13 +136,13 @@ def create_app(config_name=None):
         from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, Histogram, generate_latest
         metrics_registry = CollectorRegistry()
         request_counter = Counter(
-            'opera_http_requests_total',
+            'materialhub_http_requests_total',
             'HTTP requests',
             ['method', 'route', 'status'],
             registry=metrics_registry,
         )
         request_duration = Histogram(
-            'opera_http_request_duration_seconds',
+            'materialhub_http_request_duration_seconds',
             'HTTP request duration',
             ['method', 'route'],
             registry=metrics_registry,
