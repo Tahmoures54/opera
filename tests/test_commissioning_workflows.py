@@ -70,7 +70,8 @@ def opera_setup(app):
 
 def test_operations_dashboard_is_available_to_project_member(client, opera_setup):
     from models import User
-    user = db.session.get(User, opera_setup["manager"])
+    with client.application.app_context():
+        user = db.session.get(User, opera_setup["manager"])
     _login(client, user)
     response = client.get(f"/commissioning/projects/{opera_setup['project']}/operations")
     assert response.status_code == 200
@@ -79,7 +80,8 @@ def test_operations_dashboard_is_available_to_project_member(client, opera_setup
 
 def test_membership_cannot_cross_company_boundary(client, opera_setup):
     from models import User
-    manager = db.session.get(User, opera_setup["manager"])
+    with client.application.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
     _login(client, manager)
     response = client.post(
         f"/commissioning/projects/{opera_setup['project']}/members",
@@ -123,7 +125,8 @@ def test_checksheet_two_party_signoff_and_immutable_revision(client, app, opera_
         sheet = db.session.get(CheckSheet, sheet_id)
         assert sheet.signed_by_contractor_id == opera_setup["manager"]
         assert sheet.status == CheckSheetStatus.IN_PROGRESS
-    client_rep = db.session.get(User, opera_setup["client"])
+    with app.app_context():
+        client_rep = db.session.get(User, opera_setup["client"])
     _login(client, client_rep)
     response = client.post(f"/commissioning/checksheets/{sheet_id}/sign")
     assert response.status_code == 302
@@ -148,7 +151,8 @@ def test_viewer_cannot_transition_punch_status(client, app, opera_setup):
         db.session.add(punch)
         db.session.commit()
         punch_id = punch.id
-    viewer = db.session.get(User, opera_setup["viewer"])
+    with app.app_context():
+        viewer = db.session.get(User, opera_setup["viewer"])
     _login(client, viewer)
     response = client.post(
         f"/commissioning/punch/{punch_id}/transition",
