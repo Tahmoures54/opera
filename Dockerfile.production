@@ -19,10 +19,9 @@ RUN apk upgrade --no-cache \
 # OPERA production uses PostgreSQL only. Remove SQLite's optional Python module
 # and the SQLite runtime package from this minimal Alpine image.
 RUN find /usr/local/lib/python3.12 -type f -name '_sqlite3*.so' -delete \
-    && (apk info -e sqlite-libs >/dev/null 2>&1 && apk del sqlite-libs || true) \
-    && ! python -c "import sqlite3" \
-    && python -c "import psycopg2, sqlalchemy; print('PostgreSQL runtime ready')"
+    && (apk info -e sqlite-libs >/dev/null 2>&1 && apk del sqlite-libs || true)
 COPY --from=builder /opt/venv /opt/venv
+RUN ! python -c "import sqlite3" && python -c "import psycopg2, sqlalchemy; print('PostgreSQL runtime ready')"
 COPY . .
 RUN chmod 0555 /app/docker/entrypoint.sh && chown -R opera:opera /app
 USER opera
