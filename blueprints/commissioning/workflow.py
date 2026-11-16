@@ -335,7 +335,7 @@ def revise_checksheet(sheet_id):
     db.session.add(CheckSheetRevision(
         company_name=previous.company_name, sheet_number=previous.sheet_number,
         revision_number=revision_no, previous_check_sheet_id=previous.id,
-        new_check_sheet_id=new_sheet.id, reason=_required("reason", 2000),
+        new_check_sheet_id=new_sheet.id, revision_reason=_required("reason", 2000),
         created_by_id=current_user.id,
     ))
     add_audit_event(previous.company_name, "CheckSheet", new_sheet.id, "CHECKSHEET_REVISION_CREATED",
@@ -434,7 +434,8 @@ def create_witness(project_id):
         scheduled_at=scheduled, status=WitnessStatus.PLANNED,
     )
     db.session.add(witness)
-    add_audit_event(project.company_name, "WitnessPoint", 0, "WITNESS_SCHEDULED",
+    db.session.flush()
+    add_audit_event(project.company_name, "WitnessPoint", witness.id, "WITNESS_SCHEDULED",
                     after={"check_sheet_id": sheet.id, "scheduled_at": scheduled.isoformat()})
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=project.id))
@@ -490,7 +491,8 @@ def create_handover(project_id):
         status=HandoverStatus.DRAFT,
     )
     db.session.add(package)
-    add_audit_event(project.company_name, "HandoverPackage", 0, "HANDOVER_PACKAGE_CREATED",
+    db.session.flush()
+    add_audit_event(project.company_name, "HandoverPackage", package.id, "HANDOVER_PACKAGE_CREATED",
                     after={"package_number": package_no, "subsystem_id": subsystem.id})
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=project.id))
