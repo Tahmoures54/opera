@@ -308,6 +308,24 @@ def sign_checksheet(sheet_id):
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
 
 
+@commissioning_bp.post("/checksheets/<int:sheet_id>/reject")
+@login_required
+def reject_checksheet(sheet_id):
+    sheet = _sheet(sheet_id)
+    if not has_permission(sheet.project_id, "checksheets.sign"):
+        abort(403)
+    if sheet.status not in (CheckSheetStatus.ISSUED, CheckSheetStatus.IN_PROGRESS):
+        abort(409, description="Only an issued check sheet can be rejected")
+    reason = _required("reason", 2000)
+    old = sheet.status
+    sheet.status = CheckSheetStatus.REJECTED
+    sheet.rejection_reason = reason
+    add_audit_event(sheet.company_name, "CheckSheet", sheet.id, "CHECKSHEET_REJECTED",
+                    before={"status": old.value}, after={"reason": reason})
+    db.session.commit()
+    return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
+
+
 @commissioning_bp.post("/checksheets/<int:sheet_id>/revise")
 @login_required
 def revise_checksheet(sheet_id):
@@ -372,6 +390,36 @@ def create_punch(project_id):
                     after={"punch_number": punch.punch_number, "category": category.value})
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=project.id))
+
+
+@commissioning_bp.post("/punch/<int:punch_id>/assign")
+@login_required
+def assign_punch(punch_id):
+    punch = _punch(punch_id)
+    if not has_permission(punch.project_id, "punch.assign"):
+        abort(403)
+    assignee_value = (request.form.get("assigned_to_id") or "").strip()
+    assignee = None
+    if assignee_value:
+        try:
+            assignee_id = int(assignee_value)
+        except ValueError:
+            abort(400, description="Invalid assignee")
+        active_member = CommissioningMembership.query.filter_by(
+            company_name=punch.company_name, project_id=punch.project_id,
+            user_id=assignee_id, is_active=True,
+        ).first()
+        if not active_member:
+            abort(400, description="Assignee must be an active project member")
+        assignee = User.query.filter_by(id=assignee_id, company_name=punch.company_name).first_or_404()
+    old_assignee = punch.assigned_to_id
+    punch.assigned_to_id = assignee.id if assignee else None
+    punch.target_closure_date = _date("target_closure_date") or punch.target_closure_date
+    add_audit_event(punch.company_name, "PunchItem", punch.id, "PUNCH_ASSIGNED",
+                    before={"assigned_to_id": old_assignee},
+                    after={"assigned_to_id": punch.assigned_to_id})
+    db.session.commit()
+    return redirect(url_for("commissioning.operations", project_id=punch.project_id))
 
 
 @commissioning_bp.post("/punch/<int:punch_id>/transition")
@@ -554,7 +602,7 @@ def transition_handover(package_id):
 @commissioning_bp.post("/projects/<int:project_id>/reports/snapshot")
 @login_required
 def create_progress_snapshot(project_id):
-    _need(project_id, "reports.view", "project.manage")
+    _need(project_id, "project.manage")
     project = get_project(project_id)
     snapshot_date = _date("snapshot_date") or date.today()
     sheets = CheckSheet.query.filter_by(company_name=project.company_name, project_id=project.id).all()
