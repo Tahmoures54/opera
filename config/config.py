@@ -136,6 +136,7 @@ class Config:
 
     # Misc
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))
+    OPERA_UPLOAD_DIR = os.getenv('OPERA_UPLOAD_DIR', os.path.join(INSTANCE_DIR, 'uploads'))
     JSON_SORT_KEYS = False
     PREFERRED_URL_SCHEME = os.getenv(
         'PREFERRED_URL_SCHEME',
