@@ -400,18 +400,17 @@
             <i class="fas fa-rocket"></i> Get started free
           </a>
         {% else %}
-          <a class="mh-footer-cta" href="{{ url_for('role_workspace.my_workspace') }}">
+          <a class="mh-footer-cta" href="{{ url_for('commissioning.dashboard') }}">
             <i class="fas fa-layer-group"></i> Open workspace
           </a>
         {% endif %}
       </div>
 
       <div class="mh-footer-col">
-        <h4>Product</h4>
-        <a href="{{ url_for('product_overview') }}"><i class="fas fa-cube"></i> Overview</a>
-        <a href="{{ url_for('growth.demo') }}"><i class="fas fa-play-circle"></i> Demo</a>
-        <a href="{{ url_for('growth.pricing') }}"><i class="fas fa-tags"></i> Pricing</a>
-        <a href="{{ url_for('material_marketplace') }}"><i class="fas fa-store"></i> Marketplace</a>
+        <h4>OPERA</h4>
+        <a href="{{ url_for('product_overview') }}"><i class="fas fa-industry"></i> Overview</a>
+        <a href="{{ url_for('commissioning.dashboard') }}"><i class="fas fa-project-diagram"></i> Commissioning Projects</a>
+        <a href="{{ url_for('help.getting_started') }}"><i class="fas fa-flag"></i> Getting Started</a>
       </div>
 
       <div class="mh-footer-col">
