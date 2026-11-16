@@ -3,7 +3,6 @@ FROM python:3.12-alpine AS builder
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /build
 # Build psycopg2 against Alpine's musl/libpq; the runtime stage keeps only libpq.
-RUN apk add --no-cache --virtual .build-deps build-base postgresql-dev
 RUN python -m pip install --no-cache-dir --upgrade "pip==26.2.1" "setuptools==84.0.0"
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -13,7 +12,7 @@ FROM python:3.12-alpine AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 RUN apk upgrade --no-cache \
-    && apk add --no-cache postgresql-libs \
+    && true \
     && addgroup -S -g 10001 opera \
     && adduser -S -D -H -u 10001 -G opera opera
 # OPERA production uses PostgreSQL only. Remove SQLite's optional Python module
