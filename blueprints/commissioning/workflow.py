@@ -572,6 +572,7 @@ def create_progress_snapshot(project_id):
             snapshot_date=snapshot_date)
         db.session.add(snapshot)
     snapshot.percent_complete, snapshot.weighted_percent = percent, weighted
+    db.session.flush()
     snapshot.punch_open_count, snapshot.punch_closed_count = len(punches)-completed_punches, completed_punches
     snapshot.checksheet_total, snapshot.checksheet_signed_off = total, signed
     add_audit_event(project.company_name, "ProgressSnapshot", snapshot.id or 0,
