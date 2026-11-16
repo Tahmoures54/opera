@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0E7490">
   <link rel="canonical" href="{{ request.base_url }}">
-  <meta name="description" content="{% block meta_description %}OPERA — integrated material procurement, delivery, warehouse and intelligence platform for construction and EPC projects.{% endblock %}">
+  <meta name="description" content="{% block meta_description %}OPERA — commissioning, pre-commissioning and start-up management for industrial and EPC projects.{% endblock %}">
   <meta property="og:title" content="OPERA{% block og_title %}{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}Control procurement, delivery, quality, warehouse and material traceability in one workspace.{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Manage check sheets, punch lists, witness points, mechanical completion and handover in one auditable workspace.{% endblock %}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="{{ request.base_url }}">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="OPERA{% block twitter_title %}{% endblock %}">
-  <meta name="twitter:description" content="{% block twitter_description %}Material operations for construction and EPC projects.{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}Commissioning and start-up control for industrial and EPC projects.{% endblock %}">
   <title>OPERA{% block title %}{% endblock %}</title>
   <script type="application/ld+json">
     {
@@ -21,7 +21,7 @@
       "name": "OPERA",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web",
-      "description": "Material operations platform for construction and EPC projects, covering procurement, delivery, quality, warehouse and traceability."
+      "description": "Commissioning and start-up management for industrial and EPC projects, covering check sheets, punch lists, witness points, mechanical completion and handover."
     }
   </script>
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -305,7 +305,7 @@
 
     <a class="mh-brand" href="{{ url_for('index') }}">
       <img src="{{ url_for('static', filename='logo.png') }}" alt="" onerror="this.style.display='none'">
-      <div class="mh-brand-mark">M</div>
+      <div class="mh-brand-mark">O</div>
       <div>
         <strong>OPERA</strong>
         <span>Commissioning & Start-up Management</span>
@@ -388,13 +388,13 @@
     <div class="mh-footer-inner">
       <div class="mh-footer-brand">
         <a class="mh-footer-logo" href="{{ url_for('index') }}">
-          <div class="mh-footer-logo-mark">M</div>
+          <div class="mh-footer-logo-mark">O</div>
           <div>
             <strong>OPERA</strong>
-            <span>Material Operations Platform</span>
+            <span>Commissioning & Start-up Platform</span>
           </div>
         </a>
-        <p>Integrated material operations for construction and EPC — procurement, delivery, warehouse, quality and intelligence in one controlled workspace.</p>
+        <p>Integrated commissioning control for industrial and EPC projects — from pre-commissioning and check sheets to punch closure, mechanical completion and operational handover.</p>
         {% if not current_user.is_authenticated %}
           <a class="mh-footer-cta" href="{{ url_for('auth.register') }}">
             <i class="fas fa-rocket"></i> Get started free
@@ -434,7 +434,7 @@
 
     <div class="mh-footer-bottom">
       <span>© {{ current_year|default(2026) }} OPERA. All rights reserved.</span>
-<span class="mh-footer-tagline">Built for industrial material control</span>
+<span class="mh-footer-tagline">Built for industrial commissioning</span>
     </div>
   </footer>
 
