@@ -325,7 +325,7 @@
         <a class="mh-pill primary" href="{{ url_for('commissioning.dashboard') }}">
           <i class="fas fa-industry"></i> OPERA Workspace
         </a>
-        <a class="mh-avatar" title="{{ current_user.full_name }}" href="{{ url_for('role_workspace.my_workspace') }}">
+        <a class="mh-avatar" title="{{ current_user.full_name }}" href="{{ url_for('commissioning.dashboard') }}">
           {{ (current_user.full_name or 'U')[:1]|upper }}
         </a>
       </div>
