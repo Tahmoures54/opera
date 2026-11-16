@@ -33,6 +33,17 @@ jobs:
         run: bash -n scripts/prod_up.sh scripts/backup_postgres.sh scripts/restore_postgres.sh scripts/restore_evidence.sh
       - name: Pytest with core coverage
         run: pytest --cov=app.py --cov=blueprints/health.py --cov=blueprints/growth.py --cov=config/config.py --cov=extensions.py --cov=forms --cov=models.py --cov=models_intelligence.py --cov=errors.py --cov=data/country_codes.py --cov-report=term-missing --cov-fail-under=80
+      - name: Test OPERA commissioning coverage
+        run: >-
+          pytest -q tests/test_commissioning_*.py tests/test_evidence_archive_validation.py
+          --cov=models_commissioning
+          --cov=blueprints/commissioning
+          --cov=services/commissioning_access
+          --cov=services/commissioning_storage
+          --cov=services/commissioning_number_service
+          --cov=scripts/validate_evidence_archive.py
+          --cov-report=term-missing
+          --cov-fail-under=65
       - name: Bandit
         run: bandit -r . -x ./tests,./migrations
       - name: pip-audit
