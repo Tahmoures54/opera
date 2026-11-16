@@ -100,6 +100,7 @@ def operations(project_id):
         "commissioning/operations.html", project=project, sheets=sheets,
         punches=punches, witnesses=witnesses, packages=packages, members=members,
         users=users, subsystems=subsystems, roles=list(MembershipRole),
+        witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
         punch_severities=list(PunchSeverity), witness_types=list(WitnessType),
         progress=percent, signed=signed, total=total, punch_open=punch_open,
@@ -386,11 +387,11 @@ def transition_punch(punch_id):
     }
     if target not in allowed.get(old, set()):
         abort(409, description=f"Transition {old.value} to {target.value} is not allowed")
-    if target == PunchStatus.VERIFIED and not has_permission(punch.project_id, "punch.verify"):
+    if target in (PunchStatus.IN_PROGRESS, PunchStatus.CLOSED) and not (has_permission(punch.project_id, "punch.assign") or has_permission(punch.project_id, "punch.raise")):
+        abort(403)
+    if target in (PunchStatus.VERIFIED, PunchStatus.WAIVED) and not has_permission(punch.project_id, "punch.verify"):
         abort(403)
     if target == PunchStatus.WAIVED:
-        if not has_permission(punch.project_id, "punch.verify"):
-            abort(403)
         punch.waiver_reason = _required("reason", 2000)
         punch.waived_by_id, punch.waived_at = current_user.id, datetime.utcnow()
     if target == PunchStatus.CLOSED:
