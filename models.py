@@ -1277,8 +1277,11 @@ class User(db.Model, UserMixin):
     project = db.relationship('Project', backref=db.backref('users', lazy=True))
 
     def __init__(self, **kwargs):
+        password = kwargs.pop('password', None)
         super().__init__(**kwargs)
         self.validate(kwargs)
+        if password:
+            self.set_password(password)
 
     def validate(self, kwargs):
         if 'company_email' in kwargs:
