@@ -18,7 +18,7 @@ OPERA is built on the proven Flask, SQLAlchemy, Alembic, authentication, TOTP an
 - Punch A/B/C/D, project-member assignment, closure, independent verification and controlled waiver with history.
 - Witness, Hold and Review point scheduling, attendance and release.
 - MC / RF certification, RFSU and operations acceptance gates.
-- Progress snapshots and project audit evidence.
+- Progress snapshots, project audit evidence and private PDF/image/text/CSV attachments for check sheets, Punch items and handover packages.
 - Tenant-scoped database constraints and authorization checks.
 
 ## Quick start
@@ -87,7 +87,7 @@ Membership roles are project-scoped and do not alter the inherited account role.
 - Role checks are enforced server-side; hiding a UI action is not treated as authorization.
 - Check-sheet sign-off is an authenticated electronic acknowledgement, not a qualified cryptographic certificate or legally accredited digital signature.
 - Audit records, signatures, Punch history and check-sheet revision records are append-only through ORM safeguards.
-- Production deployment requires HTTPS, PostgreSQL, a strong secret, backups, monitored migrations and a configured storage policy for evidence attachments.
+- Production deployment requires HTTPS, PostgreSQL, a strong secret, backups, monitored migrations and a persistent private evidence volume. Evidence files must be backed up and restored together with PostgreSQL.
 - Never commit .env, passwords, TOTP secrets or recovery codes.
 
 ## CI and validation
