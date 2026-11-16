@@ -479,7 +479,7 @@ def create_app(config_name=None):
     app.register_error_handler(500, internal_server_error)
     app.register_error_handler(403, forbidden)
 
-    app.logger.info("MaterialHub application created successfully.")
+    app.logger.info("OPERA application created successfully.")
     return app
 
 
