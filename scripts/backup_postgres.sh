@@ -11,7 +11,7 @@ fi
 umask 077
 mkdir -p backups
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-backup="backups/materialhub_${stamp}.dump"
+backup="backups/opera_${stamp}.dump"
 tmp="${backup}.tmp"
 if [[ -e "$backup" || -e "${backup}.sha256" ]]; then
   echo "Backup path already exists; refusing to overwrite: $backup" >&2
