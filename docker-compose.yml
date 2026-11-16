@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   web:
     build: .
@@ -8,10 +6,12 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql://materialhub:materialhub@db:5432/materialhub
-      - FLASK_ENV=development\n      - RATELIMIT_STORAGE_URI=memory://
+      FLASK_ENV: development
+      RATELIMIT_STORAGE_URI: memory://
+      DATABASE_URL: postgresql://${POSTGRES_USER:-opera_dev}:${POSTGRES_PASSWORD:-opera_local_only}@db:5432/${POSTGRES_DB:-opera_dev}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./instance:/app/instance
     restart: unless-stopped
@@ -19,13 +19,18 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: materialhub
-      POSTGRES_PASSWORD: materialhub
-      POSTGRES_DB: materialhub
+      POSTGRES_USER: ${POSTGRES_USER:-opera_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-opera_local_only}
+      POSTGRES_DB: ${POSTGRES_DB:-opera_dev}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-opera_dev} -d ${POSTGRES_DB:-opera_dev}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
 volumes:
