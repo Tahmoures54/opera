@@ -240,3 +240,28 @@ def test_evidence_upload_rejects_mismatched_file_content(client, app, opera_setu
         content_type="multipart/form-data",
     )
     assert response.status_code == 400
+
+
+def test_viewer_cannot_upload_evidence(client, app, opera_setup, tmp_path):
+    from io import BytesIO
+    from models import User
+
+    app.config["OPERA_UPLOAD_DIR"] = str(tmp_path)
+    with app.app_context():
+        viewer = db.session.get(User, opera_setup["viewer"])
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-C-00003", sheet_type=CheckSheetType.COMM_C,
+            title="Permission test", created_by_id=viewer.id,
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        sheet_id = sheet.id
+    _login(client, viewer)
+    response = client.post(
+        f"/commissioning/evidence/CheckSheet/{sheet_id}",
+        data={"file": (BytesIO(b"%PDF-1.7\\nrestricted"), "restricted.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 403
