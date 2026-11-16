@@ -315,8 +315,8 @@
     {% if not current_user.is_authenticated %}
       <nav class="mh-public-nav">
         <a href="{{ url_for('product_overview') }}">Product</a>
-        <a href="{{ url_for('growth.demo') }}">Demo</a>
-        <a href="{{ url_for('growth.pricing') }}">Pricing</a>
+        <a href="{{ url_for('help.getting_started') }}">Guide</a>
+        
         <a href="{{ url_for('auth.login') }}">Sign in</a>
         <a class="mh-pill primary" href="{{ url_for('auth.register') }}">Get started</a>
       </nav>
