@@ -166,7 +166,7 @@ def create_checksheet(project_id):
     _need(project_id, "checksheets.create", "checksheets.manage")
     project = get_project(project_id)
     subsystem_id = int(_required("subsystem_id", 20))
-    subsystem = CommissioningSubsystem.query.join(CommissioningSystem).filter(
+    subsystem = CommissioningSubsystem.query.join(CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id).filter(
         CommissioningSubsystem.id == subsystem_id,
         CommissioningSubsystem.company_name == project.company_name,
         CommissioningSystem.project_id == project.id,
@@ -396,7 +396,7 @@ def revise_checksheet(sheet_id):
 def create_punch(project_id):
     _need(project_id, "punch.raise", "punch.assign")
     project = get_project(project_id)
-    subsystem = CommissioningSubsystem.query.join(CommissioningSystem).filter(
+    subsystem = CommissioningSubsystem.query.join(CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id).filter(
         CommissioningSubsystem.id == int(_required("subsystem_id", 20)),
         CommissioningSubsystem.company_name == project.company_name,
         CommissioningSystem.project_id == project.id,
@@ -556,7 +556,7 @@ def transition_witness(witness_id):
 def create_handover(project_id):
     _need(project_id, "handover.manage", "project.manage")
     project = get_project(project_id)
-    subsystem = CommissioningSubsystem.query.join(CommissioningSystem).filter(
+    subsystem = CommissioningSubsystem.query.join(CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id).filter(
         CommissioningSubsystem.id == int(_required("subsystem_id", 20)),
         CommissioningSubsystem.company_name == project.company_name,
         CommissioningSystem.project_id == project.id,
