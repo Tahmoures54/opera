@@ -25,7 +25,8 @@ This checklist distinguishes implemented workflows from production deployment ev
 - [ ] Configure production secrets and PostgreSQL
 - [ ] Take and verify a production database backup
 - [ ] Apply migration 20261116_0019 in a staging environment
-- [ ] Verify evidence volume persistence, paired database/evidence backup and restore
+- [ ] Verify evidence volume persistence, paired database/evidence backup and restore in staging
+- [ ] Confirm malware-scanning/retention policy and off-host encrypted evidence backup
 - [ ] Run an end-to-end commissioning scenario with separate contractor, QC, client and operations accounts
 - [ ] Verify HTTPS, readiness endpoint, logging and monitoring
 - [ ] Obtain operational acceptance from the project owner
