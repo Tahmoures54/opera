@@ -84,6 +84,7 @@ def operations(project_id):
     punches = PunchItem.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(PunchItem.raised_at.desc()).all()
     witnesses = WitnessPoint.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(WitnessPoint.scheduled_at.desc()).all()
     packages = HandoverPackage.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(HandoverPackage.created_at.desc()).all()
+    snapshots = ProgressSnapshot.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(ProgressSnapshot.snapshot_date.desc()).limit(12).all()
     members = CommissioningMembership.query.filter_by(company_name=project.company_name, project_id=project.id, is_active=True).all()
     users = User.query.filter_by(company_name=project.company_name).order_by(User.full_name).all()
     subsystems = (CommissioningSubsystem.query
@@ -98,7 +99,7 @@ def operations(project_id):
     percent = round((signed / total) * 100, 2) if total else 0.0
     return render_template(
         "commissioning/operations.html", project=project, sheets=sheets,
-        punches=punches, witnesses=witnesses, packages=packages, members=members,
+        punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots, members=members,
         users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}], subsystems=subsystems, roles=list(MembershipRole),
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
