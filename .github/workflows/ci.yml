@@ -27,6 +27,8 @@ jobs:
         run: ruff check . --select E4,E7,E9,F --ignore E401,E402,E701,E702,F401
       - name: Mypy
         run: mypy --config-file mypy.ini app.py extensions.py config blueprints role_workspace.py utils.py
+      - name: Ensure migrations are not coupled to Vercel builds
+        run: python -c "import json; assert 'buildCommand' not in json.load(open('vercel.json', encoding='utf-8'))"
       - name: Validate operational shell scripts
         run: bash -n scripts/prod_up.sh scripts/backup_postgres.sh scripts/restore_postgres.sh scripts/restore_evidence.sh
       - name: Pytest with core coverage
