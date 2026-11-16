@@ -112,6 +112,8 @@ def operations(project_id):
         punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots, members=members,
         users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}], subsystems=subsystems, roles=list(MembershipRole),
         evidence_by_entity=evidence_by_entity,
+        can_upload_punch_evidence=any(has_permission(project.id, p) for p in ("punch.raise", "punch.assign", "punch.verify")),
+        can_upload_handover_evidence=any(has_permission(project.id, p) for p in ("handover.manage", "handover.accept")),
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
         punch_severities=list(PunchSeverity), witness_types=list(WitnessType),
