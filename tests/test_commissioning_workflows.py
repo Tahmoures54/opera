@@ -201,7 +201,7 @@ def test_checksheet_evidence_upload_download_and_tenant_isolation(client, app, o
     assert client.get(f"/commissioning/checksheets/{sheet_id}").status_code == 200
     response = client.post(
         f"/commissioning/evidence/CheckSheet/{sheet_id}",
-        data={"file": (BytesIO(b"%PDF-1.7\\nOPERA test evidence"), "test-evidence.pdf")},
+        data={"file": (BytesIO(b"%PDF-1.7\\nOPERA test evidence"), "گزارش-تست.pdf")},
         content_type="multipart/form-data",
     )
     assert response.status_code == 302
@@ -210,6 +210,7 @@ def test_checksheet_evidence_upload_download_and_tenant_isolation(client, app, o
             company_name="Contractor A", entity_type="CheckSheet", entity_id=sheet_id
         ).one()
         attachment_id = attachment.id
+        assert attachment.filename == "گزارش-تست.pdf"
         assert attachment.file_size > 0
         assert len(attachment.checksum) == 64
         stored_path = tmp_path / attachment.storage_key
