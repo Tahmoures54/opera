@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Contact Support - MaterialHub{% endblock %}
+{% block title %}Contact Support - OPERA{% endblock %}
 {% block content %}
 <div class="support-container">
     <div class="support-card">
         <h2 class="support-title">Need Help? We're Here!</h2>
-        <p class="support-subtitle">Whether you lost access to Microsoft Authenticator or have other issues, follow these steps or reach out to us.</p>
+        <p class="support-subtitle">Whether you need help with your authenticator app, account access or an OPERA workflow, follow these steps or contact the team.</p>
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -18,8 +18,8 @@
         {% endwith %}
 
         <div class="authenticator-guide">
-            <h3 class="guide-title">Set Up Microsoft Authenticator</h3>
-            <p class="guide-text">To secure your account, install Microsoft Authenticator on your device. Follow these steps:</p>
+            <h3 class="guide-title">Set Up an Authenticator App</h3>
+            <p class="guide-text">To secure your account, install a TOTP-compatible authenticator app on your device. Follow these steps:</p>
             <ol class="guide-steps">
                 <li>Download the app using the links below.</li>
                 <li>Open the app and scan the QR code provided during registration.</li>
@@ -40,8 +40,8 @@
             <div class="contact-item">
                 <i class="fas fa-envelope"></i>
                 <div class="contact-details">
-                    <h4>Email Support</h4>
-                    <a href="mailto:materialhub2025@gmail.com" class="contact-link">materialhub2025@gmail.com</a>
+                    <h4>Contact OPERA</h4>
+                    <a href="{{ url_for('growth.contact') }}" class="contact-link">Open the OPERA contact form</a>
                 </div>
             </div>
         </div>
@@ -51,7 +51,7 @@
         <!-- Footer -->
         <footer class="support-footer">
             <div class="footer-content">
-                <p>© 2025 MaterialHub. All Rights Reserved.</p>
+                <p>© 2026 OPERA. All Rights Reserved.</p>
                 <div class="footer-links">
                     <a href="{{ url_for('auth.privacy_policy') }}">Privacy Policy</a>
                     <a href="{{ url_for('auth.terms_of_service') }}">Terms of Service</a>
