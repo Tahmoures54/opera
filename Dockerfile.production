@@ -20,12 +20,12 @@ RUN apk upgrade --no-cache \
 RUN find /usr/local/lib/python3.12 -type f -name '_sqlite3*.so' -delete \
     && apk del .python-rundeps \
     && apk add --no-cache pax-utils \
-    && runDeps="$(scanelf --needed --nobanner --recursive /usr/local \
-        | awk '{ gsub(/,/, "\nso:", $2); print "so:" $2 }' \
+    && find /usr/local -type f -executable -not -name '*tkinter*' \
+        -exec scanelf --needed --nobanner --format '%n#p' '{}' ';' \
+        | tr ',' '\n' \
         | sort -u \
-        | xargs -r apk info --installed \
-        | sort -u)" \
-    && apk add --no-cache --virtual .python-rundeps $runDeps \
+        | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
+        | xargs -rt apk add --no-cache --virtual .python-rundeps \
     && apk del pax-utils \
     && ! apk info -e sqlite-libs \
     && ! python -c "import sqlite3"
