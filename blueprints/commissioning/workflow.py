@@ -1,6 +1,6 @@
 """OPERA operational workflows: membership, check sheets, punch, witness and handover."""
 from datetime import date, datetime
-from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
+from flask import abort, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 
 from extensions import db
