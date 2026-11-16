@@ -213,7 +213,8 @@ def checksheet_detail(sheet_id):
                            attachments=attachments,
                            results=list(ItemResultStatus),
                            can_fill=has_permission(sheet.project_id, "checksheets.fill") or has_permission(sheet.project_id, "checksheets.manage"),
-                           can_verify=has_permission(sheet.project_id, "checksheets.verify") or has_permission(sheet.project_id, "checksheets.manage"))
+                           can_verify=has_permission(sheet.project_id, "checksheets.verify") or has_permission(sheet.project_id, "checksheets.manage"),
+                           can_upload_attachments=any(has_permission(sheet.project_id, p) for p in ("checksheets.manage", "checksheets.create", "checksheets.fill")))
 
 
 @commissioning_bp.post("/checksheets/<int:sheet_id>/items")
