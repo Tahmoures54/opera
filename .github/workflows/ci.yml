@@ -136,6 +136,15 @@ jobs:
     needs: integration
     steps:
       - uses: actions/checkout@v4
+      - name: Validate production Compose configuration
+        run: |
+          mkdir -p secrets
+          printf 'ci-only-password' > secrets/postgres_password
+          printf 'ci-only-cert' > secrets/tls_cert
+          printf 'ci-only-key' > secrets/tls_key
+          cp .env.prod.example .env.prod
+          sed -i 's/^SECRET_KEY=.*/SECRET_KEY=ci-only-opera-secret-key-0123456789abcdef/' .env.prod
+          docker compose --env-file .env.prod -f docker-compose.production.yml config --quiet
       - name: Validate Nginx configuration
         run: |
           mkdir -p "$RUNNER_TEMP/nginx-tls"
