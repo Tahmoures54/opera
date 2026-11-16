@@ -217,7 +217,9 @@ def checksheet_detail(sheet_id):
                            results=list(ItemResultStatus),
                            can_fill=has_permission(sheet.project_id, "checksheets.fill") or has_permission(sheet.project_id, "checksheets.manage"),
                            can_verify=has_permission(sheet.project_id, "checksheets.verify") or has_permission(sheet.project_id, "checksheets.manage"),
-                           can_upload_attachments=any(has_permission(sheet.project_id, p) for p in ("checksheets.manage", "checksheets.create", "checksheets.fill")))
+                           can_upload_attachments=(sheet.status != CheckSheetStatus.SIGNED_OFF and any(
+                               has_permission(sheet.project_id, p)
+                               for p in ("checksheets.manage", "checksheets.create", "checksheets.fill"))))
 
 
 @commissioning_bp.post("/checksheets/<int:sheet_id>/items")
@@ -690,6 +692,8 @@ def upload_evidence(entity_type, entity_id):
     if permissions is None:
         abort(404)
     entity, project_id = _attachment_entity(entity_type, entity_id)
+    if entity_type == "CheckSheet" and entity.status == CheckSheetStatus.SIGNED_OFF:
+        abort(409, description="Signed-off check sheets are immutable; create a new revision to add evidence")
     if not any(has_permission(project_id, permission) for permission in permissions["upload"]):
         abort(403)
     metadata = store_commissioning_upload(
