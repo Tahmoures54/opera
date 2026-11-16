@@ -99,7 +99,7 @@ def operations(project_id):
     return render_template(
         "commissioning/operations.html", project=project, sheets=sheets,
         punches=punches, witnesses=witnesses, packages=packages, members=members,
-        users=users, subsystems=subsystems, roles=list(MembershipRole),
+        users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}], subsystems=subsystems, roles=list(MembershipRole),
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
         punch_severities=list(PunchSeverity), witness_types=list(WitnessType),
