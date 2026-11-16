@@ -308,13 +308,13 @@ def create_app(config_name=None):
         if request.endpoint in allowed_endpoints:
             return None
 
-        flash('Your 45-day free trial has ended. Choose a plan to continue using MaterialHub.', 'warning')
+        flash('Your 45-day free trial has ended. Choose a plan to continue using OPERA.', 'warning')
         return redirect(url_for('growth.pricing'))
 
     @app.route('/')
     def index():
         if current_user.is_authenticated:
-            return redirect(url_for('role_workspace.my_workspace'))
+            return redirect(url_for('commissioning.dashboard'))
         return render_template('marketing/landing.html')
 
     @app.get('/robots.txt')
