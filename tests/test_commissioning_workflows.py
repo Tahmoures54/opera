@@ -276,3 +276,30 @@ def test_viewer_cannot_upload_evidence(client, app, opera_setup, tmp_path):
         content_type="multipart/form-data",
     )
     assert response.status_code == 403
+
+
+def test_signed_off_checksheet_rejects_new_evidence(client, app, opera_setup, tmp_path):
+    from io import BytesIO
+    from models import User
+
+    app.config["OPERA_UPLOAD_DIR"] = str(tmp_path)
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-C-00004", sheet_type=CheckSheetType.COMM_C,
+            title="Signed-off evidence immutability", created_by_id=manager.id,
+            status=CheckSheetStatus.SIGNED_OFF,
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        sheet_id = sheet.id
+        manager_id = manager.id
+    _login_id(client, manager_id)
+    response = client.post(
+        f"/commissioning/evidence/CheckSheet/{sheet_id}",
+        data={"file": (BytesIO(b"%PDF-1.7\\nlate evidence"), "late.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 409
