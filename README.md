@@ -44,6 +44,8 @@ python app.py
 
 Open http://127.0.0.1:5000 and sign in using an existing OPERA-enabled account. The account's company boundary is reused as the OPERA tenant boundary.
 
+The OPERA product surface is the default: legacy MaterialHub procurement, warehouse, and workspace routes are disabled. Set `ENABLE_LEGACY_MODULES=true` only when intentionally running the combined legacy application for compatibility/testing. Shared users, authentication, TOTP, sessions, and document numbering remain available to OPERA.
+
 ## Database and upgrade
 
 Always back up the database before upgrading. Apply schema changes with:
