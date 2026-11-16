@@ -8,7 +8,7 @@
       {% for punch in punches %}
       <div class="border rounded p-2 mb-2">
         <div class="fw-semibold">{{ punch.punch_number }} — {{ punch.description|truncate(80) }}</div>
-        {% if can_upload_punch_evidence %}<form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='PunchItem', entity_id=punch.id) }}" class="d-flex gap-2 mt-2">
+        {% if can_upload_punch_evidence and punch.status.value not in ['VERIFIED','WAIVED'] %}<form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='PunchItem', entity_id=punch.id) }}" class="d-flex gap-2 mt-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input class="form-control form-control-sm" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv" required>
           <button class="btn btn-sm btn-outline-primary">بارگذاری</button>
@@ -24,7 +24,7 @@
       {% for package in packages %}
       <div class="border rounded p-2 mb-2">
         <div class="fw-semibold">{{ package.package_number }}</div>
-        {% if can_upload_handover_evidence %}<form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='HandoverPackage', entity_id=package.id) }}" class="d-flex gap-2 mt-2">
+        {% if can_upload_handover_evidence and package.status.value != 'ACCEPTED' %}<form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='HandoverPackage', entity_id=package.id) }}" class="d-flex gap-2 mt-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input class="form-control form-control-sm" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv" required>
           <button class="btn btn-sm btn-outline-primary">بارگذاری</button>
