@@ -1,4 +1,4 @@
-name: MaterialHub CI
+name: OPERA CI
 
 on:
   push:
@@ -149,7 +149,7 @@ jobs:
             -v "$RUNNER_TEMP/nginx-tls/tls_key:/run/secrets/tls_key:ro" \
             nginx:1.27-alpine nginx -t
       - name: Build production image
-        run: docker build -f Dockerfile.production -t materialhub:ci .
+        run: docker build -f Dockerfile.production -t opera:ci .
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
