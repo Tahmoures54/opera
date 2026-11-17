@@ -14,3 +14,15 @@ html,body{max-width:100%;overflow-x:hidden}
 .table-responsive{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 @media(max-width:950px){.mh-public-nav{display:flex!important;gap:3px;margin-left:auto}.mh-public-nav a{font-size:.78rem;padding:7px 8px}.mh-public-nav a:first-child,.mh-public-nav a:nth-child(2){display:none}.mh-topbar{gap:8px}.mh-brand{min-width:0}.mh-brand strong{font-size:1rem}}
 @media(max-width:480px){.mh-public-nav a{font-size:.75rem;padding:6px 7px}.mh-public-nav .mh-pill{min-height:34px}.mh-brand-mark{width:32px;height:32px}.mh-brand img{width:32px;height:32px}.mh-topbar{padding-inline:10px}}
+
+/* Respect the existing theme preference without losing contrast */
+[data-theme="dark"] .card-header{background:#172638!important;color:#E2E8F0;border-bottom-color:#334155}
+[data-theme="dark"] .card-body,[data-theme="dark"] .card-footer{background:#111D2B;color:#E2E8F0;border-color:#334155}
+[data-theme="dark"] .table{color:#E2E8F0;--bs-table-color:#E2E8F0;--bs-table-hover-color:#F8FAFC;--bs-table-hover-bg:#1B2B3B}
+[data-theme="dark"] .table thead th{background:#1B2B3B;color:#B6C5D0;border-color:#334155}
+[data-theme="dark"] .form-control,[data-theme="dark"] .form-select,[data-theme="dark"] .input-group input{background:#0F1B29;color:#E2E8F0;border-color:#405365}
+[data-theme="dark"] .form-control::placeholder{color:#8FA2B1}
+[data-theme="dark"] .auth-box,[data-theme="dark"] .opera-feature{background:#111D2B;color:#E2E8F0;border-color:#334155}
+[data-theme="dark"] .auth-title,[data-theme="dark"] .opera-feature h3{color:#F1F5F9}
+[data-theme="dark"] .security-notice,[data-theme="dark"] .opera-cta{background:#172638;color:#E2E8F0;border-color:#334155}
+[data-theme="dark"] .opera-hero p,[data-theme="dark"] .opera-section-intro,[data-theme="dark"] .opera-cta p{color:#A8BAC7}
