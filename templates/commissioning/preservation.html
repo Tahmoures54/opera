@@ -72,6 +72,7 @@
                   <label class="form-label small">Inspection date</label><input class="form-control form-control-sm mb-2" type="date" name="performed_at" value="{{ today.isoformat() }}" required>
                   <label class="form-label small">Result</label><select class="form-select form-select-sm mb-2" name="result" required><option value="COMPLIANT">Compliant</option><option value="NON_COMPLIANT">Non-compliant</option><option value="NOT_APPLICABLE">Not applicable</option></select>
                   <label class="form-label small">Findings</label><textarea class="form-control form-control-sm mb-2" name="findings" rows="2"></textarea>
+                  <label class="form-label small">Environmental conditions (where applicable)</label><textarea class="form-control form-control-sm mb-2" name="environmental_conditions" rows="2"></textarea>
                   <label class="form-label small">Corrective action (required for non-compliant)</label><textarea class="form-control form-control-sm mb-2" name="corrective_action" rows="2"></textarea>
                   <button class="btn btn-sm btn-primary w-100">Save inspection</button>
                 </form>
@@ -90,12 +91,13 @@
           <tr><td colspan="8" class="bg-body-tertiary">
             <div class="small fw-semibold mb-2">Inspection history</div>
             <div class="table-responsive"><table class="table table-sm mb-0">
-              <thead><tr><th>Date</th><th>Result</th><th>Findings</th><th>Corrective action</th><th>Procedure snapshot</th><th>Evidence</th></tr></thead>
+              <thead><tr><th>Date</th><th>Result</th><th>Findings</th><th>Environment</th><th>Corrective action</th><th>Procedure snapshot</th><th>Evidence</th></tr></thead>
               <tbody>{% for inspection in plan.inspections %}
                 <tr>
                   <td>{{ inspection.performed_at.strftime('%Y-%m-%d') }}</td>
                   <td>{{ inspection.result|replace('_',' ') }}</td>
                   <td>{{ inspection.findings or '—' }}</td>
+                  <td>{{ inspection.environmental_conditions or '—' }}</td>
                   <td>{{ inspection.corrective_action or '—' }}</td>
                   <td>{{ inspection.procedure_reference_snapshot }} Rev {{ inspection.procedure_revision_snapshot }} · {{ inspection.interval_days_snapshot }} days</td>
                   <td>
