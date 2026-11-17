@@ -48,13 +48,13 @@ def normalize_readiness_policy(raw):
             if gate not in supplied_punch:
                 continue
             values = supplied_punch[gate]
-            if not isinstance(values, list) or any(value not in punch_values for value in values):
+            if not isinstance(values, list) or any(not isinstance(value, str) or value not in punch_values for value in values):
                 errors.append(f"Invalid Punch categories for {gate}")
             else:
                 policy["punch_blocking_categories"][gate] = sorted(set(values))
 
     supplied_holds = raw.get("hold_point_blocking_gates", policy["hold_point_blocking_gates"])
-    if not isinstance(supplied_holds, list) or any(value not in GATES for value in supplied_holds):
+    if not isinstance(supplied_holds, list) or any(not isinstance(value, str) or value not in GATES for value in supplied_holds):
         errors.append("Invalid Hold-point blocking gates")
     else:
         policy["hold_point_blocking_gates"] = sorted(set(supplied_holds))
@@ -67,7 +67,7 @@ def normalize_readiness_policy(raw):
             if gate not in supplied_sheets:
                 continue
             values = supplied_sheets[gate]
-            if not isinstance(values, list) or any(value not in sheet_values for value in values):
+            if not isinstance(values, list) or any(not isinstance(value, str) or value not in sheet_values for value in values):
                 errors.append(f"Invalid required Check Sheet types for {gate}")
             else:
                 policy["required_check_sheet_types"][gate] = sorted(set(values))
