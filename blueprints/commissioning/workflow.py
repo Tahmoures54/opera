@@ -729,6 +729,8 @@ def update_checksheet_item(sheet_id, item_id):
             "measured_value": str(item.measured_value) if item.measured_value is not None else None,
             "measurement_type": item.measurement_type,
             "unit": item.unit,
+            "minimum_value": str(item.minimum_value) if item.minimum_value is not None else None,
+            "maximum_value": str(item.maximum_value) if item.maximum_value is not None else None,
             "remarks": item.remarks,
         },
     )
