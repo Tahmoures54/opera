@@ -37,4 +37,6 @@ def test_opera_membership_does_not_change_legacy_user_role(app):
         assert project_role(project.id) is MembershipRole.COMMISSIONING_MANAGER
         assert has_permission(project.id, "project.manage")
         assert has_permission(project.id, "punch.verify")
+        assert has_permission(project.id, "tasks.view")
+        assert has_permission(project.id, "tasks.create")
         assert user.access_level is AccessLevel.project_manager
