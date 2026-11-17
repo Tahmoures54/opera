@@ -589,6 +589,12 @@ class ProgressSnapshot(db.Model):
     punch_closed_count = db.Column(db.Integer, nullable=False, default=0)
     checksheet_total = db.Column(db.Integer, nullable=False, default=0)
     checksheet_signed_off = db.Column(db.Integer, nullable=False, default=0)
+    task_total = db.Column(db.Integer, nullable=False, default=0)
+    task_completed = db.Column(db.Integer, nullable=False, default=0)
+    task_percent_complete = db.Column(db.Float, nullable=False, default=0.0)
+    task_weighted_percent = db.Column(db.Float, nullable=False, default=0.0)
+    task_estimated_hours = db.Column(db.Float, nullable=False, default=0.0)
+    task_completed_hours = db.Column(db.Float, nullable=False, default=0.0)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
