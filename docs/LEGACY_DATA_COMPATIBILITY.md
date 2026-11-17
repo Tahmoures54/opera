@@ -13,9 +13,10 @@ from `models_commissioning.py`.
 
 ## Retired MaterialHub tables
 
-The guarded migration `20261117_0019` removes the unused procurement, material,
-supplier, purchase-order, delivery, receiving, quality, warehouse, approval,
-tender/bid, report-sharing, material-request and old generic project tables.
+The guarded migration `20261117_0019` removes the unused procurement and material-control
+schema, including RFQs, tenders/bids, supplier scoring, invoices, receipts, three-way matching,
+material documents/traces/price history, purchase orders, deliveries, receiving, quality,
+warehouse, approvals, report-sharing, material requests, schedule-risk and the old generic project table.
 It also removes the obsolete `user.project_id` and `user.store_name` columns.
 
 The migration first checks every legacy table for rows. If any legacy table contains
