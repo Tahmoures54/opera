@@ -43,7 +43,7 @@ def home():
             return redirect(url_for('commissioning.dashboard'))
         else:
             return redirect(url_for('commissioning.dashboard'))
-    return render_template('dashboard/home.html', current_year=datetime.now().year)
+    return redirect(url_for('index'))
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 @limiter.limit('5 per hour')
