@@ -47,6 +47,16 @@ def _required(name, limit=5000):
     return value
 
 
+
+def _positive_int(name):
+    try:
+        value = int(_required(name, 20))
+    except ValueError:
+        abort(400, description=f"Invalid {name}")
+    if value < 1:
+        abort(400, description=f"Invalid {name}")
+    return value
+
 def _date(name):
     value = (request.form.get(name) or "").strip()
     if not value:
@@ -181,7 +191,7 @@ def deactivate_member(project_id, membership_id):
 def create_checksheet(project_id):
     _need(project_id, "checksheets.create", "checksheets.manage")
     project = get_project(project_id)
-    subsystem_id = int(_required("subsystem_id", 20))
+    subsystem_id = _positive_int("subsystem_id")
     subsystem = CommissioningSubsystem.query.join(CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id).filter(
         CommissioningSubsystem.id == subsystem_id,
         CommissioningSubsystem.company_name == project.company_name,
@@ -203,7 +213,6 @@ def create_checksheet(project_id):
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
 
-
 @commissioning_bp.get("/checksheets/<int:sheet_id>")
 @login_required
 def checksheet_detail(sheet_id):
@@ -214,15 +223,20 @@ def checksheet_detail(sheet_id):
     attachments = CommissioningAttachment.query.filter_by(
         company_name=sheet.company_name, entity_type="CheckSheet", entity_id=sheet.id
     ).order_by(CommissioningAttachment.uploaded_at.desc()).all()
+    revision_history = CheckSheetRevision.query.filter_by(
+        company_name=sheet.company_name, sheet_number=sheet.sheet_number
+    ).order_by(CheckSheetRevision.revision_number.asc()).all()
     return render_template("commissioning/checksheet_detail.html", sheet=sheet, items=items,
-                           attachments=attachments,
+                           attachments=attachments, revision_history=revision_history,
                            results=list(ItemResultStatus),
+                           can_manage=has_permission(sheet.project_id, "checksheets.create") or has_permission(sheet.project_id, "checksheets.manage"),
                            can_fill=has_permission(sheet.project_id, "checksheets.fill") or has_permission(sheet.project_id, "checksheets.manage"),
                            can_verify=has_permission(sheet.project_id, "checksheets.verify") or has_permission(sheet.project_id, "checksheets.manage"),
+                           can_sign=has_permission(sheet.project_id, "checksheets.sign") or has_permission(sheet.project_id, "checksheets.manage"),
+                           can_reject=has_permission(sheet.project_id, "checksheets.sign"),
                            can_upload_attachments=(sheet.status != CheckSheetStatus.SIGNED_OFF and any(
                                has_permission(sheet.project_id, p)
                                for p in ("checksheets.manage", "checksheets.create", "checksheets.fill", "checksheets.verify"))))
-
 
 @commissioning_bp.post("/checksheets/<int:sheet_id>/items")
 @login_required
@@ -257,7 +271,11 @@ def update_checksheet_item(sheet_id, item_id):
     item = CheckSheetItem.query.filter_by(
         id=item_id, company_name=sheet.company_name, check_sheet_id=sheet.id
     ).first_or_404()
-    old = item.result_status.value
+    old = {
+        "result": item.result_status.value,
+        "actual_result": item.actual_result,
+        "remarks": item.remarks,
+    }
     item.actual_result = (request.form.get("actual_result") or "").strip() or None
     item.result_status = _enum(ItemResultStatus, _required("result_status", 20), "result")
     if item.result_status in (ItemResultStatus.OK, ItemResultStatus.NOK) and not item.actual_result:
@@ -266,12 +284,21 @@ def update_checksheet_item(sheet_id, item_id):
     item.verified_by_id, item.verified_at = None, None
     item.remarks = (request.form.get("remarks") or "").strip() or None
     item.operator_id = current_user.id
-    sheet.status = CheckSheetStatus.IN_PROGRESS
-    add_audit_event(sheet.company_name, "CheckSheetItem", item.id, "CHECKSHEET_ITEM_RESULT",
-                    before={"result": old}, after={"result": item.result_status.value})
+    # Keep a rejected sheet in REJECTED while it is being corrected so the
+    # explicit reissue action remains available after the rework is saved.
+    if sheet.status != CheckSheetStatus.REJECTED:
+        sheet.status = CheckSheetStatus.IN_PROGRESS
+    add_audit_event(
+        sheet.company_name, "CheckSheetItem", item.id, "CHECKSHEET_ITEM_RESULT",
+        before=old,
+        after={
+            "result": item.result_status.value,
+            "actual_result": item.actual_result,
+            "remarks": item.remarks,
+        },
+    )
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
-
 
 @commissioning_bp.post("/checksheets/<int:sheet_id>/items/<int:item_id>/verify")
 @login_required
@@ -305,11 +332,22 @@ def issue_checksheet(sheet_id):
         abort(409)
     if not CheckSheetItem.query.filter_by(company_name=sheet.company_name, check_sheet_id=sheet.id).count():
         abort(409, description="A check sheet needs at least one item before issue")
+    old_status = sheet.status
+    if old_status == CheckSheetStatus.REJECTED:
+        # Reissue starts a fresh approval cycle; prior signatures remain in the
+        # append-only signature ledger but cannot satisfy this revision's sign-off.
+        sheet.signed_by_client_id = None
+        sheet.signed_by_contractor_id = None
+        sheet.signed_at = None
+        sheet.rejection_reason = None
     sheet.status, sheet.issued_by_id, sheet.issued_at = CheckSheetStatus.ISSUED, current_user.id, datetime.utcnow()
-    add_audit_event(sheet.company_name, "CheckSheet", sheet.id, "CHECKSHEET_ISSUED")
+    add_audit_event(
+        sheet.company_name, "CheckSheet", sheet.id, "CHECKSHEET_ISSUED",
+        before={"status": old_status.value},
+        after={"status": sheet.status.value, "issued_by_id": current_user.id},
+    )
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
-
 
 @commissioning_bp.post("/checksheets/<int:sheet_id>/sign")
 @login_required
@@ -324,6 +362,8 @@ def sign_checksheet(sheet_id):
     items = CheckSheetItem.query.filter_by(company_name=sheet.company_name, check_sheet_id=sheet.id).all()
     if not items or any(i.result_status in (ItemResultStatus.PENDING, ItemResultStatus.NOK) for i in items):
         abort(409, description="All check sheet items must be completed without NOK results")
+    if any(not item.verified_by_id or item.verified_by_id == item.operator_id for item in items):
+        abort(409, description="Every check sheet item requires independent QC verification before sign-off")
     if any(i.witness_required for i in items):
         for required_item in (item for item in items if item.witness_required):
             points = WitnessPoint.query.filter_by(
@@ -333,12 +373,14 @@ def sign_checksheet(sheet_id):
             if not points or any(point.status != WitnessStatus.RELEASED for point in points):
                 abort(409, description="Every required witness point must be released before sign-off")
     if has_permission(sheet.project_id, "checksheets.sign"):
-        if sheet.signed_by_client_id and sheet.signed_by_client_id != current_user.id:
+        if sheet.signed_by_client_id is not None:
             abort(409, description="Client signature already recorded")
+        if sheet.signed_by_contractor_id == current_user.id:
+            abort(409, description="Two-party sign-off requires different users")
         sheet.signed_by_client_id = current_user.id
         sig_type = "CLIENT"
     else:
-        if sheet.signed_by_contractor_id and sheet.signed_by_contractor_id != current_user.id:
+        if sheet.signed_by_contractor_id is not None:
             abort(409, description="Contractor signature already recorded")
         if sheet.signed_by_client_id == current_user.id:
             abort(409, description="Two-party sign-off requires different users")
@@ -358,7 +400,6 @@ def sign_checksheet(sheet_id):
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
 
-
 @commissioning_bp.post("/checksheets/<int:sheet_id>/reject")
 @login_required
 def reject_checksheet(sheet_id):
@@ -369,22 +410,42 @@ def reject_checksheet(sheet_id):
         abort(409, description="Only an issued check sheet can be rejected")
     reason = _required("reason", 2000)
     old = sheet.status
+    before = {
+        "status": old.value,
+        "signed_by_client_id": sheet.signed_by_client_id,
+        "signed_by_contractor_id": sheet.signed_by_contractor_id,
+    }
     sheet.status = CheckSheetStatus.REJECTED
     sheet.rejection_reason = reason
-    add_audit_event(sheet.company_name, "CheckSheet", sheet.id, "CHECKSHEET_REJECTED",
-                    before={"status": old.value}, after={"reason": reason})
+    # A rejection invalidates any signatures already collected in this approval
+    # cycle. The immutable signature ledger retains the historical evidence.
+    sheet.signed_by_client_id = None
+    sheet.signed_by_contractor_id = None
+    sheet.signed_at = None
+    add_audit_event(
+        sheet.company_name, "CheckSheet", sheet.id, "CHECKSHEET_REJECTED",
+        before=before, after={"status": sheet.status.value, "reason": reason},
+    )
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
-
 
 @commissioning_bp.post("/checksheets/<int:sheet_id>/revise")
 @login_required
 def revise_checksheet(sheet_id):
     previous = _sheet(sheet_id)
+    previous = CheckSheet.query.filter_by(
+        id=previous.id, company_name=current_user.company_name
+    ).with_for_update().first_or_404()
     if not (has_permission(previous.project_id, "checksheets.manage") or has_permission(previous.project_id, "checksheets.create")):
         abort(403)
     if previous.status != CheckSheetStatus.SIGNED_OFF:
         abort(409, description="Only a signed-off sheet can be revised")
+    latest = CheckSheet.query.filter_by(
+        company_name=previous.company_name, sheet_number=previous.sheet_number
+    ).order_by(CheckSheet.revision.desc()).first()
+    if latest is None or latest.id != previous.id:
+        abort(409, description="Create the next revision from the latest check sheet revision")
+    revision_reason = _required("reason", 2000)
     revision_no = previous.revision + 1
     new_sheet = CheckSheet(
         company_name=previous.company_name, project_id=previous.project_id,
@@ -405,14 +466,16 @@ def revise_checksheet(sheet_id):
     db.session.add(CheckSheetRevision(
         company_name=previous.company_name, sheet_number=previous.sheet_number,
         revision_number=revision_no, previous_check_sheet_id=previous.id,
-        new_check_sheet_id=new_sheet.id, revision_reason=_required("reason", 2000),
+        new_check_sheet_id=new_sheet.id, revision_reason=revision_reason,
         created_by_id=current_user.id,
     ))
-    add_audit_event(previous.company_name, "CheckSheet", new_sheet.id, "CHECKSHEET_REVISION_CREATED",
-                    before={"previous_id": previous.id}, after={"revision": revision_no})
+    add_audit_event(
+        previous.company_name, "CheckSheet", new_sheet.id, "CHECKSHEET_REVISION_CREATED",
+        before={"previous_id": previous.id},
+        after={"revision": revision_no, "reason": revision_reason},
+    )
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=new_sheet.id))
-
 
 @commissioning_bp.post("/projects/<int:project_id>/punch")
 @login_required

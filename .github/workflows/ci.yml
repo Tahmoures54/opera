@@ -86,8 +86,8 @@ jobs:
         run: pip install -r requirements-dev.txt
       - name: Run production migrations on empty PostgreSQL
         run: VERCEL_ENV=production python scripts/vercel_migrate.py
-      - name: Test concurrent TOTP recovery replay on PostgreSQL
-        run: pytest -q tests/test_account_recovery_postgres.py
+      - name: Test concurrent recovery replay and CheckSheet numbering on PostgreSQL
+        run: pytest -q tests/test_account_recovery_postgres.py tests/test_commissioning_number_service.py
       - name: Verify forward upgrade from previous schema revision
         env:
           DATABASE_URL: postgresql://opera:opera@127.0.0.1:5432/opera_upgrade

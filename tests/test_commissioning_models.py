@@ -188,3 +188,122 @@ def test_commissioning_task_rejects_negative_man_hours(app):
     with pytest.raises(IntegrityError):
         db.session.commit()
     db.session.rollback()
+
+
+def test_signed_off_check_sheet_cannot_be_reopened_to_edit_items(app):
+    project = _project("Contractor A", "IMMUTABLE-01")
+    system = CommissioningSystem(
+        company_name=project.company_name, project_id=project.id,
+        system_code="SYS", name="System",
+    )
+    db.session.add(system)
+    db.session.flush()
+    subsystem = CommissioningSubsystem(
+        company_name=project.company_name, system_id=system.id,
+        subsystem_code="SUB", name="Subsystem",
+    )
+    db.session.add(subsystem)
+    db.session.flush()
+    sheet = CheckSheet(
+        company_name=project.company_name, project_id=project.id,
+        system_id=system.id, subsystem_id=subsystem.id,
+        sheet_number="IMMUTABLE-01-C-00001", sheet_type=CheckSheetType.COMM_C,
+        title="Immutable signed sheet", status=CheckSheetStatus.DRAFT,
+    )
+    db.session.add(sheet)
+    db.session.flush()
+    item = CheckSheetItem(
+        company_name=project.company_name, check_sheet_id=sheet.id,
+        sequence=1, description="Original inspection item",
+        result_status=ItemResultStatus.OK,
+    )
+    db.session.add(item)
+    db.session.commit()
+
+    sheet.status = CheckSheetStatus.SIGNED_OFF
+    db.session.commit()
+
+    sheet.status = CheckSheetStatus.DRAFT
+    item.description = "Attempted post-sign-off edit"
+    with pytest.raises(ValueError, match="immutable"):
+        db.session.commit()
+    db.session.rollback()
+
+    assert db.session.get(CheckSheet, sheet.id).status is CheckSheetStatus.SIGNED_OFF
+    assert db.session.get(CheckSheetItem, item.id).description == "Original inspection item"
+
+
+def _signed_sheet_with_item():
+    project = _project("Contractor A", "IMMUTABLE-EXTRA")
+    system = CommissioningSystem(
+        company_name=project.company_name, project_id=project.id,
+        system_code="SYS", name="System",
+    )
+    db.session.add(system)
+    db.session.flush()
+    subsystem = CommissioningSubsystem(
+        company_name=project.company_name, system_id=system.id,
+        subsystem_code="SUB", name="Subsystem",
+    )
+    db.session.add(subsystem)
+    db.session.flush()
+    sheet = CheckSheet(
+        company_name=project.company_name, project_id=project.id,
+        system_id=system.id, subsystem_id=subsystem.id,
+        sheet_number="IMMUTABLE-EXTRA-COMC-00001",
+        sheet_type=CheckSheetType.COMM_C, title="Signed sheet",
+        status=CheckSheetStatus.DRAFT,
+    )
+    db.session.add(sheet)
+    db.session.flush()
+    item = CheckSheetItem(
+        company_name=project.company_name, check_sheet_id=sheet.id,
+        sequence=1, description="Original inspection item",
+    )
+    db.session.add(item)
+    db.session.commit()
+    sheet.status = CheckSheetStatus.SIGNED_OFF
+    db.session.commit()
+    return sheet.id, item.id, project.id, system.id, subsystem.id
+
+
+def test_signed_off_sheet_content_and_item_deletion_are_immutable(app):
+    from models_commissioning import CheckSheetRevision
+
+    sheet_id, item_id, _, _, _ = _signed_sheet_with_item()
+    sheet = db.session.get(CheckSheet, sheet_id)
+    sheet.title = "Attempted post-sign-off edit"
+    with pytest.raises(ValueError, match="immutable"):
+        db.session.commit()
+    db.session.rollback()
+
+    item = db.session.get(CheckSheetItem, item_id)
+    db.session.delete(item)
+    with pytest.raises(ValueError, match="immutable"):
+        db.session.commit()
+    db.session.rollback()
+
+    assert db.session.get(CheckSheet, sheet_id).status is CheckSheetStatus.SIGNED_OFF
+    assert db.session.get(CheckSheetItem, item_id) is not None
+    assert CheckSheetRevision.query.count() == 0
+
+
+def test_signed_off_item_cannot_be_moved_to_another_check_sheet(app):
+    sheet_id, item_id, project_id, system_id, subsystem_id = _signed_sheet_with_item()
+    draft_sheet = CheckSheet(
+        company_name="Contractor A", project_id=project_id,
+        system_id=system_id, subsystem_id=subsystem_id,
+        sheet_number="IMMUTABLE-EXTRA-COMC-00002",
+        sheet_type=CheckSheetType.COMM_C, title="Draft destination",
+        status=CheckSheetStatus.DRAFT,
+    )
+    db.session.add(draft_sheet)
+    db.session.flush()
+    item = db.session.get(CheckSheetItem, item_id)
+    item.check_sheet_id = draft_sheet.id
+    with pytest.raises(ValueError, match="signed-off"):
+        db.session.commit()
+    db.session.rollback()
+
+    item = db.session.get(CheckSheetItem, item_id)
+    assert item.check_sheet_id == sheet_id
