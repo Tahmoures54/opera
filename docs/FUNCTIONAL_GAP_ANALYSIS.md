@@ -44,7 +44,7 @@
 ## Recommended implementation order
 1. Full dossier PDF/ZIP compilation, revision control and approval workflow.
 2. Durable evidence storage and security/retention/restore controls.
-3. Reusable revision-controlled Check Sheet/Test Sheet templates and project instantiation.
+3. Advanced Check Sheet measurement capture, result vocabularies, cross-project template library and generated PDF form packages.
 4. Preservation reminders, plan revisions, templates and compliance reporting.
 5. Work logs/manpower and expanded reports.
 6. Further document-control and engineering import/revision workflows.
