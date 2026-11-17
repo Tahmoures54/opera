@@ -39,3 +39,7 @@ Use **Commissioning Operations → Readiness policy** to configure the MC, RFC a
 
 ## Configurable subsystem dossier index
 Project administrators can define mandatory document types, disciplines, minimum counts, approval requirements and evidence requirements from the Commissioning Operations page. Rules are audited and evaluated against current document revisions. See [DOSSIER_INDEX.md](DOSSIER_INDEX.md) for matching, default behavior and limitations.
+
+
+## Preservation management
+Project managers configure preservation plans only from approved project/OEM procedures. Inspectors record compliant/non-compliant/not-applicable outcomes, findings, environmental conditions, corrective actions and evidence. Inspection records are append-only. See [PRESERVATION_GUIDE.md](PRESERVATION_GUIDE.md) for workflow and limitations.
