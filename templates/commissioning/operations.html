@@ -41,29 +41,26 @@
           <tbody>
           {% for rule in dossier_requirements %}
             <tr>
-              <td>
-                {% if can_manage_dossier_requirements %}
-                <form method="post" action="{{ url_for('commissioning.save_dossier_requirement', project_id=project.id) }}" class="d-flex gap-2">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save"><input type="hidden" name="requirement_id" value="{{ rule.id }}">
-                  <input class="form-control form-control-sm" name="document_type" maxlength="80" value="{{ rule.document_type }}" required>
-              </td>
-              <td><input class="form-control form-control-sm" name="discipline" maxlength="80" value="{{ '' if rule.discipline == 'ANY' else rule.discipline }}" placeholder="ANY"></td>
-              <td><input class="form-control form-control-sm" type="number" name="minimum_count" min="1" max="1000" value="{{ rule.minimum_count }}" required></td>
-              <td>
-                <div class="form-check"><input class="form-check-input" type="checkbox" name="require_approved" id="approved-{{ rule.id }}" {% if rule.require_approved %}checked{% endif %}><label class="form-check-label small" for="approved-{{ rule.id }}">Approved</label></div>
-              </td>
-              <td>
-                <div class="form-check"><input class="form-check-input" type="checkbox" name="require_evidence" id="evidence-{{ rule.id }}" {% if rule.require_evidence %}checked{% endif %}><label class="form-check-label small" for="evidence-{{ rule.id }}">Evidence</label></div>
-              </td>
               {% if can_manage_dossier_requirements %}
-              <td><button class="btn btn-sm btn-outline-primary">Save</button></form>
-                <form method="post" action="{{ url_for('commissioning.save_dossier_requirement', project_id=project.id) }}" class="d-inline">
+              <td colspan="6">
+                <form method="post" action="{{ url_for('commissioning.save_dossier_requirement', project_id=project.id) }}" class="row g-2 align-items-center">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save"><input type="hidden" name="requirement_id" value="{{ rule.id }}">
+                  <div class="col-md-3"><input class="form-control form-control-sm" name="document_type" maxlength="80" value="{{ rule.document_type }}" required></div>
+                  <div class="col-md-2"><input class="form-control form-control-sm" name="discipline" maxlength="80" value="{{ '' if rule.discipline == 'ANY' else rule.discipline }}" placeholder="ANY"></div>
+                  <div class="col-md-1"><input class="form-control form-control-sm" type="number" name="minimum_count" min="1" max="1000" value="{{ rule.minimum_count }}" required></div>
+                  <div class="col-md-2">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="require_approved" id="approved-{{ rule.id }}" {% if rule.require_approved %}checked{% endif %}><label class="form-check-label small" for="approved-{{ rule.id }}">Approved</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="require_evidence" id="evidence-{{ rule.id }}" {% if rule.require_evidence %}checked{% endif %}><label class="form-check-label small" for="evidence-{{ rule.id }}">Evidence</label></div>
+                  </div>
+                  <div class="col-md-2"><button class="btn btn-sm btn-outline-primary">Save</button></div>
+                </form>
+                <form method="post" action="{{ url_for('commissioning.save_dossier_requirement', project_id=project.id) }}" class="mt-1">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="deactivate"><input type="hidden" name="requirement_id" value="{{ rule.id }}">
                   <button class="btn btn-sm btn-outline-danger">Deactivate</button>
                 </form>
               </td>
               {% else %}
-              <td>{{ rule.document_type }}</td><td>{{ rule.discipline }}</td><td>{{ rule.minimum_count }}</td><td>{{ 'Required' if rule.require_approved else 'Optional' }}</td><td>{{ 'Required' if rule.require_evidence else 'Optional' }}</td>
+              <td colspan="5"><div class="d-flex flex-wrap gap-3"><strong>{{ rule.document_type }}</strong><span>{{ rule.discipline }}</span><span>Minimum {{ rule.minimum_count }}</span><span>{{ 'Approved' if rule.require_approved else 'Approval optional' }}</span><span>{{ 'Evidence required' if rule.require_evidence else 'Evidence optional' }}</span></div></td>
               {% endif %}
             </tr>
           {% else %}
