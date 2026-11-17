@@ -48,7 +48,7 @@ The implemented certificate types are MC and RFC. RFSU is a separate readiness/a
 10. Alembic migrations are additive and must be exercised against supported SQLite/PostgreSQL paths before release.
 
 ## Known gaps / next increments
-- Reusable revision-controlled Check Sheet/Test Sheet template catalogue and controlled project instantiation.
+- Advanced measurement capture, configurable result vocabularies, qualified e-signatures, cross-project template sharing and generated blank/test form packs.
 - Further readiness-policy extensions: configurable witness/review point rules, waiver/signatory authority matrix and procedure-revision linkage.
 - Persisted dossier revision numbering, controlled review/approval/rejection, formal issue/sign-off and contractual status; current PDF/ZIP outputs remain explicitly uncontrolled working exports.
 - Production S3 bucket configuration and live provider round-trip; existing evidence migration; provider access controls, retention/versioning, malware scanning and paired database/object backup-restore.
