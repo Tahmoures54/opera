@@ -937,6 +937,7 @@ def task_register(project_id):
         equipment_by_id=equipment_by_id, sheet_by_id=sheet_by_id,
         activity_types=list(CommissioningTaskType), task_statuses=list(CommissioningTaskStatus),
         can_create=any(has_permission(project.id, p) for p in ("tasks.create", "tasks.manage", "project.manage")),
+        can_manage_tasks=any(has_permission(project.id, p) for p in ("tasks.manage", "project.manage")),
         selected_activity=activity_filter, selected_status=status_filter, search_term=search_term,
     )
 
