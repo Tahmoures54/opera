@@ -24,6 +24,7 @@
         <div class="col-lg-2 col-md-4"><label class="form-label">Assigned group</label><input class="form-control" name="assigned_group" maxlength="120"></div>
         <div class="col-lg-4 col-md-6"><label class="form-label">System *</label><select class="form-select" name="system_id" required><option value="">Select system</option>{% for system in systems %}<option value="{{ system.id }}">{{ system.system_code }} — {{ system.name }}</option>{% endfor %}</select></div>
         <div class="col-lg-4 col-md-6"><label class="form-label">Subsystem *</label><select class="form-select" name="subsystem_id" required><option value="">Select subsystem</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
+        <div class="col-lg-4"><label class="form-label">Linked Check Sheet</label><select class="form-select" name="check_sheet_id"><option value="">No linked sheet</option>{% for sheet in check_sheets %}<option value="{{ sheet.id }}">{{ sheet.sheet_number }} — {{ sheet.title }}</option>{% endfor %}</select></div>
         <div class="col-lg-4"><label class="form-label">Equipment / Tag</label><select class="form-select" name="equipment_id"><option value="">Not equipment-specific</option>{% for item in equipment %}<option value="{{ item.id }}">{{ item.tag_number }} — {{ item.description or item.equipment_type }}</option>{% endfor %}</select></div>
         <div class="col-md-3"><label class="form-label">Progress stage</label><input class="form-control" name="progress_stage" maxlength="80" placeholder="Pre-commissioning / Commissioning"></div>
         <div class="col-md-3"><label class="form-label">Progress substage</label><input class="form-control" name="progress_substage" maxlength="80" placeholder="Static / Functional / Operational"></div>
@@ -52,7 +53,7 @@
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
-        <thead><tr><th>Task number</th><th>Activity</th><th>Task</th><th>Discipline</th><th>System / Subsystem</th><th>Equipment</th><th>Man-hours</th><th>Planned dates</th><th>Status</th></tr></thead>
+        <thead><tr><th>Task number</th><th>Activity</th><th>Task</th><th>Discipline</th><th>System / Subsystem</th><th>Equipment</th><th>Check Sheet</th><th>Man-hours</th><th>Planned dates</th><th>Status</th></tr></thead>
         <tbody>
         {% for task in tasks %}
           <tr>
@@ -62,12 +63,13 @@
             <td>{{ task.discipline }}</td>
             <td>{{ task.system_id }} / {{ task.subsystem_id }}</td>
             <td>{{ task.equipment_id or '—' }}</td>
+            <td>{{ task.check_sheet_id or '—' }}</td>
             <td>{{ task.spent_man_hours }} / {{ task.estimated_man_hours }}</td>
             <td><small>{{ task.planned_start_date or '—' }} → {{ task.planned_finish_date or '—' }}</small></td>
             <td>{{ task.status.value|replace('_',' ')|title }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="9" class="text-center text-muted py-4">No tasks match this project and filter. No progress is inferred from an empty register.</td></tr>
+          <tr><td colspan="10" class="text-center text-muted py-4">No tasks match this project and filter. No progress is inferred from an empty register.</td></tr>
         {% endfor %}
         </tbody>
       </table>
