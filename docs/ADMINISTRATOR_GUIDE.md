@@ -59,3 +59,10 @@ Before switching an existing installation to S3, copy existing evidence objects 
 The subsystem dossier page provides a printable PDF and a ZIP package containing a JSON manifest and linked evidence. The ZIP export verifies every evidence object's SHA-256 checksum and refuses to produce a package if an object is missing or mismatched. The default maximum declared evidence size is 100 MiB; configure OPERA_DOSSIER_EXPORT_MAX_BYTES to change the limit.
 
 These are point-in-time working exports only. Do not use them as issued or approved contractual dossiers. A controlled dossier revision register, reviewer/approver workflow and formal issue record are not yet implemented.
+
+
+## Check Sheet template governance
+
+The template library is project-scoped and requires checksheets.manage. Templates follow DRAFT → APPROVED → RETIRED. Approved and retired template content cannot be edited or deleted. Changes are made by creating a new revision; approval of that revision retires the previous approved revision. Template changes are recorded in the commissioning audit log.
+
+Template item acceptance criteria must be taken from approved project procedures, ITPs, OEM documents or contract requirements. OPERA validates template structure and workflow only; it does not generate engineering limits or technical pass/fail criteria.
