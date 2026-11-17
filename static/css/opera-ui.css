@@ -36,3 +36,5 @@ html,body{max-width:100%;overflow-x:hidden}
 .footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:.65rem}
 .footer-links a{color:var(--mh-primary);text-decoration:underline;text-underline-offset:3px}
 .terms-group label{font-size:.875rem;color:var(--mh-muted);font-weight:500}
+
+.mh-sidebar-backdrop{padding:0;border:0;cursor:pointer}
