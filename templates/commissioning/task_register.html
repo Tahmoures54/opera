@@ -53,7 +53,7 @@
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
-        <thead><tr><th>Task number</th><th>Activity</th><th>Task</th><th>Discipline</th><th>System / Subsystem</th><th>Equipment</th><th>Check Sheet</th><th>Man-hours</th><th>Planned dates</th><th>Status</th></tr></thead>
+        <thead><tr><th>Task number</th><th>Activity</th><th>Task</th><th>Discipline</th><th>System / Subsystem</th><th>Equipment</th><th>Check Sheet</th><th>Man-hours</th><th>Planned dates</th><th>Status / execution</th></tr></thead>
         <tbody>
         {% for task in tasks %}
           <tr>
@@ -66,7 +66,20 @@
             <td>{{ sheet_by_id.get(task.check_sheet_id).sheet_number if sheet_by_id.get(task.check_sheet_id) else '—' }}</td>
             <td>{{ task.spent_man_hours }} / {{ task.estimated_man_hours }}</td>
             <td><small>{{ task.planned_start_date or '—' }} → {{ task.planned_finish_date or '—' }}</small></td>
-            <td>{{ task.status.value|replace('_',' ')|title }}</td>
+            <td>
+              <span class="badge {% if task.status.value == 'COMPLETED' %}bg-success{% elif task.status.value == 'BLOCKED' %}bg-danger{% elif task.status.value == 'IN_PROGRESS' %}bg-primary{% else %}bg-secondary{% endif %}">{{ task.status.value|replace('_',' ')|title }}</span>
+              {% if can_manage_tasks and task.status.value not in ('CANCELLED',) %}
+              <form method="post" action="{{ url_for('commissioning.transition_task', project_id=project.id, task_id=task.id) }}" class="mt-2" style="min-width:190px">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select class="form-select form-select-sm mb-1" name="status" aria-label="New task status" required>
+                  <option value="" selected disabled>Select next status</option>
+                  {% for status in task_statuses %}{% if status != task.status %}<option value="{{ status.value }}">{{ status.value|replace('_',' ')|title }}</option>{% endif %}{% endfor %}
+                </select>
+                <input class="form-control form-control-sm mb-1" name="reason" maxlength="2000" placeholder="Reason (required for block/cancel/reopen)">
+                <button class="btn btn-sm btn-outline-primary w-100" type="submit">Update status</button>
+              </form>
+              {% endif %}
+            </td>
           </tr>
         {% else %}
           <tr><td colspan="10" class="text-center text-muted py-4">No tasks match this project and filter. No progress is inferred from an empty register.</td></tr>
