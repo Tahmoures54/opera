@@ -8,6 +8,7 @@ from datetime import datetime
 import enum
 
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, UniqueConstraint
+from sqlalchemy.orm import synonym
 from extensions import db
 
 
@@ -119,7 +120,8 @@ class HandoverStatus(enum.Enum):
     MC_PENDING = "MC_PENDING"
     MC_CERTIFIED = "MC_CERTIFIED"
     RF_PENDING = "RF_PENDING"
-    RF_CERTIFIED = "RF_CERTIFIED"
+    RFC_CERTIFIED = "RFC_CERTIFIED"
+    RF_CERTIFIED = "RFC_CERTIFIED"  # Backward-compatible Python alias
     RFSU = "RFSU"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
@@ -483,11 +485,14 @@ class HandoverPackage(db.Model):
     subsystem_id = db.Column(db.Integer, db.ForeignKey("commissioning_subsystem.id", ondelete="RESTRICT"), nullable=False)
     package_number = db.Column(db.String(100), nullable=False)
     mc_certificate_number = db.Column(db.String(100))
-    rf_certificate_number = db.Column(db.String(100))
+    rfc_certificate_number = db.Column(db.String(100))
+    rf_certificate_number = synonym("rfc_certificate_number")
     mc_certificate_date = db.Column(db.Date)
-    rf_certificate_date = db.Column(db.Date)
+    rfc_certificate_date = db.Column(db.Date)
+    rf_certificate_date = synonym("rfc_certificate_date")
     mc_issued_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
-    rf_issued_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    rfc_issued_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    rf_issued_by_id = synonym("rfc_issued_by_id")
     accepted_by_operations = db.Column(db.Boolean, nullable=False, default=False)
     operations_accepted_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
     operations_accepted_at = db.Column(db.DateTime)
@@ -499,7 +504,7 @@ class HandoverPackage(db.Model):
 
 
 class CommissioningCertificate(db.Model):
-    """Immutable MC/RF certificate and issue-time evidence snapshot."""
+    """Immutable MC/RFC certificate and issue-time evidence snapshot."""
     __tablename__ = "commissioning_certificate"
     __table_args__ = (
         UniqueConstraint("company_name", "certificate_number",
@@ -515,7 +520,7 @@ class CommissioningCertificate(db.Model):
         ForeignKeyConstraint(["package_id", "company_name"],
                              ["commissioning_handover_package.id", "commissioning_handover_package.company_name"],
                              name="fk_comm_certificate_package_tenant"),
-        CheckConstraint("certificate_type IN ('MC', 'RF')",
+        CheckConstraint("certificate_type IN ('MC', 'RFC')",
                         name="ck_comm_certificate_type"),
         Index("ix_comm_certificate_company_project_date",
               "company_name", "project_id", "certificate_date"),
@@ -525,7 +530,7 @@ class CommissioningCertificate(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
     subsystem_id = db.Column(db.Integer, db.ForeignKey("commissioning_subsystem.id", ondelete="RESTRICT"), nullable=False)
     package_id = db.Column(db.Integer, db.ForeignKey("commissioning_handover_package.id", ondelete="RESTRICT"), nullable=False)
-    certificate_type = db.Column(db.String(2), nullable=False)
+    certificate_type = db.Column(db.String(3), nullable=False)
     certificate_number = db.Column(db.String(100), nullable=False)
     certificate_date = db.Column(db.Date, nullable=False)
     issued_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
