@@ -289,6 +289,12 @@ def _validate_import(project, parsed):
 
     valid_equipment = []
     equipment_tags = set(existing_equipment)
+    equipment_locations = {}
+    for item in equipment:
+        subsystem = subsystem_by_id.get(item.subsystem_id)
+        system = system_by_id.get(subsystem.system_id) if subsystem else None
+        if subsystem and system:
+            equipment_locations[item.tag_number] = (system.system_code, subsystem.subsystem_code)
     subsystem_keys_all = subsystem_keys
     for row in parsed["Equipment"]:
         start = len(errors)
@@ -306,6 +312,7 @@ def _validate_import(project, parsed):
             errors.append({"sheet": "Equipment", "row": row["_row"], "field": "equipment_type", "message": "Required."})
         if len(errors) == start:
             equipment_tags.add(tag)
+            equipment_locations[tag] = (system_code, subsystem_code)
             valid_equipment.append({
                 **row, "tag_number": tag, "system_code": system_code,
                 "subsystem_code": subsystem_code, "equipment_type": equipment_type,
@@ -336,6 +343,8 @@ def _validate_import(project, parsed):
             errors.append({"sheet": "Tasks", "row": row["_row"], "field": "subsystem_code", "message": "Subsystem reference does not exist under the selected system."})
         if equipment_tag and equipment_tag not in equipment_tag_refs:
             errors.append({"sheet": "Tasks", "row": row["_row"], "field": "equipment_tag", "message": "Equipment tag does not exist in this project or workbook."})
+        elif equipment_tag and equipment_locations.get(equipment_tag) != (system_code, subsystem_code):
+            errors.append({"sheet": "Tasks", "row": row["_row"], "field": "equipment_tag", "message": "Equipment must belong to the same system and subsystem as the task."})
         if activity not in activity_values:
             errors.append({"sheet": "Tasks", "row": row["_row"], "field": "activity_type", "message": "Use one of: " + ", ".join(sorted(activity_values))})
         if not title:
