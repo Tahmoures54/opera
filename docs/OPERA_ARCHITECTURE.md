@@ -42,14 +42,16 @@ The implemented certificate types are MC and RFC. RFSU is a separate readiness/a
 4. Workflow state changes and their audit events are committed together.
 5. Signed Check Sheets, issued certificates, signatures, attachment metadata, review records and Punch history are protected from ordinary ORM mutation/deletion.
 6. Progress is derived from persisted records; empty denominators do not produce fabricated completion.
-7. The current evidence storage adapter writes to a local filesystem path. This is suitable only where the filesystem is persistent. It is not a durable Vercel/serverless evidence store.
-8. Alembic migrations are additive and must be exercised against supported SQLite/PostgreSQL paths before release.
+7. Commissioning evidence supports a private S3-compatible backend configured through `OPERA_STORAGE_BACKEND=s3` and `OPERA_S3_*` environment variables. Uploads request server-side AES-256 encryption; storage keys retain the tenant-scoped namespace and database metadata retains SHA-256 checksums.
+8. Local filesystem storage remains available for persistent development installations. Uploads fail closed with HTTP 503 when a serverless runtime is configured to use local storage, preventing silent evidence loss.
+9. Existing local evidence must be copied to the configured object store without changing database `storage_key` values, then verified against stored SHA-256 checksums. Provider-side retention, versioning, backup and restore remain deployment responsibilities.
+10. Alembic migrations are additive and must be exercised against supported SQLite/PostgreSQL paths before release.
 
 ## Known gaps / next increments
 - Reusable revision-controlled Check Sheet/Test Sheet template catalogue and controlled project instantiation.
 - Further readiness-policy extensions: configurable witness/review point rules, waiver/signatory authority matrix and procedure-revision linkage.
 - Full revision-controlled dossier PDF/ZIP package, dossier approval workflow and durable evidence-byte verification.
-- Durable private object storage adapter, access controls, retention, malware scanning and paired database/object backup-restore.
+- Production S3 bucket configuration and live provider round-trip; existing evidence migration; provider access controls, retention/versioning, malware scanning and paired database/object backup-restore.
 - Automated reminders, recurring calendar planning, OEM interval library, preservation templates and advanced compliance reporting.
 - Daily work logs, approved manpower capacity planning and vendor mobilization.
 - Richer progress reporting and approved project/system roll-up formulas.
