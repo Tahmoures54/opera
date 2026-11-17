@@ -33,6 +33,10 @@
 Green CI validates the tested commit in CI. It does not replace staging migration rehearsal, production backup/restore, durable evidence storage, end-to-end multi-role acceptance or operational sign-off.
 
 
+### Preservation compliance reporting
+
+Added a project-level Preservation Compliance Report with due-status and equipment filters, plan/equipment register, latest inspection and corrective-action context, summary counts, and UTF-8 CSV export. Formula-like cell values are escaped to reduce spreadsheet formula-injection risk. The report does not invent technical preservation limits or calculate an unsupported compliance percentage.
+
 ### Controlled subsystem dossier lifecycle
 
 Added immutable subsystem dossier revision snapshots with SHA-256 integrity metadata, DRAFT/IN_REVIEW/APPROVED/REJECTED/ISSUED workflow, append-only review decisions, author/reviewer/issuer separation, readiness and evidence checks before approval/issue, and controlled issued PDF/ZIP exports. Existing current-state PDF/ZIP routes remain explicitly uncontrolled working exports.
