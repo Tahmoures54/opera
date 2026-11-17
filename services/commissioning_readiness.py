@@ -92,6 +92,7 @@ def _open_hold_points(company_name: str, subsystem_id: int):
         )
         .filter(
             WitnessPoint.company_name == company_name,
+            CheckSheet.company_name == company_name,
             CheckSheet.subsystem_id == subsystem_id,
             WitnessPoint.type == WitnessType.HOLD,
             WitnessPoint.status.notin_([WitnessStatus.RELEASED, WitnessStatus.CANCELLED]),
