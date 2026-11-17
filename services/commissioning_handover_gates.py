@@ -10,8 +10,8 @@ from flask import abort
 from services.commissioning_readiness import evaluate_subsystem_readiness, ReadinessResult
 
 
-def _format_blockers(result: ReadinessResult, limit: int = 8) -> str:
-    blockers = [i for i in result.issues if i.severity == "BLOCKER"]
+def _format_blockers(result: ReadinessResult, gate: str, limit: int = 8) -> str:
+    blockers = [i for i in result.issues if i.severity == "BLOCKER" and i.gate == gate]
     if not blockers:
         return ""
     messages = "; ".join(i.message for i in blockers[:limit])
@@ -24,7 +24,7 @@ def require_ready_for_mc(company_name: str, subsystem_id: int) -> ReadinessResul
     """Abort with 409 if the subsystem is not ready for Mechanical Completion."""
     result = evaluate_subsystem_readiness(company_name, subsystem_id)
     if not result.is_ready_for_mc:
-        msg = _format_blockers(result) or "Subsystem is not ready for MC"
+        msg = _format_blockers(result, "MC") or "Subsystem is not ready for MC"
         abort(409, description=f"MC certification blocked: {msg}")
     return result
 
@@ -33,7 +33,7 @@ def require_ready_for_rfc(company_name: str, subsystem_id: int) -> ReadinessResu
     """Abort with 409 if the subsystem is not ready for Ready-for-Commissioning."""
     result = evaluate_subsystem_readiness(company_name, subsystem_id)
     if not result.is_ready_for_rfc:
-        msg = _format_blockers(result) or "Subsystem is not ready for RFC"
+        msg = _format_blockers(result, "RFC") or "Subsystem is not ready for RFC"
         abort(409, description=f"RFC certification blocked: {msg}")
     return result
 
@@ -42,9 +42,9 @@ def require_ready_for_rfsu(company_name: str, subsystem_id: int) -> ReadinessRes
     """Abort with 409 if the subsystem is not ready for Ready-for-Start-Up."""
     result = evaluate_subsystem_readiness(company_name, subsystem_id)
     if not result.is_ready_for_rfsu:
-        msg = _format_blockers(result) or "Subsystem is not ready for RFSU"
+        msg = _format_blockers(result, "RFSU") or "Subsystem is not ready for RFSU"
         # Also surface warnings for incomplete tasks
-        warnings = [i.message for i in result.issues if i.severity == "WARNING"]
+        warnings = [i.message for i in result.issues if i.severity == "WARNING" and i.gate == "RFSU"]
         if warnings:
             msg += " | Warnings: " + "; ".join(warnings[:5])
         abort(409, description=f"RFSU blocked: {msg}")
