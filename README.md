@@ -70,7 +70,11 @@ The OPERA foundation migration is 20261116_0019, chained after the inherited sch
 8. Raise and resolve punch items. Category A/B punch items block MC certification.
 9. Create subsystem handover packages and progress snapshots.
 
-## Task register\n\nThe task register is a project-scoped execution planning register. It records task number, activity type, title, discipline, project hierarchy, optional equipment and check-sheet links, progress stage/substage, assigned group, estimated/actual man-hours and planned/actual dates. Task status begins at Not Started; controlled execution transitions and dependency sequencing are subsequent increments.\n\n## OPERA roles
+## Task register
+
+The task register is a project-scoped execution planning register. It records task number, activity type, title, discipline, project hierarchy, optional equipment and check-sheet links, progress stage/substage, assigned group, estimated/actual man-hours and planned/actual dates. Task status begins at Not Started; controlled execution transitions and dependency sequencing are subsequent increments.
+
+## OPERA roles
 
 | Role | Primary responsibilities |
 |---|---|
@@ -99,13 +103,16 @@ GitHub Actions runs Ruff, Mypy, pytest, Bandit, pip-audit, PostgreSQL integratio
 
 ## Documentation
 
-- [ICAPS Functional & Technical Analysis](docs/ICAPS_ANALYSIS.md)\n- [Functional Gap Analysis](docs/FUNCTIONAL_GAP_ANALYSIS.md)\n- [OPERA Architecture](docs/OPERA_ARCHITECTURE.md)
+- [ICAPS Functional & Technical Analysis](docs/ICAPS_ANALYSIS.md)
+- [Functional Gap Analysis](docs/FUNCTIONAL_GAP_ANALYSIS.md)
+- [OPERA Architecture](docs/OPERA_ARCHITECTURE.md)
 - [Workflow Guide](docs/WORKFLOW_GUIDE.md)
 - [Document Templates](docs/DOCUMENT_TEMPLATES.md)
 - [User Manual](docs/USER_MANUAL.md)
 - [Administrator Guide](docs/ADMINISTRATOR_GUIDE.md)
 - [Testing Report](docs/TESTING_REPORT.md)
-- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)\n- [OPERA Phase 1 architecture and migration notes](docs/OPERA_PHASE1.md)
+- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
+- [OPERA Phase 1 architecture and migration notes](docs/OPERA_PHASE1.md)
 - [Production launch checklist](docs/PRODUCTION_LAUNCH.md)
 - [Security policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
