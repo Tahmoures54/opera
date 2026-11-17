@@ -2128,7 +2128,21 @@ def test_preservation_compliance_report_filters_and_safe_csv(client, app, opera_
     invalid_equipment = client.get(f"{report_url}?equipment_id=not-a-number")
     assert invalid_equipment.status_code == 400
 
+    active_rows = client.get(f"{report_url}?status=ACTIVE")
+    assert active_rows.status_code == 200
+    # ACTIVE is the plan lifecycle state, so both overdue and future-due active plans remain visible.
+    assert b"PRES-REPORT-OVERDUE" in active_rows.data
+    assert b"PRES-REPORT-SOON" in active_rows.data
+    equipment_rows = client.get(f"{report_url}?equipment_id={equipment_id}")
+    assert equipment_rows.status_code == 200
+    assert b"PRES-REPORT-OVERDUE" in equipment_rows.data
+    assert b"PRES-REPORT-SOON" in equipment_rows.data
+    assert b"private, no-store" in csv_report.headers.get("Cache-Control", "").encode()
+    assert csv_report.headers.get("X-Content-Type-Options") == "nosniff"
+
     _login_id(client, opera_setup["viewer"])
     assert client.get(report_url).status_code == 200
+    viewer_csv = client.get(f"{base}/preservation/report.csv")
+    assert viewer_csv.status_code == 200
     _login_id(client, opera_setup["outsider"])
     assert client.get(report_url).status_code == 404
