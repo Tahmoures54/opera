@@ -1120,11 +1120,11 @@ def test_engineering_excel_exchange_dry_run_import_and_export(client, app, opera
     ])
     payload = BytesIO()
     workbook.save(payload)
-    payload.seek(0)
+    workbook_bytes = payload.getvalue()
 
     dry_run = client.post(
         f"/commissioning/projects/{opera_setup['project']}/engineering-data/import",
-        data={"action": "validate", "workbook": (payload, "engineering.xlsx")},
+        data={"action": "validate", "workbook": (BytesIO(workbook_bytes), "engineering.xlsx")},
         content_type="multipart/form-data",
     )
     assert dry_run.status_code == 200
@@ -1133,12 +1133,9 @@ def test_engineering_excel_exchange_dry_run_import_and_export(client, app, opera
         assert CommissioningSystem.query.filter_by(system_code="SYS-EX").count() == 0
         assert CommissioningTask.query.filter_by(task_number="TASK-EX-001").count() == 0
 
-    payload = BytesIO()
-    workbook.save(payload)
-    payload.seek(0)
     imported = client.post(
         f"/commissioning/projects/{opera_setup['project']}/engineering-data/import",
-        data={"action": "import", "workbook": (payload, "engineering.xlsx")},
+        data={"action": "import", "workbook": (BytesIO(workbook_bytes), "engineering.xlsx")},
         content_type="multipart/form-data",
     )
     assert imported.status_code == 302
