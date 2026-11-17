@@ -1,4 +1,5 @@
 """OPERA operational workflows: membership, check sheets, punch, witness and handover."""
+import hashlib
 import json
 from datetime import date, datetime
 from io import BytesIO
@@ -10,7 +11,7 @@ from extensions import db
 from models import User
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskDependency, CommissioningTaskType, CommissioningTaskStatus,
-    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningPreservationInspection, CommissioningCheckSheetTemplate, DocumentStatus,
+    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningDossierRevision, CommissioningDossierReview, DossierRevisionStatus, DossierReviewDecision, CommissioningPreservationInspection, CommissioningCheckSheetTemplate, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
@@ -129,6 +130,70 @@ def _punch(punch_id):
     _need(punch.project_id, "punch.view", "punch.raise", "punch.assign",
           "punch.verify", "project.manage")
     return punch
+
+
+def _dossier_snapshot_digest(snapshot):
+    payload = json.dumps(
+        snapshot, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _dossier_revision_attachments(revision):
+    evidence = revision.snapshot_json.get("evidence", [])
+    ids = [int(item["id"]) for item in evidence]
+    if len(ids) != len(set(ids)):
+        abort(409, description="The dossier snapshot contains duplicate evidence references.")
+    records = CommissioningAttachment.query.filter(
+        CommissioningAttachment.company_name == revision.company_name,
+        CommissioningAttachment.id.in_(ids or [-1]),
+    ).all()
+    by_id = {item.id: item for item in records}
+    if len(by_id) != len(ids):
+        abort(409, description="One or more dossier evidence records are no longer available.")
+    ordered = []
+    for item in evidence:
+        attachment = by_id[int(item["id"])]
+        if (
+            attachment.checksum != item.get("sha256")
+            or attachment.filename != item.get("filename")
+            or attachment.file_size != item.get("file_size")
+        ):
+            abort(409, description="Dossier evidence metadata no longer matches its approved snapshot.")
+        try:
+            content = read_commissioning_upload(attachment.storage_key)
+        except Exception:
+            abort(409, description=f"Evidence file {attachment.filename} is unavailable.")
+        if hashlib.sha256(content).hexdigest() != attachment.checksum:
+            abort(409, description=f"Evidence checksum mismatch for {attachment.filename}.")
+        ordered.append(attachment)
+    return ordered
+
+
+def _require_issued_dossier(dossier_id):
+    revision = CommissioningDossierRevision.query.filter_by(
+        id=dossier_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(
+        revision.project_id, "dossier.view", "dossier.manage",
+        "dossier.review", "dossier.issue", "project.manage",
+    )
+    if revision.status != DossierRevisionStatus.ISSUED:
+        abort(409, description="Only an issued dossier revision can be exported.")
+    if _dossier_snapshot_digest(revision.snapshot_json) != revision.snapshot_sha256:
+        abort(409, description="The stored dossier snapshot failed its integrity check.")
+    attachments = _dossier_revision_attachments(revision)
+    snapshot = dict(revision.snapshot_json)
+    snapshot["dossier_control"] = {
+        "revision_number": revision.revision_number,
+        "status": revision.status.value,
+        "created_at": revision.created_at.isoformat() if revision.created_at else None,
+        "submitted_at": revision.submitted_at.isoformat() if revision.submitted_at else None,
+        "approved_at": revision.approved_at.isoformat() if revision.approved_at else None,
+        "issued_at": revision.issued_at.isoformat() if revision.issued_at else None,
+        "snapshot_sha256": revision.snapshot_sha256,
+    }
+    return revision, snapshot, attachments
 
 
 @commissioning_bp.get("/projects/<int:project_id>/operations")
@@ -2072,7 +2137,7 @@ def save_dossier_requirement(project_id):
 def subsystem_dossier(project_id, subsystem_id):
     """Consolidated, evidence-based readiness view and configurable document index."""
     _need(project_id, "structure.view", "handover.view", "handover.manage",
-          "handover.accept", "reports.view", "project.manage")
+          "handover.accept", "reports.view", "dossier.view", "project.manage")
     project = get_project(project_id)
     subsystem = CommissioningSubsystem.query.join(
         CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
@@ -2225,6 +2290,16 @@ def subsystem_dossier(project_id, subsystem_id):
          "detail": "; ".join(policy_errors) if policy_errors else "Valid project readiness policy"},
     ]
     readiness_passed = all(item["passed"] for item in gates)
+    dossier_revisions = CommissioningDossierRevision.query.filter_by(
+        company_name=project.company_name, project_id=project.id, subsystem_id=subsystem.id,
+    ).order_by(CommissioningDossierRevision.revision_number.desc()).all()
+    dossier_reviews = CommissioningDossierReview.query.filter(
+        CommissioningDossierReview.company_name == project.company_name,
+        CommissioningDossierReview.dossier_revision_id.in_([item.id for item in dossier_revisions] or [-1]),
+    ).order_by(CommissioningDossierReview.decided_at.desc()).all()
+    dossier_reviews_by_revision = {}
+    for review in dossier_reviews:
+        dossier_reviews_by_revision.setdefault(review.dossier_revision_id, []).append(review)
     return render_template(
         "commissioning/subsystem_dossier.html", project=project, subsystem=subsystem,
         documents=documents, evidence_by_document=evidence_by_document,
@@ -2235,7 +2310,208 @@ def subsystem_dossier(project_id, subsystem_id):
         pending_holds=pending_holds, incomplete_tasks=incomplete_tasks,
         dossier_requirements=dossier_requirements,
         document_requirement_results=document_requirement_results,
+        dossier_revisions=dossier_revisions,
+        dossier_reviews_by_revision=dossier_reviews_by_revision,
+        can_manage_dossiers=any(has_permission(project.id, p) for p in ("dossier.manage", "project.manage")),
+        can_review_dossiers=any(has_permission(project.id, p) for p in ("dossier.review", "project.manage")),
+        can_issue_dossiers=any(has_permission(project.id, p) for p in ("dossier.issue", "project.manage")),
     )
+
+
+@commissioning_bp.post("/projects/<int:project_id>/subsystems/<int:subsystem_id>/dossiers")
+@login_required
+def create_dossier_revision(project_id, subsystem_id):
+    """Create a frozen point-in-time dossier draft for a project subsystem."""
+    _need(project_id, "dossier.manage", "project.manage")
+    project = get_project(project_id)
+    subsystem = CommissioningSubsystem.query.join(
+        CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
+    ).filter(
+        CommissioningSubsystem.id == subsystem_id,
+        CommissioningSubsystem.company_name == project.company_name,
+        CommissioningSystem.project_id == project.id,
+    ).first_or_404()
+    previous = CommissioningDossierRevision.query.filter_by(
+        company_name=project.company_name, project_id=project.id, subsystem_id=subsystem.id,
+    ).order_by(CommissioningDossierRevision.revision_number.desc()).first()
+    if previous and previous.status not in (
+        DossierRevisionStatus.ISSUED, DossierRevisionStatus.REJECTED,
+    ):
+        abort(409, description="Complete or reject the current dossier revision before creating another.")
+    revision_number = previous.revision_number + 1 if previous else 1
+    snapshot, _ = build_subsystem_dossier_snapshot(
+        project.company_name, project.id, subsystem.id,
+    )
+    snapshot["export_classification"] = "CONTROLLED_DOSSIER_REVISION"
+    snapshot["notice"] = (
+        "Controlled point-in-time OPERA dossier revision. Approval and issue status "
+        "are maintained in the dossier revision register."
+    )
+    snapshot["dossier_revision"] = {"revision_number": revision_number}
+    revision = CommissioningDossierRevision(
+        company_name=project.company_name, project_id=project.id,
+        subsystem_id=subsystem.id, revision_number=revision_number,
+        supersedes_id=previous.id if previous else None,
+        title=f"{subsystem.subsystem_code} Completion Dossier",
+        status=DossierRevisionStatus.DRAFT, snapshot_json=snapshot,
+        snapshot_sha256=_dossier_snapshot_digest(snapshot),
+        created_by_id=current_user.id,
+    )
+    db.session.add(revision)
+    db.session.flush()
+    add_audit_event(
+        project.company_name, "CommissioningDossierRevision", revision.id,
+        "DOSSIER_REVISION_CREATED",
+        after={"revision_number": revision_number, "subsystem_id": subsystem.id,
+               "snapshot_sha256": revision.snapshot_sha256},
+    )
+    db.session.commit()
+    flash(f"Dossier revision {revision_number} created as a frozen draft.", "success")
+    return redirect(url_for(
+        "commissioning.subsystem_dossier", project_id=project.id, subsystem_id=subsystem.id,
+    ))
+
+
+@commissioning_bp.post("/dossiers/<int:dossier_id>/submit")
+@login_required
+def submit_dossier_revision(dossier_id):
+    revision = CommissioningDossierRevision.query.filter_by(
+        id=dossier_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(revision.project_id, "dossier.manage", "project.manage")
+    if revision.status not in (DossierRevisionStatus.DRAFT, DossierRevisionStatus.REJECTED):
+        abort(409, description="Only a draft or rejected dossier revision can be submitted.")
+    if _dossier_snapshot_digest(revision.snapshot_json) != revision.snapshot_sha256:
+        abort(409, description="The dossier snapshot failed its integrity check.")
+    before = {"status": revision.status.value}
+    revision.status = DossierRevisionStatus.IN_REVIEW
+    revision.submitted_at = datetime.utcnow()
+    revision.rejection_reason = None
+    add_audit_event(
+        revision.company_name, "CommissioningDossierRevision", revision.id,
+        "DOSSIER_REVISION_SUBMITTED", before=before,
+        after={"status": revision.status.value},
+    )
+    db.session.commit()
+    flash("Dossier revision submitted for independent review.", "success")
+    return redirect(url_for(
+        "commissioning.subsystem_dossier", project_id=revision.project_id,
+        subsystem_id=revision.subsystem_id,
+    ))
+
+
+@commissioning_bp.post("/dossiers/<int:dossier_id>/decision")
+@login_required
+def decide_dossier_revision(dossier_id):
+    revision = CommissioningDossierRevision.query.filter_by(
+        id=dossier_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(revision.project_id, "dossier.review", "project.manage")
+    if revision.status != DossierRevisionStatus.IN_REVIEW:
+        abort(409, description="Only a dossier revision in review can receive a decision.")
+    if revision.created_by_id == current_user.id:
+        abort(403, description="The dossier author cannot review their own revision.")
+    decision = (request.form.get("decision") or "").strip().upper()
+    comments = (request.form.get("comments") or "").strip()[:3000]
+    if decision not in ("APPROVE", "REJECT"):
+        abort(400, description="Decision must be APPROVE or REJECT.")
+    if decision == "REJECT" and not comments:
+        abort(400, description="A reason is required when rejecting a dossier revision.")
+    if _dossier_snapshot_digest(revision.snapshot_json) != revision.snapshot_sha256:
+        abort(409, description="The dossier snapshot failed its integrity check.")
+    if decision == "APPROVE":
+        if not revision.snapshot_json.get("readiness", {}).get("mc_dossier_checks_passed"):
+            abort(409, description="Dossier completeness/readiness checks must pass before approval.")
+        _dossier_revision_attachments(revision)
+        revision.status = DossierRevisionStatus.APPROVED
+        revision.approved_by_id = current_user.id
+        revision.approved_at = datetime.utcnow()
+        review_decision = DossierReviewDecision.APPROVED
+    else:
+        revision.status = DossierRevisionStatus.REJECTED
+        revision.rejection_reason = comments
+        review_decision = DossierReviewDecision.REJECTED
+    review = CommissioningDossierReview(
+        company_name=revision.company_name, dossier_revision_id=revision.id,
+        reviewer_id=current_user.id, decision=review_decision, comments=comments or None,
+    )
+    db.session.add(review)
+    add_audit_event(
+        revision.company_name, "CommissioningDossierRevision", revision.id,
+        "DOSSIER_REVISION_REVIEWED",
+        before={"status": DossierRevisionStatus.IN_REVIEW.value},
+        after={"status": revision.status.value, "decision": decision,
+               "reviewer_id": current_user.id, "comments": comments or None},
+    )
+    db.session.commit()
+    flash("Dossier revision decision recorded.", "success")
+    return redirect(url_for(
+        "commissioning.subsystem_dossier", project_id=revision.project_id,
+        subsystem_id=revision.subsystem_id,
+    ))
+
+
+@commissioning_bp.post("/dossiers/<int:dossier_id>/issue")
+@login_required
+def issue_dossier_revision(dossier_id):
+    revision = CommissioningDossierRevision.query.filter_by(
+        id=dossier_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(revision.project_id, "dossier.issue", "project.manage")
+    if revision.status != DossierRevisionStatus.APPROVED:
+        abort(409, description="Only an approved dossier revision can be issued.")
+    if current_user.id in (revision.created_by_id, revision.approved_by_id):
+        abort(403, description="The dossier author and approver cannot issue the same revision.")
+    if _dossier_snapshot_digest(revision.snapshot_json) != revision.snapshot_sha256:
+        abort(409, description="The dossier snapshot failed its integrity check.")
+    if not revision.snapshot_json.get("readiness", {}).get("mc_dossier_checks_passed"):
+        abort(409, description="The approved dossier no longer satisfies its recorded readiness checks.")
+    _dossier_revision_attachments(revision)
+    before = {"status": revision.status.value}
+    revision.status = DossierRevisionStatus.ISSUED
+    revision.issued_by_id = current_user.id
+    revision.issued_at = datetime.utcnow()
+    add_audit_event(
+        revision.company_name, "CommissioningDossierRevision", revision.id,
+        "DOSSIER_REVISION_ISSUED", before=before,
+        after={"status": revision.status.value, "issued_by_id": current_user.id,
+               "issued_at": revision.issued_at.isoformat(),
+               "snapshot_sha256": revision.snapshot_sha256},
+    )
+    db.session.commit()
+    flash(f"Dossier revision {revision.revision_number} issued.", "success")
+    return redirect(url_for(
+        "commissioning.subsystem_dossier", project_id=revision.project_id,
+        subsystem_id=revision.subsystem_id,
+    ))
+
+
+@commissioning_bp.get("/dossiers/<int:dossier_id>/export.pdf")
+@login_required
+def issued_dossier_pdf_export(dossier_id):
+    revision, snapshot, _attachments = _require_issued_dossier(dossier_id)
+    payload = render_subsystem_dossier_pdf(snapshot)
+    response = send_file(
+        BytesIO(payload), mimetype="application/pdf", as_attachment=True,
+        download_name=f"OPERA-dossier-R{revision.revision_number}.pdf", max_age=0,
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@commissioning_bp.get("/dossiers/<int:dossier_id>/export.zip")
+@login_required
+def issued_dossier_zip_export(dossier_id):
+    revision, snapshot, attachments = _require_issued_dossier(dossier_id)
+    payload = render_subsystem_dossier_zip(snapshot, attachments)
+    response = send_file(
+        BytesIO(payload), mimetype="application/zip", as_attachment=True,
+        download_name=f"OPERA-dossier-R{revision.revision_number}-evidence.zip", max_age=0,
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @commissioning_bp.post("/projects/<int:project_id>/tasks/<int:task_id>/dependencies")
