@@ -8,7 +8,7 @@ from models_commissioning import (
     CommissioningMembership, MembershipRole, CheckSheet, CheckSheetItem,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, PunchItem,
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
-    CommissioningTaskType, CommissioningTaskStatus, CommissioningAuditLog,
+    CommissioningTaskType, CommissioningTaskStatus, CommissioningAuditLog,\n    CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
 )
 
 
@@ -447,3 +447,112 @@ def test_task_lifecycle_requires_manager_permission(client, app, opera_setup):
     )
     assert response.status_code == 403
 
+
+
+def test_document_register_upload_submit_approve_and_create_revision(client, app, opera_setup, tmp_path):
+    from io import BytesIO
+    app.config["OPERA_UPLOAD_DIR"] = str(tmp_path)
+    project_id = opera_setup["project"]
+    _login_id(client, opera_setup["manager"])
+    created = client.post(
+        f"/commissioning/projects/{project_id}/documents",
+        data={
+            "document_number": "FLOW-ME-DWG-001",
+            "title": "Instrument air package general arrangement",
+            "document_type": "GA Drawing",
+            "discipline": "Mechanical",
+            "purpose": "For Approval",
+            "system_id": opera_setup["system"],
+            "subsystem_id": opera_setup["subsystem"],
+        },
+    )
+    assert created.status_code == 302
+    with app.app_context():
+        document = CommissioningDocument.query.filter_by(
+            document_number="FLOW-ME-DWG-001", revision="A",
+        ).one()
+        document_id = document.id
+    uploaded = client.post(
+        f"/commissioning/evidence/CommissioningDocument/{document_id}",
+        data={"file": (BytesIO(b"%PDF-1.7\\nOPERA controlled drawing"), "drawing.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert uploaded.status_code == 302
+    submitted = client.post(f"/commissioning/documents/{document_id}/submit")
+    assert submitted.status_code == 302
+    _login_id(client, opera_setup["client"])
+    approved = client.post(
+        f"/commissioning/documents/{document_id}/decision",
+        data={"decision": "APPROVE", "comments": "Reviewed and accepted."},
+    )
+    assert approved.status_code == 302
+    with app.app_context():
+        document = db.session.get(CommissioningDocument, document_id)
+        assert document.status == DocumentStatus.APPROVED
+        assert document.approved_by_id == opera_setup["client"]
+        review = CommissioningDocumentReview.query.filter_by(document_id=document_id).one()
+        assert review.decision == "APPROVE"
+    _login_id(client, opera_setup["manager"])
+    revised = client.post(f"/commissioning/documents/{document_id}/revision")
+    assert revised.status_code == 302
+    with app.app_context():
+        old = db.session.get(CommissioningDocument, document_id)
+        new = CommissioningDocument.query.filter_by(
+            document_number="FLOW-ME-DWG-001", revision="B",
+        ).one()
+        assert old.status == DocumentStatus.SUPERSEDED
+        assert new.status == DocumentStatus.DRAFT
+        assert new.supersedes_id == old.id
+        assert new.revision_sequence == 2
+
+
+def test_document_register_rejects_missing_file_and_requires_rejection_reason(client, app, opera_setup):
+    project_id = opera_setup["project"]
+    _login_id(client, opera_setup["manager"])
+    created = client.post(
+        f"/commissioning/projects/{project_id}/documents",
+        data={
+            "document_number": "FLOW-PR-001", "title": "Commissioning procedure",
+            "document_type": "Procedure", "discipline": "Commissioning",
+        },
+    )
+    assert created.status_code == 302
+    with app.app_context():
+        document = CommissioningDocument.query.filter_by(document_number="FLOW-PR-001").one()
+        document_id = document.id
+    assert client.post(f"/commissioning/documents/{document_id}/submit").status_code == 409
+    from io import BytesIO
+    app.config["OPERA_UPLOAD_DIR"] = str(app.instance_path)
+    uploaded = client.post(
+        f"/commissioning/evidence/CommissioningDocument/{document_id}",
+        data={"file": (BytesIO(b"%PDF-1.7\\ncontrolled procedure"), "procedure.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert uploaded.status_code == 302
+    assert client.post(f"/commissioning/documents/{document_id}/submit").status_code == 302
+    _login_id(client, opera_setup["qc"])
+    rejected = client.post(
+        f"/commissioning/documents/{document_id}/decision",
+        data={"decision": "REJECT", "comments": ""},
+    )
+    assert rejected.status_code == 400
+    rejected = client.post(
+        f"/commissioning/documents/{document_id}/decision",
+        data={"decision": "REJECT", "comments": "Revise drawing notes and dimensions."},
+    )
+    assert rejected.status_code == 302
+    with app.app_context():
+        document = db.session.get(CommissioningDocument, document_id)
+        assert document.status == DocumentStatus.REJECTED
+
+
+def test_document_register_viewer_cannot_create_documents(client, opera_setup):
+    _login_id(client, opera_setup["viewer"])
+    response = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/documents",
+        data={
+            "document_number": "FLOW-VIEW-001", "title": "Unauthorized",
+            "document_type": "Other", "discipline": "Quality",
+        },
+    )
+    assert response.status_code == 403
