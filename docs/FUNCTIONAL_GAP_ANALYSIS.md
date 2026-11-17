@@ -27,7 +27,7 @@
 | Engineering Excel exchange | Implemented bounded scope | OPERA XLSX template/export, dry run, row validation, SHA-256 confirmation, create-only atomic import and audit | More registers, revision-delta workflows, controlled retire/modify actions |
 | Subsystem dossier | Partial | Evidence-based readiness view across current documents, Check Sheets, Punch, Hold points, tags and tasks; project-configurable document index with type/discipline/minimum-count/approval/evidence rules | Generated revision-controlled PDF, ZIP evidence package, dossier revision/approval workflow and durable evidence-byte verification |
 | Progress reporting | Partial | Scoped snapshots, Check Sheet/Task count and weight metrics, Punch counts | Approved project/system roll-up, daily/weekly reports and contractual progress procedure |
-| Preservation | Not implemented | — | Preservation plans, intervals, inspections, evidence, corrective actions and overdue reports |
+| Preservation | Partial | Project-scoped equipment plans, approved procedure/revision references, user-supplied interval/due date, append-only inspection history, compliant/non-compliant/not-applicable outcomes, corrective action, environmental conditions and evidence attachments | Plan revision editing, recurring calendar/reminders, preservation check-sheet templates, trend/compliance reports and durable production evidence storage |
 | Manpower / resource planning | Partial | Task estimated and spent man-hour fields | Timesheets/work logs, capacity, contractor allocation and approvals |
 | Evidence storage | Partial / production blocker | Private tenant/entity-scoped local storage, extension/content checks, size limit and SHA-256 metadata | Durable private object storage for serverless production, malware scanning, retention and restore rehearsal |
 | Reporting catalogue | Evidence-limited | OPERA dashboards and stored progress snapshots | Exact ICAPS catalogue/formulas unavailable; do not claim the advertised 30+ report catalogue |
@@ -38,13 +38,14 @@
 2. **Readiness policy:** current A/B Punch and Check Sheet defaults must be reviewed and approved against the project's completion procedure, ITPs, contract and authority matrix.
 3. **Electronic signatures:** authenticated acknowledgement is not a qualified cryptographic signature.
 4. **Dossier:** configurable document index and completeness results exist, but the subsystem page is not yet a generated revision-controlled PDF/ZIP turnover package or approval workflow.
-5. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
+5. **Preservation:** automated reminders, recurring schedules, plan revisions and advanced compliance reports are not implemented; uploaded evidence still requires durable production storage.
+6. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
 ## Recommended implementation order
 1. Full dossier PDF/ZIP compilation, revision control and approval workflow.
 2. Durable evidence storage and security/retention/restore controls.
 3. Reusable revision-controlled Check Sheet/Test Sheet templates and project instantiation.
-4. Preservation management.
+4. Preservation reminders, plan revisions, templates and compliance reporting.
 5. Work logs/manpower and expanded reports.
 6. Further document-control and engineering import/revision workflows.
 7. Procedure-linked witness, signatory and waiver authority configuration.
