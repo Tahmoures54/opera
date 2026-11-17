@@ -23,7 +23,7 @@ An attended point cannot be cancelled or silently reopened. HOLD points cannot b
 ## Required records
 
 - Check Sheet and optional item association, point type, notified party and planned time.
-- Server-recorded notification, attendance and release timestamps.
+- Server-recorded notification, attendance and release timestamps. The NOTIFIED transition records that a user has manually notified the named party; OPERA does not send email/SMS notifications.
 - Attending user, release-authorizing user, attendance result, release note or cancellation reason.
 - Append-only before/after audit snapshots for every state transition.
 
@@ -33,6 +33,7 @@ An attended point cannot be cancelled or silently reopened. HOLD points cannot b
 - HOLD points block configured MC/RFC/RFSU readiness gates while not released or cancelled.
 - REVIEW points are tracked for review traceability; they do not automatically become a HOLD point.
 - The application does not infer acceptance criteria, witness notice periods, waiver authority or statutory inspection rules. These must be defined by approved project procedures and the ITP.
+- WitnessPoint does not yet have dedicated file-evidence attachments; the release note and audit trail are recorded, but supporting ITP evidence must remain in the controlled document/check-sheet record until that linkage is implemented.
 - Authenticated user attribution is an application audit record, not a qualified electronic signature.
 
 Production acceptance still requires project-specific role/authority approval, staging execution, database migration rehearsal and audit/evidence retention verification.
