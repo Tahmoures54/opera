@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - Preservation Compliance Report{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+      <a href="{{ url_for('commissioning.preservation_index', project_id=project.id) }}">Back to preservation</a>
+      <h1 class="h3 mt-2 mb-1">Preservation Compliance Report</h1>
+      <div class="text-muted">{{ project.project_code }} · {{ project.name }} · As of {{ today.isoformat() }}</div>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('commissioning.preservation_report_csv', project_id=project.id, status=status_filter, equipment_id=selected_equipment_id) }}">Export CSV</a>
+  </div>
+
+  <section class="card shadow-sm mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label" for="status">Schedule status</label>
+          <select class="form-select" id="status" name="status">
+            {% for item in filters %}<option value="{{ item }}" {% if item == status_filter %}selected{% endif %}>{{ item|replace('_',' ')|title }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label" for="equipment_id">Equipment / Tag</label>
+          <select class="form-select" id="equipment_id" name="equipment_id">
+            <option value="">All equipment</option>
+            {% for item in equipment %}<option value="{{ item.id }}" {% if item.id == selected_equipment_id %}selected{% endif %}>{{ item.tag_number }} — {{ item.description or item.equipment_type }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button class="btn btn-outline-primary flex-fill">Apply filters</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('commissioning.preservation_report', project_id=project.id) }}">Reset</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="text-muted small">Plans in report</div><div class="h3 mb-0">{{ counts.total }}</div></div></div></div>
+    <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="text-muted small">Overdue</div><div class="h3 mb-0 text-danger">{{ counts.overdue }}</div></div></div></div>
+    <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="text-muted small">Due soon</div><div class="h3 mb-0 text-warning">{{ counts.due_soon }}</div></div></div></div>
+    <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="text-muted small">Action required</div><div class="h3 mb-0 text-danger">{{ counts.action_required }}</div></div></div></div>
+    <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="text-muted small">On schedule</div><div class="h3 mb-0 text-success">{{ counts.on_schedule }}</div></div></div></div>
+    <div class="col-6 col-lg-2"><div class="card h-100"><div class="card-body"><div class="text-muted small">Suspended / Closed</div><div class="h3 mb-0">{{ counts.suspended + counts.closed }}</div></div></div></div>
+  </div>
+
+  <section class="card shadow-sm">
+    <div class="card-header fw-semibold">Plan register and latest inspection</div>
+    <div class="table-responsive">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead><tr><th>Plan / Tag</th><th>Activity</th><th>Procedure</th><th>Interval</th><th>Last inspection</th><th>Next due</th><th>Status</th><th>Responsible</th><th>Latest corrective action</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          {% set plan = row.plan %}
+          {% set latest = row.last_inspection %}
+          <tr>
+            <td><strong>{{ plan.plan_number }}</strong><div class="small text-muted">{{ row.equipment.tag_number if row.equipment else 'Equipment unavailable' }}</div></td>
+            <td>{{ plan.activity }}</td>
+            <td>{{ plan.procedure_reference }} · Rev {{ plan.procedure_revision }}</td>
+            <td>{{ plan.interval_days }} days</td>
+            <td>{% if latest %}{{ latest.performed_at.isoformat() }} · {{ latest.result|replace('_',' ') }}{% else %}Not performed{% endif %}</td>
+            <td>{{ plan.next_due_date.isoformat() }}</td>
+            <td>{{ row.due_status|replace('_',' ')|title }}</td>
+            <td>{{ row.assigned_user.full_name if row.assigned_user else plan.responsible_company or 'Unassigned' }}</td>
+            <td>{{ latest.corrective_action if latest and latest.corrective_action else '—' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="text-center text-muted py-4">No preservation plans match these filters.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <p class="small text-muted mt-3">The report displays approved procedure references and configured intervals as recorded. It does not define technical preservation limits or infer compliance beyond the stored inspection results and due-date rules.</p>
+</div>
+{% endblock %}
