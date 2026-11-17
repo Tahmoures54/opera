@@ -50,7 +50,7 @@ The implemented certificate types are MC and RFC. RFSU is a separate readiness/a
 ## Known gaps / next increments
 - Reusable revision-controlled Check Sheet/Test Sheet template catalogue and controlled project instantiation.
 - Further readiness-policy extensions: configurable witness/review point rules, waiver/signatory authority matrix and procedure-revision linkage.
-- Full revision-controlled dossier PDF/ZIP package, dossier approval workflow and durable evidence-byte verification.
+- Controlled dossier revision numbering, review/approval and formal issue workflow; the current PDF/ZIP is an explicitly uncontrolled working export.
 - Production S3 bucket configuration and live provider round-trip; existing evidence migration; provider access controls, retention/versioning, malware scanning and paired database/object backup-restore.
 - Automated reminders, recurring calendar planning, OEM interval library, preservation templates and advanced compliance reporting.
 - Daily work logs, approved manpower capacity planning and vendor mobilization.
