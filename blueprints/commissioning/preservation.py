@@ -175,6 +175,7 @@ def record_preservation_inspection(project_id, plan_id):
     if result not in ("COMPLIANT", "NON_COMPLIANT", "NOT_APPLICABLE"):
         abort(400, description="Invalid preservation inspection result.")
     findings = (request.form.get("findings") or "").strip() or None
+    environmental_conditions = (request.form.get("environmental_conditions") or "").strip() or None
     corrective_action = (request.form.get("corrective_action") or "").strip() or None
     if result == "NON_COMPLIANT" and not corrective_action:
         abort(400, description="Corrective action is required for a non-compliant inspection.")
@@ -184,6 +185,7 @@ def record_preservation_inspection(project_id, plan_id):
     inspection = CommissioningPreservationInspection(
         company_name=project.company_name, project_id=project.id, plan_id=plan.id,
         performed_at=performed_at, result=result, findings=findings,
+        environmental_conditions=environmental_conditions,
         corrective_action=corrective_action,
         procedure_reference_snapshot=plan.procedure_reference,
         procedure_revision_snapshot=plan.procedure_revision,
@@ -209,7 +211,8 @@ def record_preservation_inspection(project_id, plan_id):
         after={
             "plan_id": plan.id, "plan_number": plan.plan_number,
             "performed_at": performed_at.isoformat(), "result": result,
-            "findings": findings, "corrective_action": corrective_action,
+            "findings": findings, "environmental_conditions": environmental_conditions,
+            "corrective_action": corrective_action,
             "procedure_reference": inspection.procedure_reference_snapshot,
             "procedure_revision": inspection.procedure_revision_snapshot,
             "interval_days": inspection.interval_days_snapshot,
