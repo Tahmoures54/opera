@@ -96,3 +96,12 @@ The readiness panel currently evaluates four configured indicators:
 Category C/D Punch items and incomplete commissioning tasks remain visible for review but are not currently hard blockers in this dossier score. A missing document register or empty Check Sheet register is shown as not ready, not treated as completed.
 
 The dossier is a readiness overview only. It is not a generated MC certificate, and this initial increment does not automatically change a Handover Package status. The project must approve its dossier index, required document types, Punch category rules, witness/hold rules and task completion criteria before these indicators can be treated as contractual acceptance gates.
+
+
+## 11. Task dependencies and execution sequence
+
+Project managers can add finish-to-start (FS) predecessor links between tasks in the same project and subsystem. Optional lag is recorded as a non-negative number of calendar days. A successor cannot be moved to **Ready** or **In Progress** until every predecessor is **Completed**.
+
+The dependency graph rejects self-links, duplicate links and circular sequences. Removing a link is permission-controlled and audited. This release intentionally implements FS only; SS, FF and SF relationships, negative leads, automatic date rescheduling and critical-path calculations are not implied. A lag is recorded for planning visibility and is not yet used to automatically move planned dates.
+
+Dependencies are an execution control, not a substitute for approved project logic. The project scheduler remains responsible for validating the sequence and planned dates.

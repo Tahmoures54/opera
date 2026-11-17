@@ -42,7 +42,7 @@
   {% endif %}
 
   <section class="card">
-    <div class="card-header fw-semibold">Task register</div>
+    <div class="card-header fw-semibold">Task register <span class="text-muted small fw-normal">· finish-to-start sequencing</span></div>
     <div class="card-body border-bottom">
       <form method="get" class="row g-2">
         <div class="col-md-5"><input class="form-control" name="q" value="{{ search_term }}" placeholder="Search number, title, discipline or group"></div>
@@ -53,7 +53,7 @@
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
-        <thead><tr><th>Task number</th><th>Activity</th><th>Task</th><th>Discipline</th><th>System / Subsystem</th><th>Equipment</th><th>Check Sheet</th><th>Man-hours</th><th>Planned dates</th><th>Status / execution</th></tr></thead>
+        <thead><tr><th>Task number</th><th>Activity</th><th>Task</th><th>Discipline</th><th>System / Subsystem</th><th>Equipment</th><th>Check Sheet</th><th>Man-hours</th><th>Planned dates</th><th>Predecessors</th><th>Status / execution</th></tr></thead>
         <tbody>
         {% for task in tasks %}
           <tr>
@@ -66,6 +66,25 @@
             <td>{{ sheet_by_id.get(task.check_sheet_id).sheet_number if sheet_by_id.get(task.check_sheet_id) else '—' }}</td>
             <td>{{ task.spent_man_hours }} / {{ task.estimated_man_hours }}</td>
             <td><small>{{ task.planned_start_date or '—' }} → {{ task.planned_finish_date or '—' }}</small></td>
+            <td style="min-width:220px">
+              {% for dependency in dependencies_by_task.get(task.id, []) %}
+                {% set predecessor = task_by_id.get(dependency.predecessor_task_id) %}
+                <div class="small d-flex justify-content-between gap-2 align-items-center mb-1">
+                  <span>{{ predecessor.task_number if predecessor else 'Unknown task' }} <span class="text-muted">(+{{ dependency.lag_days }}d)</span></span>
+                  {% if can_manage_tasks %}<form method="post" action="{{ url_for('commissioning.remove_task_dependency', project_id=project.id, task_id=task.id, dependency_id=dependency.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-link btn-sm text-danger p-0" aria-label="Remove predecessor">Remove</button></form>{% endif %}
+                </div>
+              {% else %}<span class="small text-muted">No predecessor</span>{% endfor %}
+              {% if can_manage_tasks and task.status.value not in ('IN_PROGRESS','COMPLETED','CANCELLED') %}
+              <form method="post" action="{{ url_for('commissioning.add_task_dependency', project_id=project.id, task_id=task.id) }}" class="mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select class="form-select form-select-sm mb-1" name="predecessor_task_id" aria-label="Select predecessor" required>
+                  <option value="" selected disabled>Add predecessor</option>
+                  {% for candidate in tasks %}{% if candidate.id != task.id and candidate.subsystem_id == task.subsystem_id and candidate.status.value != 'CANCELLED' %}<option value="{{ candidate.id }}">{{ candidate.task_number }} — {{ candidate.title|truncate(35) }}</option>{% endif %}{% endfor %}
+                </select>
+                <div class="input-group input-group-sm"><input class="form-control" type="number" name="lag_days" min="0" step="1" value="0" aria-label="Lag days"><button class="btn btn-outline-secondary" type="submit">Link</button></div>
+              </form>
+              {% endif %}
+            </td>
             <td>
               <span class="badge {% if task.status.value == 'COMPLETED' %}bg-success{% elif task.status.value == 'BLOCKED' %}bg-danger{% elif task.status.value == 'IN_PROGRESS' %}bg-primary{% else %}bg-secondary{% endif %}">{{ task.status.value|replace('_',' ')|title }}</span>
               {% if can_manage_tasks and task.status.value not in ('CANCELLED',) %}
@@ -82,7 +101,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="10" class="text-center text-muted py-4">No tasks match this project and filter. No progress is inferred from an empty register.</td></tr>
+          <tr><td colspan="11" class="text-center text-muted py-4">No tasks match this project and filter. No progress is inferred from an empty register.</td></tr>
         {% endfor %}
         </tbody>
       </table>
