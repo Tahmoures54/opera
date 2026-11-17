@@ -158,7 +158,7 @@ def operations(project_id):
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
         punch_severities=list(PunchSeverity), witness_types=list(WitnessType),
-        progress=percent, weighted_progress=weighted_progress,
+        progress=percent, weighted_progress=weighted_progress,\n        today=date.today().isoformat(),
         signed=signed, total=total, punch_open=punch_open,
     )
 
