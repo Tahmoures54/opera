@@ -380,6 +380,7 @@ class CheckSheet(db.Model):
     equipment_id = db.Column(db.Integer, db.ForeignKey("commissioning_equipment.id", ondelete="RESTRICT"))
     sheet_number = db.Column(db.String(100), nullable=False)
     sheet_type = db.Column(_enum(CheckSheetType, "commissioning_check_sheet_type"), nullable=False)
+    discipline = db.Column(db.String(80), nullable=False, default="ANY")
     revision = db.Column(db.Integer, nullable=False, default=0)
     supersedes_id = db.Column(db.Integer, db.ForeignKey("commissioning_check_sheet.id", ondelete="RESTRICT"))
     template_id = db.Column(db.Integer)
