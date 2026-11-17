@@ -1,13 +1,14 @@
 # OPERA Release Readiness Checklist
 
-**Code baseline:** `23f087ab972fefc13545670657de8395f82828fc` (merge commit for PR #40)  
-**CI run:** [44086055925](https://github.com/Tahmoures54/opera/actions/runs/44086055925) — PR head `283a30c30c1f6bd5fe998636c56e38c70cb5e7e6`; quality, integration and docker jobs passed.
+**Code baseline:** c1945633f592db4823558921b0abd109a9abce58 (merge commit for PR #42)  
+**CI run:** [44087919325](https://github.com/Tahmoures54/opera/actions/runs/44087919325) — PR head 578a609392b538f27091f16e64ce9ef8e23b8161; quality, PostgreSQL integration and docker jobs passed.
 
 ## Repository and CI
-- [x] Main contains Task, Check Sheet, Punch, document-control, engineering exchange, dossier index and working PDF/ZIP exports, MC/RFC, readiness, Preservation and S3-compatible evidence-storage increments.
+- [x] Main contains Task, revision-controlled Check Sheet templates, Punch, document-control, engineering exchange, dossier index and working PDF/ZIP exports, MC/RFC, readiness, Preservation and S3-compatible evidence-storage increments.
 - [x] `quality`, `integration` and `docker` checks passed on the earlier baseline `ca37db49224160628e9fb28d3b7d51930acc099f`.
 - [x] PR #39 `quality`, `integration` and `docker` jobs passed on head commit `417654cf6a2db1ac8ff94c3a45426307ab8fdcd9`.
 - [x] PR #40 `quality`, `integration` and `docker` jobs passed on head commit `283a30c30c1f6bd5fe998636c56e38c70cb5e7e6`.
+- [x] PR #42 `quality`, PostgreSQL `integration` and `docker` jobs passed on head commit `578a609392b538f27091f16e64ce9ef8e23b8161`.
 - [ ] Reconcile and remove obsolete remote feature branches after confirming merged ancestry; retain any branch with unmerged work.
 - [ ] Confirm no stale or duplicate pull requests remain open.
 
@@ -29,7 +30,8 @@
 - [ ] Verify direct HTTP requests cannot bypass role checks or readiness gates.
 - [ ] Configure and approve the project dossier index (document types, disciplines, minimum counts, approval and evidence requirements).
 - [ ] Verify certificate and dossier evidence against the approved project completion procedure.
-- [ ] Verify generated dossier PDF/ZIP package and revision/approval controls when that module is delivered.
+- [x] Verify generated dossier PDF/ZIP package and checksum/missing-evidence controls in PR #40 automated tests.
+- [ ] Implement controlled dossier revisions, review/approval/rejection and formal issue/sign-off.
 - [ ] Obtain project owner / Operations acceptance.
 
 A successful CI run is necessary but is not evidence of production deployment, durable evidence retention or project acceptance.
