@@ -1,91 +1,60 @@
 # OPERA Architecture — Commissioning Product
 
 ## Product boundary
+OPERA is an independently implemented project completion, pre-commissioning, commissioning and handover application. MaterialHub warehouse/material workflows are outside this product boundary. Shared authentication, account identity, tenant/company identity, database connectivity and deployment infrastructure are retained where required.
 
-OPERA is a project-scoped Project Completion, Pre-commissioning and Commissioning application. MaterialHub warehouse/material workflows are outside this product boundary. Shared authentication, user identity, tenant/company identity, database connectivity and deployment infrastructure are retained only where still required.
-
-## Current architecture observed
-
+## Runtime architecture
 - Backend: Flask application factory.
 - Persistence: SQLAlchemy ORM.
 - Schema evolution: Flask-Migrate / Alembic.
-- Relational database: PostgreSQL in production; SQLite supported for local/test use.
-- Authentication: Flask-Login with existing account security controls.
+- Relational database: PostgreSQL in production; SQLite for local/test use where supported.
+- Authentication: Flask-Login and the existing account security controls.
 - UI: Jinja templates, Bootstrap-oriented markup, shared CSS and JavaScript.
 - Deployment: Vercel/serverless configuration and Docker-based CI.
-- Domain package: `models_commissioning.py`, `blueprints/commissioning/`, `services/commissioning_*`.
+- Domain implementation: `models_commissioning.py`, `blueprints/commissioning/`, and `services/commissioning_*`.
 
-## Current domain model
+## Implemented domain capabilities on main
+- Project, System, Subsystem and Equipment/Tag registers.
+- Commissioning Task Register with CCK, STS, PIP, PRC, FTS, OTS and PVP activity codes.
+- Task execution state transitions, audit history and finish-to-start dependencies with cycle prevention.
+- Check Sheet issue, execution results, independent QC verification, two-party sign-off, rejection/rework and controlled revisions.
+- Punch lifecycle with corrective action, audited reopening, verification/waiver history and read-only history view.
+- Witness / Hold / Review points and readiness blocking for unreleased Hold points.
+- Controlled engineering Document Register with revision records, file evidence metadata, review and approval history.
+- OPERA-owned XLSX engineering data exchange for Systems, Subsystems, Equipment and Tasks; dry-run validation, workbook SHA-256 confirmation, atomic create-only import and audit events.
+- Subsystem dossier/readiness view aggregating current documents, Check Sheets, Punch items, Witness/Hold points, equipment and tasks.
+- Immutable MC and RFC certificate records with issue-time evidence snapshots; distinct RFSU readiness gate and Operations Acceptance transition.
+- Progress snapshots with Check Sheet and Task count/weight metrics and Punch counts.
+- Tenant-scoped project membership, server-side role permissions and append-only audit/evidence records.
 
-Existing model families observed:
-- Project, System, Subsystem, Equipment.
-- Check Sheet, Check Sheet Item, Check Sheet Revision.
-- Punch Item and Punch History.
-- Witness Point.
-- Handover Package.
-- Progress Snapshot.
-- Audit Log, Attachment, Signature and Project Membership.
+## Readiness and handover
+`services/commissioning_readiness.py` evaluates MC, RFC and RFSU readiness for a subsystem. Current defaults include required registered Check Sheets, open A/B Punch items and unreleased Hold points; RFC adds commissioning/functional-test Check Sheets; RFSU additionally requires tasks to be completed or cancelled. These are OPERA defaults, not universal ICAPS rules. Project-specific required-sheet selection, Punch blocking categories, signatory matrices and contractual acceptance rules require approved project configuration.
 
-Task-register:
-- Commissioning Task with project/system/subsystem/equipment references.
-- Activity taxonomy: CCK, STS, PIP, PRC, FTS, OTS and PVP.
-- Discipline, progress stage/substage, assigned group, man-hour estimates/actuals, planned/actual dates and task status.
-- Finish-to-start Task Dependency with lag.
+The implemented certificate types are MC and RFC. RFSU is a separate readiness/authorization transition; it is not an RFC certificate. Operations Acceptance is the final handover acceptance/rejection step.
 
-## Readiness / Certificate Engine (P1 completed)
+## Data and security controls
+1. Commissioning entities are scoped to the active company/tenant and project.
+2. Cross-tenant/project references are rejected in service and route logic, with database constraints where implemented.
+3. Project-role authorization is enforced server-side.
+4. Workflow state changes and their audit events are committed together.
+5. Signed Check Sheets, issued certificates, signatures, attachment metadata, review records and Punch history are protected from ordinary ORM mutation/deletion.
+6. Progress is derived from persisted records; empty denominators do not produce fabricated completion.
+7. The current evidence storage adapter writes to a local filesystem path. This is suitable only where the filesystem is persistent. It is not a durable Vercel/serverless evidence store.
+8. Alembic migrations are additive and must be exercised against supported SQLite/PostgreSQL paths before release.
 
-`services/commissioning_readiness.py` provides:
-
-- `evaluate_subsystem_readiness(company_name, subsystem_id)` → structured result with:
-  - `is_ready_for_mc` / `is_ready_for_rf` / `is_ready_for_rfsu`
-  - blocker/warning issues (open Punch A/B, unsigned required sheets, open Hold points, incomplete tasks)
-  - metrics dictionary
-- `calculate_subsystem_progress(...)` → weighted progress from CheckSheet weights + Task estimated man-hours.
-
-Rules follow the public OPERCOM intent (system-subsystem approach, punch clearance before MC/RFSU, signed check sheets) while remaining an independent OPERA implementation.
-
-## Target relationship model
-
-```text
-Company / Tenant
-  └── Project
-       ├── System
-       │    └── Subsystem
-       │         ├── Equipment / Tag
-       │         ├── Commissioning Tasks (+ dependencies)
-       │         ├── Check Sheets
-       │         ├── Punch Items
-       │         └── Handover / Dossier
-       ├── Project Memberships / Roles
-       ├── Witness & Hold Points
-       ├── Documents / Revisions (planned)
-       └── Progress Snapshots (derived from approved source records)
-```
-
-## Architectural controls
-
-1. Every commissioning entity is tenant-scoped.
-2. Cross-tenant and cross-project references are rejected at query and database-constraint levels where possible.
-3. Role checks are project-scoped; company-level admin status does not remove tenant filtering.
-4. State changes must be audited in the same database transaction.
-5. Signed/approved records must not be silently overwritten; revisions or controlled reopen events are required.
-6. Progress is derived from persisted source records and approved weights; no demo or synthetic progress.
-7. Attachments must use durable object storage in serverless production. The current local filesystem adapter is suitable only for persistent local/container storage, not as the final Vercel evidence store.
-8. Alembic migrations must be additive and reversible where practical. Destructive schema retirement requires an explicit backup and empty-data verification.
-
-## Next architectural increments
-
-- Wire ReadinessResult into Handover Package creation and UI.
-- Normalize task-to-discipline and task-to-document associations if project requirements confirm many-to-many relationships.
-- Introduce a configurable progress sequence and richer predecessor rules.
-- Add a Document Register and controlled document revision/transmittal model.
-- Add a reusable template catalog for Check Sheets and test procedures.
-- Certificate/readiness PDF artefacts and full dossier packaging.
-- Introduce an object-storage interface (local adapter for development; durable S3-compatible or Vercel-supported provider in production).
-- Centralize remaining state transition services so routes cannot bypass workflow invariants.
+## Known gaps / next increments
+- Project-configurable readiness policy: required Check Sheet templates/types, Punch category blocking per milestone, Hold/Witness rules, waivers and authorized signatories.
+- Reusable, revision-controlled Check Sheet/Test Sheet template catalogue and controlled project instantiation.
+- Full indexed dossier compilation, missing-evidence rules, revisioned PDF package and ZIP evidence export.
+- Durable private object storage adapter, access controls, retention, malware scanning and paired database/object backup-restore.
+- Preservation plans, periodic inspection records and overdue reporting.
+- Daily work logs, approved manpower capacity planning and vendor mobilization.
+- Richer progress reporting and approved project/system roll-up formulas.
+- Full document transmittals and configurable review cycles.
+- Mobile/offline field execution and richer field evidence capture.
+- Expanded audit coverage and consolidated workflow transition services.
 
 ## Non-goals
-
 - Reintroducing MaterialHub warehouse, procurement, inventory or goods-receipt modules.
-- Copying ICAPS proprietary source code, protected form artwork or branding.
-- Claiming full ICAPS parity without a current release-specific manual and representative authorized project data.
+- Copying ICAPS proprietary source code, protected forms, artwork or branding.
+- Claiming full ICAPS parity without current release-specific documentation and authorized representative project data.

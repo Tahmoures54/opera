@@ -1,34 +1,30 @@
 # OPERA Release Readiness Checklist
 
-This checklist distinguishes implemented workflows from production deployment evidence.
+**Code baseline:** `ca37db49224160628e9fb28d3b7d51930acc099f`  
+**CI run:** [44074781281](https://github.com/Tahmoures54/opera/actions/runs/44074781281)
 
-## Product and workflow
-- [x] OPERA branding, product landing page and authenticated navigation
-- [x] Project/system/subsystem structure foundation
-- [x] Project-scoped membership and role permissions
-- [x] Check-sheet issue, item results, independent QC verification, two-party sign-off and revisions
-- [x] Punch creation, assignment, closure, verification and waiver history
-- [x] Witness/Hold/Review scheduling, notification, attendance and release
-- [x] MC, RF, RFSU and operations handover state gates
-- [x] Project progress snapshots and audit evidence
+## Repository and CI
+- [x] Main contains the merged Task, Check Sheet, Punch, document-control, engineering exchange, dossier, MC/RFC and readiness increments.
+- [x] `quality` check passed on the baseline commit.
+- [x] `integration` check passed on the baseline commit.
+- [x] `docker` check passed on the baseline commit.
+- [ ] Reconcile and remove obsolete remote feature branches after confirming merged ancestry; retain any branch with unmerged work.
+- [ ] Confirm no stale or duplicate pull requests remain open.
 
-## Automated verification
-- [x] Ruff and Mypy pass on the first CI run
-- [x] Full pytest suite passes on the latest main commit (CI run 123)
-- [x] Bandit passes
-- [x] pip-audit passes with no unresolved advisories
-- [x] PostgreSQL migration/integration suite passes
-- [x] Docker build and Trivy scan pass
+## Production deployment and evidence controls
+- [ ] Configure production secrets and PostgreSQL connection settings.
+- [ ] Rehearse the current Alembic head upgrade on a production-like staging database.
+- [ ] Take and verify a production database backup before migration.
+- [ ] Configure durable private object storage for evidence files; local filesystem storage is not suitable for Vercel/serverless persistence.
+- [ ] Verify object access controls, encryption, retention, malware scanning and off-host backup.
+- [ ] Perform paired database/evidence backup and restore rehearsal.
+- [ ] Verify deployment health, HTTPS, logging, monitoring and rollback procedure.
 
-## Before production
-- [x] Review and merge the product foundation PR
-- [ ] Configure production secrets and PostgreSQL
-- [ ] Take and verify a production database backup
-- [ ] Apply migration 20261116_0019 in a staging environment
-- [ ] Verify evidence volume persistence, paired database/evidence backup and restore in staging
-- [ ] Confirm malware-scanning/retention policy and off-host encrypted evidence backup
-- [ ] Run an end-to-end commissioning scenario with separate contractor, QC, client and operations accounts
-- [ ] Verify HTTPS, readiness endpoint, logging and monitoring
-- [ ] Obtain operational acceptance from the project owner
+## Project acceptance
+- [ ] Approve systemization, activity taxonomy, Check Sheet templates, Punch category/blocking policy, Hold/Witness rules and certificate signatory matrix.
+- [ ] Run a realistic end-to-end scenario using separate contractor, executor, QC, client and Operations accounts.
+- [ ] Verify direct HTTP requests cannot bypass role checks or readiness gates.
+- [ ] Verify certificate and dossier evidence against the approved project completion procedure.
+- [ ] Obtain project owner / Operations acceptance.
 
-A successful CI run does not replace a staging acceptance test or a production backup/restore rehearsal.
+A successful CI run is necessary but is not evidence of production deployment, durable evidence retention or project acceptance.

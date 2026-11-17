@@ -1,66 +1,56 @@
 # OPERA Functional Gap Analysis
 
-**Baseline:** repository `main` as of 17 November 2026 (post Readiness Engine commit).  
-**Evidence rule:** “Present” means code/model/route evidence was observed; “partial” means some foundation exists but the lifecycle or coverage is incomplete. Historical ICAPS references are not treated as current product specifications.
+**Baseline:** `main` at commit `ca37db49224160628e9fb28d3b7d51930acc099f`, 17 November 2026.  
+**Evidence basis:** merged PRs #21–#29 and #31, current models/routes/services, and successful `quality`, `integration` and `docker` checks on the baseline commit. This is a code-level capability assessment, not production acceptance.
 
-## Status legend
-- **Present and complete:** verified end-to-end for the stated bounded scope.
-- **Present but incomplete:** a working foundation exists, but meaningful lifecycle or coverage remains.
-- **Requires development:** no sufficient implementation was found.
-- **Requires redesign:** existing structure needs material change.
-- **Not transferable:** proprietary/product-specific behavior or unsupported assumption.
-- **Needs more documentation:** exact ICAPS behavior cannot yet be verified.
+## Status definitions
+- **Implemented baseline:** code, route/UI and automated workflow coverage exist for the stated bounded scope.
+- **Partial:** a working foundation exists but important lifecycle or operational requirements remain.
+- **Not implemented:** no sufficient end-to-end implementation is present on main.
+- **Evidence-limited:** exact current ICAPS behavior cannot be verified from available public sources.
 
 ## Capability matrix
 
-| ICAPS / OPERCOM capability | Functional intent | OPERA baseline | Gap | Priority | Implementation |
-|---|---|---|---|---|---|
-| Project setup | Project/client/contractor and dates | Present | Project-specific configuration and phases need extension | P1 | Extend existing project model; avoid duplicate project core |
-| Organization / roles | Separate administrator, superintendent, executor responsibilities | Partial | OPERA project roles exist; configurable groups and discipline ownership are limited | P1 | Role/permission matrix and group register |
-| System / subsystem | Physical breakdown for completion scope | Present but incomplete | Limits, WBS and optional subproject levels need definition | P1 | Extend current hierarchy only where approved |
-| Equipment / Tag | Equipment register tied to subsystem | Present but incomplete | Engineering attributes, import mapping and tag status lifecycle need extension | P1 | Equipment data dictionary and import validation |
-| Task branch | Task register connected to equipment and progress sequence | Present | Task dependencies exist; controlled status transitions and full execution records remain | P1 | Task model + dependency + status service |
-| Task activity taxonomy | CCK/STS/PIP/PRC/FTS/OTS/PVP | Present | Confirm codes against project manual and map to client procedure library | P1 | Controlled enum; configurable catalog later |
-| Discipline association | One or more disciplines per task | Partial | Current task record stores one discipline string | P1 | Add normalized task-discipline association after requirements confirmed |
-| Progress stage/substage | Sequence and progress classification | Partial | Free-text stage/substage does not yet enforce a project sequence | P1 | Configurable sequence register and predecessor rules |
-| Check/test sheets | Execute and record checks with acceptance criteria | Present but incomplete | Sheet library, reusable templates, richer witness/result controls and controlled revisions | P1 | Template definitions and project-specific sheet instances |
-| Check-sheet revision | Preserve signed records and issue revisions | Partial | Existing revision/immutability foundation; full transmittal/review workflow needs validation | P1 | Revision register and tests |
-| Punch list | Raise, assign, clear, verify and close defects | Present but incomplete | Reopen and configurable category/closure matrix need completion | P1 | Explicit state machine and category policy |
-| Witness / Hold / Review | Notify, attend, record and release points | Present but incomplete | Hold-point blocking behavior and overdue/escalation logic need verification | P1 | Workflow guardrails and evidence |
-| MC / RFC / RFSU handover | Explicit MC and RFC certificates, readiness gates and milestone-based transfer | **Implemented baseline** | Full contractual dossier packaging, configurable certificate signatory matrix and qualified electronic signatures remain future scope | P1 | `CommissioningCertificate` stores immutable MC/RFC issue-time evidence; RFSU remains a gated transition |
-| Document register | Controlled document metadata, revisions and status | Requires development | No complete standalone register found | P1 | Document register, revision and transmittal workflow |
-| Import / Export | Excel-based engineering data exchange | Present | Versioned templates + dry-run already implemented | P1 | OPERA-owned XLSX templates and import pipeline |
-| Dossier compilation | Compile approved evidence by subsystem/discipline | Partial | Handover package exists; indexed dossier generation is incomplete | P1 | Dossier index, completeness checks and PDF export |
-| Preservation | Periodic preservation plans and check sheets | Requires development | Dedicated module not observed | P2 | Add only when project scope requires it |
-| Reporting | Actual execution progress and outstanding items | **Present** (weighted progress) | Task + CheckSheet weighted progress helper added; richer dashboards remain | P1 | `calculate_subsystem_progress` in readiness service |
-| PDF / print | Controlled, printable forms and certificates | Partial | Output catalog and revision-aware rendering need completion | P1 | Server-generated, versioned PDF outputs |
-| Daily / weekly progress | Period reporting | Requires development | No verified operational report workflow | P2 | Derive from dated task/checksheet/punch events |
-| Resource / man-hours | Estimate and actual hours | Partial | Task register captures estimate/spent fields; timesheet evidence and approval absent | P2 | Add daily work logs if contract requires |
-| Audit trail | Record who changed what and when | Present but incomplete | Generic audit exists; coverage must include all new transitions | P1 | Append-only events and tests |
-| Attachments | Evidence linked to entity | Present but incomplete | Local/serverless filesystem is ephemeral on Vercel | P1 | Durable object storage adapter before production evidence use |
-| Advanced reports catalogue | ICAPS advertises 30+ reports | Needs more documentation | Exact catalogue and formulas not available | P2 | Map only after authorized catalogue is supplied |
-| Current ICAPS forms and field rules | Exact product release parity | Needs more documentation | No current manual / workbook samples supplied | P1 | Evidence intake and field-by-field mapping |
+| Capability | Main-branch status | Verified implementation | Remaining gap |
+|---|---|---|---|
+| Project / System / Subsystem | Partial | Tenant-scoped project and system/subsystem structure | Optional subproject/area/basic-function hierarchy and project systemization policy |
+| Equipment / Tag Register | Partial | Equipment register and task/checksheet/punch/dossier relationships | Broader engineering attributes, discipline catalog and lifecycle/status governance |
+| OPERCOM activity taxonomy | Implemented baseline | CCK, STS, PIP, PRC, FTS, OTS, PVP | Project-approved catalog, templates and applicability rules |
+| Task Register | Implemented baseline | Task creation, controlled state transitions, actual dates, audit events | Task-to-multiple-disciplines/document links and configurable workflow templates |
+| Task sequencing | Implemented bounded scope | Finish-to-start dependencies, lag storage, duplicate/self/cycle and project-scope validation; predecessor completion gate | SS/FF/SF, leads, automatic rescheduling and critical-path calculation |
+| Check Sheet execution | Implemented bounded scope | Issue, item results, independent QC verification, two-party sign-off, rejection/rework, controlled revisions and immutability | Reusable template catalogue, richer measurements, controlled witness matrix and qualified e-signatures |
+| Punch List | Implemented bounded scope | Raise/assign, corrective action, closure, audited reopen, history, verification and waiver evidence | Project-configurable category definitions and milestone blocking/waiver matrix |
+| Witness / Hold / Review | Partial | Scheduling, attendance/release and Hold-point readiness blocking | Project-configurable witness rules, overdue escalation and complete authority matrix |
+| MC / RFC / RFSU | Implemented bounded scope | Immutable MC and RFC certificates with issue-time evidence; distinct RFSU gate | Configurable readiness rules and certificate signatory matrix; qualified electronic signatures |
+| Operations Acceptance | Implemented baseline | Authorized accept/reject transition after RFSU with audit | Full custody-transfer package and project-specific acceptance checklist |
+| Document Register | Implemented bounded scope | Revision records, evidence upload metadata, review/approval/rejection and history | Transmittals, bulk exchange, external numbering and configurable review cycles |
+| Engineering Excel exchange | Implemented bounded scope | OPERA XLSX template/export, dry run, row validation, SHA-256 confirmation, create-only atomic import and audit | More registers, revision-delta workflows, controlled retire/modify actions |
+| Subsystem dossier | Partial | Evidence-based readiness view across current documents, Check Sheets, Punch, Hold points, tags and tasks | Configurable index, generated revision-controlled PDF, ZIP package and full completeness workflow |
+| Progress reporting | Partial | Scoped snapshots, Check Sheet/Task count and weight metrics, Punch counts | Approved project/system roll-up, daily/weekly reports and contractual progress procedure |
+| Preservation | Not implemented | — | Preservation plans, intervals, inspections, evidence, corrective actions and overdue reports |
+| Manpower / resource planning | Partial | Task estimated and spent man-hour fields | Timesheets/work logs, capacity, contractor allocation and approvals |
+| Evidence storage | Partial / production blocker | Private tenant/entity-scoped local storage, extension/content checks, size limit and SHA-256 metadata | Durable private object storage for serverless production, malware scanning, retention and restore rehearsal |
+| Reporting catalogue | Evidence-limited | OPERA dashboards and stored progress snapshots | Exact ICAPS catalogue/formulas unavailable; do not claim the advertised 30+ report catalogue |
+| Current ICAPS parity | Evidence-limited | Public product capability baseline and historical references documented in ICAPS_ANALYSIS.md | Current release manual, administrator guide, import annex and authorized representative sample files |
 
-## Priority order (updated)
+## Critical operational risks before production
+1. **Evidence durability:** local filesystem storage is not suitable for Vercel/serverless persistence. Configure and test durable private object storage before using OPERA as the system of record for project evidence.
+2. **Readiness policy:** current A/B Punch and Check Sheet defaults must be reviewed and approved against the project's completion procedure, ITPs, contract and authority matrix.
+3. **Electronic signatures:** authenticated acknowledgement is not a qualified cryptographic signature.
+4. **Dossier:** the subsystem page is a readiness view, not yet a complete indexed turnover package.
+5. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
-1. P1 — task register and controlled sequence → **largely complete**.
-2. P1 — readiness / certificate gates → **implemented** (`commissioning_readiness.py`).
-3. P1 — weighted progress formulas → **implemented**.
-4. P1 — document register and controlled revisions.
-5. P1 — durable evidence storage for Vercel.
-6. P1 — explicit workflow state machines and authorization tests (ongoing).
-7. P1 — dossier packaging and certificate PDF artefacts.
-8. P2 — preservation, resource planning and expanded reporting once contract scope is known.
+## Recommended implementation order
+1. Project-configurable readiness and Punch/Check Sheet policy.
+2. Reusable revision-controlled Check Sheet/Test Sheet templates.
+3. Dossier index, completeness engine, PDF/ZIP compilation.
+4. Durable evidence storage and security/retention/restore controls.
+5. Preservation management.
+6. Work logs/manpower and expanded reports.
+7. Additional engineering import registers and controlled revision delta workflows.
 
-## Acceptance evidence required before calling a capability complete
+## Acceptance evidence
+A capability is complete only when its model constraints, migrations, backend service, route authorization, UI, audit history, tenant-isolation tests, rejection-path tests and relevant output tests are verified. Production readiness additionally requires a staging acceptance scenario, production-equivalent database migration test and evidence backup/restore rehearsal.
 
-- Model constraints and migration tested on SQLite and PostgreSQL.
-- Route tests include tenant isolation and role denial.
-- Workflow tests verify allowed and rejected transitions.
-- Output tests verify document content and revision metadata.
-- CI green on the merge commit.
-- Production deployment points to the same commit and health checks pass.
-
-## Notes on reverse-engineering boundary
-
-The Readiness Engine implements the *intent* of OPERCOM handover gates (no open A/B punches, signed pre-commissioning sheets, released holds, etc.) using only OPERA’s own models. It does not reproduce any proprietary ICAPS form, certificate layout, or internal calculation formula.
+## Reverse-engineering boundary
+The public ICAPS product pages and historical manuals establish a conceptual reference only. They do not establish current workbook schemas, revision semantics, current role matrix, punch category rules, exact report formulas or current form layouts. OPERA's workbook, state machines and forms are independently designed; no proprietary ICAPS behavior is inferred where evidence is absent.

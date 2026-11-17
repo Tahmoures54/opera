@@ -26,7 +26,7 @@ Use handover packages to collect subsystem milestone and acceptance information.
 3. **RFSU — Ready for Start-Up:** commissioning and start-up prerequisites have been accepted before the start-up authorization process.
 4. **Operations Acceptance:** formal acceptance or rejection of the handover package by the authorized Operations representative.
 
-**Current implementation note:** the existing certificate record uses the internal code `RF` for the Ready for Commissioning (RFC) certificate. It does not currently implement a separate RF / Ready-for-Start-Up certificate type. In the implemented transition flow, RFSU follows the RFC certificate. Do not infer an extra milestone from the legacy internal code. Contract definitions and approved project procedures take precedence.
+**Current implementation:** OPERA issues separate immutable `MC` and `RFC` certificate records. RFSU is a distinct readiness/authorization gate after RFC, not an RFC certificate. The legacy RF route/data alias is retained only for backward compatibility. The certificate stores the authenticated issuer, issue date, issue-time evidence snapshot and audit event. Project-approved completion procedures and signatory authority remain authoritative.
 
 ## Data integrity
 Do not share accounts. Do not overwrite signed records. Report incorrect project mappings immediately. Do not upload personal or unrelated sensitive data as evidence.

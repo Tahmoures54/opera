@@ -1,30 +1,30 @@
-# OPERA Release Notes — Productization Build
+# OPERA Release Notes — Commissioning Implementation Baseline
 
-## Included in this build
-- Standalone OPERA product identity, Persian landing page and help center.
-- Project-scoped roles and organization-tenant isolation.
-- Check-sheet lifecycle: draft, issue, item results, independent QC verification, client/contractor sign-off, rejection and revision.
-- Punch lifecycle: raise, assign, progress, close, verify and waiver with append-only history.
-- Witness/Hold/Review point lifecycle: plan, notify, attend and release.
-- Handover lifecycle: MC, RF, RFSU, operations acceptance or rejection.
-- Progress snapshots and audit evidence.
+**Baseline commit:** `ca37db49224160628e9fb28d3b7d51930acc099f`  
+**Verification:** GitHub Actions run `44074781281`; `quality`, `integration` and `docker` checks completed successfully on this commit.
 
-## Known limitations before production
-- Electronic sign-off is a logged authenticated acknowledgement, not a PKI-based qualified signature.
-- Evidence attachment upload/download screens and a production object-storage backend are not included in this build.
-- Import/export templates, mobile/offline client, external scheduling integrations and configurable workflow templates remain future work.
-- A real project acceptance test with separate contractor, QC, client and operations accounts is still required.
-- The production image is PostgreSQL-only and omits Python's optional SQLite runtime; SQLite remains available for local development and tests.
-- Production migration, backup/restore rehearsal, deployment secrets and HTTPS configuration must be completed in the target environment.
+## Implemented capabilities on main
+- Standalone OPERA product identity and commissioning-focused navigation.
+- Tenant-scoped project, System, Subsystem and Equipment/Tag structure.
+- Commissioning Task Register with historical OPERCOM activity-code references, audited execution transitions and finish-to-start dependencies with cycle detection.
+- Check Sheet issue/execution, item results, independent QC verification, two-party sign-off, rejection/rework and controlled immutable revisions.
+- Punch List creation, assignment, corrective action, closure, audited reopening, history, verification and waiver evidence.
+- Witness/Hold/Review point workflow and readiness blocking for unreleased Hold points.
+- Controlled engineering Document Register with revision history, file evidence metadata, review and approval decisions.
+- OPERA-owned XLSX engineering data exchange for Systems, Subsystems, Equipment and Tasks, including dry-run validation, SHA-256 workbook confirmation, atomic create-only import and audit.
+- Subsystem completion dossier/readiness view consolidating documents, Check Sheets, Punch items, witness/hold points, equipment and tasks.
+- Immutable MC and RFC certificates with issue-time evidence snapshots; separate RFSU gate and Operations Acceptance transition.
+- Scoped progress snapshots with Check Sheet and Task count/weight metrics and Punch counts.
+- Project-scoped role authorization, tenant filters and append-only evidence/audit protections.
+
+## Known limitations / production blockers
+- Readiness rules and signatory authorities require project-specific approval/configuration; current Punch and Check Sheet defaults are OPERA baseline behavior.
+- Dossier is a readiness view, not yet a complete indexed PDF/ZIP turnover package.
+- Reusable revision-controlled Check Sheet/Test Sheet template catalogue is incomplete.
+- Evidence upload currently uses local filesystem storage. Do not use it for Vercel/serverless production evidence retention until a durable private object-storage backend and backup/restore controls are configured and tested.
+- Electronic sign-off is an authenticated acknowledgement, not a qualified cryptographic signature.
+- Preservation plans, daily work logs, full resource/capacity planning and expanded reporting remain future work.
+- No claim is made that OPERA's Excel contract, report formulas, permissions or forms exactly match a current ICAPS release.
 
 ## Release rule
-Do not promote this build to production until the latest commit has a fully successful CI run and the staging acceptance checklist is signed off.
-
-
-## Evidence storage and deployment hardening
-
-- Added private tenant-scoped evidence upload/download for check sheets, Punch items and handover packages.
-- Restricted uploads to PDF, PNG, JPG/JPEG, TXT and CSV with content-signature checks, bounded size, random storage keys and SHA-256 checksums.
-- Added server-side project permission checks, private no-store downloads, append-only attachment metadata and immutable evidence after final sign-off/verification/acceptance.
-- Added a persistent Docker evidence volume and paired database/evidence backup and evidence restore helpers.
-- Removed the Vercel build-time database migration hook. Vercel build jobs must not mutate production database schema.
+Green CI validates the tested commit in CI. It does not replace staging migration rehearsal, production backup/restore, durable evidence storage, end-to-end multi-role acceptance or operational sign-off.
