@@ -13,7 +13,7 @@ from models_commissioning import (
     CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, ProgressSnapshot, CommissioningAuditLog,
     CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
     HandoverPackage, HandoverStatus, CommissioningCertificate,
-    WitnessPoint, WitnessType, WitnessStatus,
+    WitnessPoint, WitnessType, WitnessStatus, PunchHistory,
 )
 
 
@@ -1215,4 +1215,82 @@ def test_engineering_excel_exchange_rejects_formula_cells_and_wrong_equipment_sc
     )
     assert wrong_scope.status_code == 400
     assert b"Equipment must belong to the same system and subsystem" in wrong_scope.data
+
+
+
+
+def test_punch_close_requires_corrective_action_and_reopen_requires_reason(client, app, opera_setup):
+    with app.app_context():
+        punch = PunchItem(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], punch_number="PUNCH-REOPEN-001",
+            category=PunchCategory.C, severity=PunchSeverity.MEDIUM,
+            description="A minor installation defect", raised_by_id=opera_setup["manager"],
+            status=PunchStatus.OPEN,
+        )
+        db.session.add(punch)
+        db.session.flush()
+        db.session.add(PunchHistory(
+            company_name="Contractor A", punch_item_id=punch.id,
+            old_status=None, new_status=PunchStatus.OPEN,
+            changed_by_id=opera_setup["manager"], remarks="Punch item raised",
+        ))
+        db.session.commit()
+        punch_id = punch.id
+
+    _login_id(client, opera_setup["manager"])
+    url = f"/commissioning/punch/{punch_id}/transition"
+    started = client.post(url, data={"status": PunchStatus.IN_PROGRESS.value})
+    assert started.status_code == 302
+
+    missing_action = client.post(url, data={"status": PunchStatus.CLOSED.value})
+    assert missing_action.status_code == 400
+    with app.app_context():
+        punch = db.session.get(PunchItem, punch_id)
+        assert punch.status == PunchStatus.IN_PROGRESS
+        assert punch.corrective_action is None
+
+    closed = client.post(url, data={
+        "status": PunchStatus.CLOSED.value,
+        "corrective_action": "Replaced the damaged gasket and completed a leak check.",
+    })
+    assert closed.status_code == 302
+    with app.app_context():
+        punch = db.session.get(PunchItem, punch_id)
+        assert punch.status == PunchStatus.CLOSED
+        assert punch.corrective_action.startswith("Replaced the damaged gasket")
+        assert punch.closed_at is not None
+
+    missing_reason = client.post(url, data={"status": PunchStatus.IN_PROGRESS.value})
+    assert missing_reason.status_code == 400
+    reopened = client.post(url, data={
+        "status": PunchStatus.IN_PROGRESS.value,
+        "reason": "QC inspection found the leak check evidence incomplete.",
+    })
+    assert reopened.status_code == 302
+
+    history_page = client.get(f"/commissioning/punch/{punch_id}/history")
+    assert history_page.status_code == 200
+    assert b"QC inspection found the leak check evidence incomplete" in history_page.data
+    assert b"Replaced the damaged gasket" in history_page.data
+
+    with app.app_context():
+        punch = db.session.get(PunchItem, punch_id)
+        assert punch.status == PunchStatus.IN_PROGRESS
+        assert punch.closed_at is None
+        assert punch.closed_by_id is None
+        assert punch.corrective_action is None
+        events = PunchHistory.query.filter_by(punch_item_id=punch_id).order_by(
+            PunchHistory.id,
+        ).all()
+        assert len(events) == 4
+        assert events[-1].old_status == PunchStatus.CLOSED
+        assert events[-1].new_status == PunchStatus.IN_PROGRESS
+        assert "Previous corrective action" in events[-1].remarks
+        audit = CommissioningAuditLog.query.filter_by(
+            company_name="Contractor A", entity_type="PunchItem",
+            entity_id=punch_id, action="PUNCH_STATUS_CHANGED",
+        ).order_by(CommissioningAuditLog.id.desc()).first()
+        assert audit.after_json["previous_corrective_action"].startswith("Replaced the damaged gasket")
+
 
