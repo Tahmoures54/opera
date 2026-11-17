@@ -1818,7 +1818,7 @@ def test_checksheet_template_validation_and_template_type_mismatch(client, app, 
 
     created = client.post(url, data={
         "template_code": "VALVE-CCK-01", "title": "Valve conformity",
-        "sheet_type": "PRE_COMM_A", "equipment_type": "VALVE",
+        "sheet_type": "PRE_COMM_A", "discipline": "MECHANICAL",
         "items_json": json.dumps([{"description": "Verify valve tag", "mandatory": True}]),
     })
     assert created.status_code == 302
@@ -1836,3 +1836,9 @@ def test_checksheet_template_validation_and_template_type_mismatch(client, app, 
         "subsystem_id": str(opera_setup["subsystem"]), "template_id": str(template_id),
     })
     assert mismatch.status_code == 400
+    discipline_mismatch = client.post(f"/commissioning/projects/{project_id}/checksheets/new", data={
+        "title": "Wrong discipline", "sheet_type": "PRE_COMM_A",
+        "discipline": "ELECTRICAL",
+        "subsystem_id": str(opera_setup["subsystem"]), "template_id": str(template_id),
+    })
+    assert discipline_mismatch.status_code == 400
