@@ -22,9 +22,9 @@
 
 ## Known limitations / production blockers
 - Readiness rules are project-configurable for Punch categories, Check Sheet types, Hold-point gates and RFSU task completion. Project approval and a complete signatory/waiver authority matrix are still required.
-- Dossier is a readiness view, not yet a complete indexed PDF/ZIP turnover package.
-- Reusable revision-controlled Check Sheet/Test Sheet template catalogue is incomplete.
-- Evidence upload currently uses local filesystem storage. Do not use it for Vercel/serverless production evidence retention until a durable private object-storage backend and backup/restore controls are configured and tested.
+- Controlled subsystem dossier revisions, independent review, separate issue authorization and issued PDF/ZIP exports are implemented. Project-specific section/authority matrices, Operations Acceptance linkage and staging acceptance remain outstanding.
+- Revision-controlled Check Sheet/Test Sheet templates are implemented; advanced measurement capture, configurable result vocabularies, qualified e-signatures and generated blank form packs remain future work.
+- An S3-compatible evidence-storage adapter is implemented and serverless local uploads fail closed. A real private bucket, provider-side retention/versioning and a successful paired database/object backup-restore rehearsal are still required before production evidence use.
 - Electronic sign-off is an authenticated acknowledgement, not a qualified cryptographic signature.
 - Preservation reminders, recurring scheduling, plan revision workflow, preservation templates and advanced compliance reporting remain future work. Daily work logs, full resource/capacity planning and expanded reporting also remain future work.
 - No claim is made that OPERA's Excel contract, report formulas, permissions or forms exactly match a current ICAPS release.
