@@ -471,6 +471,7 @@ class HandoverPackage(db.Model):
     __tablename__ = "commissioning_handover_package"
     __table_args__ = (
         UniqueConstraint("company_name", "package_number", name="uq_comm_handover_package_number"),
+        UniqueConstraint("id", "company_name", name="uq_comm_handover_id_company"),
         ForeignKeyConstraint(["project_id", "company_name"], ["commissioning_project.id", "commissioning_project.company_name"], name="fk_comm_handover_project_tenant"),
         ForeignKeyConstraint(["subsystem_id", "company_name"], ["commissioning_subsystem.id", "commissioning_subsystem.company_name"], name="fk_comm_handover_subsystem_tenant"),
         Index("ix_comm_handover_company_subsystem_status", "company_name", "subsystem_id", "status"),
@@ -494,6 +495,42 @@ class HandoverPackage(db.Model):
     status = db.Column(_enum(HandoverStatus, "commissioning_handover_status"), nullable=False, default=HandoverStatus.DRAFT)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CommissioningCertificate(db.Model):
+    """Immutable MC/RF certificate and issue-time evidence snapshot."""
+    __tablename__ = "commissioning_certificate"
+    __table_args__ = (
+        UniqueConstraint("company_name", "certificate_number",
+                         name="uq_comm_certificate_company_number"),
+        UniqueConstraint("company_name", "package_id", "certificate_type",
+                         name="uq_comm_certificate_package_type"),
+        ForeignKeyConstraint(["project_id", "company_name"],
+                             ["commissioning_project.id", "commissioning_project.company_name"],
+                             name="fk_comm_certificate_project_tenant"),
+        ForeignKeyConstraint(["subsystem_id", "company_name"],
+                             ["commissioning_subsystem.id", "commissioning_subsystem.company_name"],
+                             name="fk_comm_certificate_subsystem_tenant"),
+        ForeignKeyConstraint(["package_id", "company_name"],
+                             ["commissioning_handover_package.id", "commissioning_handover_package.company_name"],
+                             name="fk_comm_certificate_package_tenant"),
+        CheckConstraint("certificate_type IN ('MC', 'RF')",
+                        name="ck_comm_certificate_type"),
+        Index("ix_comm_certificate_company_project_date",
+              "company_name", "project_id", "certificate_date"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
+    subsystem_id = db.Column(db.Integer, db.ForeignKey("commissioning_subsystem.id", ondelete="RESTRICT"), nullable=False)
+    package_id = db.Column(db.Integer, db.ForeignKey("commissioning_handover_package.id", ondelete="RESTRICT"), nullable=False)
+    certificate_type = db.Column(db.String(2), nullable=False)
+    certificate_number = db.Column(db.String(100), nullable=False)
+    certificate_date = db.Column(db.Date, nullable=False)
+    issued_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    issued_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    snapshot_json = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
 class CommissioningDocument(db.Model):
@@ -754,6 +791,6 @@ def _protect_signed_check_sheets(session, flush_context, instances):
 @event.listens_for(Session, "before_flush")
 def _protect_commissioning_evidence(session, flush_context, instances):
     """Keep audit events, signatures, and Punch history append-only."""
-    protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision, CommissioningAttachment, CommissioningDocumentReview)
+    protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision, CommissioningAttachment, CommissioningDocumentReview, CommissioningCertificate)
     if any(isinstance(obj, protected) for obj in set(session.dirty).union(session.deleted)):
         raise ValueError("Commissioning audit evidence is append-only.")
