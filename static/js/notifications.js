@@ -1,5 +1,5 @@
 /**
- * MaterialHub Toast Notifications
+ * OPERA Toast Notifications
  * Converts flash messages into non-blocking, auto-dismiss toasts.
  */
 (function () {

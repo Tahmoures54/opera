@@ -134,9 +134,6 @@ class Config:
         'pool_timeout': int(os.getenv('DB_POOL_TIMEOUT', '30')),
     }
 
-    # Product boundary: legacy MaterialHub business routes are opt-in only.
-    ENABLE_LEGACY_MODULES = _get_bool_env('ENABLE_LEGACY_MODULES', False)
-
     # Misc
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))
     OPERA_UPLOAD_DIR = os.getenv('OPERA_UPLOAD_DIR', os.path.join(INSTANCE_DIR, 'uploads'))
@@ -207,12 +204,10 @@ class ProductionConfig(Config):
 
 
 class TestingConfig(Config):
-    # Existing regression tests intentionally exercise the inherited modules.
-    ENABLE_LEGACY_MODULES = True
     TESTING = True
     DEBUG = True
     WTF_CSRF_ENABLED = False
-    SECRET_KEY = 'materialhub-test-secret'  # nosec B105  # Test-only configuration
+    SECRET_KEY = 'opera-test-secret'  # nosec B105  # Test-only configuration
     SQLALCHEMY_DATABASE_URI = (
         'sqlite:///' + os.path.join(Config.INSTANCE_DIR, 'test.db')
     )

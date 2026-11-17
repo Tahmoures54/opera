@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, TelField, TextAreaField, IntegerField, BooleanField
 from wtforms.validators import DataRequired, Email, Length, Regexp, ValidationError, Optional
-from models import User, AccessLevel
+from models import User
 from data.country_codes import COUNTRY_CODES
 from flask import session
 
@@ -21,11 +21,6 @@ def validate_company_phone(form, field):
     """Ensure company phone is unique."""
     if User.query.filter_by(company_phone=field.data).first():
         raise ValidationError('This phone number is already in use.')
-
-def validate_store_name(form, field):
-    """Ensure store_name is provided for suppliers."""
-    if form.access_level.data == 'supplier' and not field.data:
-        raise ValidationError('Store name is required for suppliers.')
 
 class RegisterForm(FlaskForm):
     company_name = StringField('Company Name', validators=[
@@ -50,11 +45,9 @@ class RegisterForm(FlaskForm):
     access_level = SelectField('Role', choices=[
         ('', 'Select a role'),
         ('project_manager', 'Project Manager'),
-        ('supplier', 'Supplier')
+        ('engineering', 'Engineering')
     ], validators=[DataRequired(message='Please select a role.')])
-    store_name = StringField('Store Name', validators=[
-        Optional(), validate_store_name, Length(max=100)
-    ])
+
     captcha_answer = IntegerField('CAPTCHA Answer', validators=[
         DataRequired(message='Please enter the CAPTCHA answer.'), validate_captcha
     ])
@@ -91,27 +84,3 @@ class ConfirmTOTPForm(FlaskForm):
         validators=[DataRequired(message='You must confirm that you have saved the TOTP secret.')]
     )
     submit = SubmitField('Confirm')
-
-class AddUserForm(FlaskForm):
-    new_full_name = StringField('Full Name', validators=[
-        DataRequired(message='Please enter the full name.'),
-        Length(min=2, max=100)
-    ])
-    new_email = StringField('Email', validators=[
-        DataRequired(message='Please enter the email.'),
-        Email(message='Please enter a valid email address.'),
-        validate_company_email
-    ])
-    new_phone = TelField('Phone', validators=[
-        DataRequired(message='Please enter the phone number.'),
-        Regexp(r'^\+?[0-9]{10,15}$', message='Please enter a valid phone number (e.g., +989123456789)'),
-        validate_company_phone
-    ])
-    new_access_level = SelectField('Role', choices=[
-        ('engineering', 'Engineering'),
-        ('purchase', 'Purchase'),
-        ('quality', 'Quality'),
-        ('delivery', 'Delivery'),
-        ('warehouse', 'Warehouse')
-    ], validators=[DataRequired(message='Please select a role.')])
-    add_user = SubmitField('Add Team Member')

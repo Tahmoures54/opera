@@ -246,7 +246,6 @@ th {
 .home-container { max-width: 1300px; margin: 0 auto; padding: 20px; }
 .dashboard-wrapper { max-width: 1400px; margin: 0 auto; }
 .admin-container { max-width: 1200px; margin: 20px auto; padding: 20px; }
-.supplier-dashboard { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
 @keyframes fadeIn {
     from { opacity: 0; }

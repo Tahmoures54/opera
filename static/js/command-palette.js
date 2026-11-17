@@ -1,26 +1,19 @@
 /**
- * MaterialHub Command Palette
+ * OPERA Command Palette
  * Open with Ctrl+K / Cmd+K or the search button in the top bar.
  */
 (function () {
   var ITEMS = [
-    { title: 'My Workspace', hint: 'Role home', path: '/workspace', icon: 'fa-layer-group' },
-    { title: 'Control Center', hint: 'KPIs & signals', path: '/control-center', icon: 'fa-chart-pie' },
-    { title: 'Material Intelligence', hint: 'Insights', path: '/intelligence', icon: 'fa-brain' },
-    { title: 'Operations Copilot', hint: 'AI assist', path: '/operations-copilot', icon: 'fa-robot' },
-    { title: 'Material Reconciliation', hint: 'Balance', path: '/material-reconciliation', icon: 'fa-balance-scale' },
-    { title: 'Requisitions', hint: 'MR list', path: '/material_requisitions', icon: 'fa-clipboard-list' },
-    { title: 'Purchase Orders', hint: 'PO list', path: '/purchase_order', icon: 'fa-file-invoice-dollar' },
-    { title: 'Deliveries', hint: 'Shipment tracking', path: '/delivery', icon: 'fa-truck' },
-    { title: 'Warehouse', hint: 'Receiving & stock', path: '/warehouse', icon: 'fa-warehouse' },
-    { title: 'Quality Control', hint: 'Inspections', path: '/quality_control', icon: 'fa-shield-alt' },
-    { title: 'Material Master', hint: 'Catalog', path: '/material-master', icon: 'fa-barcode' },
-    { title: 'Marketplace', hint: 'Supplier materials', path: '/material_marketplace', icon: 'fa-store' },
-    { title: 'Traceability', hint: 'Lot / heat', path: '/intelligence/traceability', icon: 'fa-qrcode' },
-    { title: 'Excel Import', hint: 'Bulk load', path: '/intelligence/excel-import', icon: 'fa-file-excel' },
-    { title: 'Reports', hint: 'Center', path: '/reports', icon: 'fa-chart-bar' },
-    { title: 'Help Center', hint: 'Docs', path: '/help', icon: 'fa-question-circle' },
-    { title: 'Change Password', hint: 'Account', path: '/auth/change_password', icon: 'fa-key' }
+    { title: 'Operations Dashboard', hint: 'Projects & readiness', path: '/commissioning/', icon: 'fa-gauge-high' },
+    { title: 'Create Project', hint: 'New commissioning project', path: '/commissioning/projects/new', icon: 'fa-folder-plus' },
+    { title: 'Product Overview', hint: 'OPERA capabilities', path: '/overview', icon: 'fa-compass' },
+    { title: 'Getting Started', hint: 'First steps', path: '/getting-started', icon: 'fa-book-open' },
+    { title: 'User Guide', hint: 'How to use OPERA', path: '/user-guide', icon: 'fa-book' },
+    { title: 'Help Center', hint: 'Guides & support', path: '/help/', icon: 'fa-circle-question' },
+    { title: 'Contact', hint: 'Contact the OPERA team', path: '/contact', icon: 'fa-envelope' },
+    { title: 'About OPERA', hint: 'Product information', path: '/about', icon: 'fa-circle-info' },
+    { title: 'Privacy Policy', hint: 'Data & privacy', path: '/privacy_policy', icon: 'fa-shield-halved' },
+    { title: 'Terms of Service', hint: 'Terms & conditions', path: '/terms_of_service', icon: 'fa-file-contract' }
   ];
 
   // Resolve real paths from sidebar links when available
