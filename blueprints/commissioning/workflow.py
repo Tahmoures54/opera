@@ -115,6 +115,11 @@ def operations(project_id):
     signed = sum(1 for item in sheets if item.status == CheckSheetStatus.SIGNED_OFF)
     punch_open = sum(1 for item in punches if item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED))
     percent = round((signed / total) * 100, 2) if total else 0.0
+    total_sheet_weight = sum(sheet.sheet_weight for sheet in sheets)
+    weighted_progress = round(
+        sum(sheet.sheet_weight for sheet in sheets if sheet.status == CheckSheetStatus.SIGNED_OFF)
+        / total_sheet_weight * 100, 2
+    ) if total_sheet_weight else 0.0
     return render_template(
         "commissioning/operations.html", project=project, sheets=sheets,
         punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots, members=members,
@@ -127,7 +132,8 @@ def operations(project_id):
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
         punch_severities=list(PunchSeverity), witness_types=list(WitnessType),
-        progress=percent, signed=signed, total=total, punch_open=punch_open,
+        progress=percent, weighted_progress=weighted_progress,
+        signed=signed, total=total, punch_open=punch_open,
     )
 
 
