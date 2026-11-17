@@ -4,7 +4,13 @@
 <div class="container-fluid py-4">
   <div class="mb-4">
     <a href="{{ url_for('commissioning.operations', project_id=project.id) }}">Back to commissioning operations</a>
-    <h1 class="h3 mt-2 mb-1">Subsystem Completion Dossier</h1>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <h1 class="h3 mt-2 mb-1">Subsystem Completion Dossier</h1>
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-primary btn-sm" href="{{ url_for('commissioning.subsystem_dossier_pdf_export', project_id=project.id, subsystem_id=subsystem.id) }}">Export PDF</a>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('commissioning.subsystem_dossier_zip_export', project_id=project.id, subsystem_id=subsystem.id) }}">Export ZIP + Evidence</a>
+      </div>
+    </div>
     <div class="text-muted">{{ project.project_code }} · {{ project.name }} · {{ subsystem.subsystem_code }} — {{ subsystem.name }}</div>
   </div>
 
