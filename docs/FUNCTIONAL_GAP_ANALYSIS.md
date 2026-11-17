@@ -25,7 +25,7 @@
 | Operations Acceptance | Implemented baseline | Authorized accept/reject transition after RFSU with audit | Full custody-transfer package and project-specific acceptance checklist |
 | Document Register | Implemented bounded scope | Revision records, evidence upload metadata, review/approval/rejection and history | Transmittals, bulk exchange, external numbering and configurable review cycles |
 | Engineering Excel exchange | Implemented bounded scope | OPERA XLSX template/export, dry run, row validation, SHA-256 confirmation, create-only atomic import and audit | More registers, revision-delta workflows, controlled retire/modify actions |
-| Subsystem dossier | Partial | Evidence-based readiness view across current documents, Check Sheets, Punch, Hold points, tags and tasks | Configurable index, generated revision-controlled PDF, ZIP package and full completeness workflow |
+| Subsystem dossier | Partial | Evidence-based readiness view across current documents, Check Sheets, Punch, Hold points, tags and tasks; project-configurable document index with type/discipline/minimum-count/approval/evidence rules | Generated revision-controlled PDF, ZIP evidence package, dossier revision/approval workflow and durable evidence-byte verification |
 | Progress reporting | Partial | Scoped snapshots, Check Sheet/Task count and weight metrics, Punch counts | Approved project/system roll-up, daily/weekly reports and contractual progress procedure |
 | Preservation | Not implemented | — | Preservation plans, intervals, inspections, evidence, corrective actions and overdue reports |
 | Manpower / resource planning | Partial | Task estimated and spent man-hour fields | Timesheets/work logs, capacity, contractor allocation and approvals |
