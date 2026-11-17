@@ -42,6 +42,10 @@ The dashboard reports:
 
 The seven-day dashboard window is an OPERA display indicator, not an engineering acceptance criterion.
 
+## Compliance report
+
+Open **Compliance report** from the Preservation dashboard to review all plans or filter by `OVERDUE`, `DUE_SOON`, `ACTION_REQUIRED`, `ACTIVE`, `SUSPENDED` or `CLOSED`, and by equipment/tag. The report shows counts for the filtered rows and the latest recorded inspection for each plan. CSV export uses UTF-8 with BOM for spreadsheet compatibility and prefixes formula-like cells to reduce spreadsheet formula-injection risk. The report does not calculate a technical compliance percentage or infer a preservation condition not present in stored records.
+
 ## Evidence and audit
 Inspection events, plan changes and evidence uploads are audited. Attachments are stored using OPERA's current evidence-storage adapter. The current local-filesystem adapter is not durable on Vercel/serverless; configure private object storage and backup/restore before relying on uploaded preservation evidence in production.
 
@@ -49,5 +53,5 @@ Inspection events, plan changes and evidence uploads are audited. Attachments ar
 - No automated reminder/notification delivery is configured yet.
 - No recurring calendar/shift planner or OEM interval library is included.
 - The module does not create a preservation check-sheet template catalogue.
-- Full preservation compliance reports and project-wide trend charts remain future work.
+- The project-level compliance report provides due-status counts, plan/equipment details, latest inspection outcomes and corrective actions, with status/equipment filters and Excel-safe UTF-8 CSV export. Project-wide trend charts remain future work.
 - Plan edits are not yet supported as revisions; close and create a new plan when the approved procedure changes, preserving the old plan/inspection history.

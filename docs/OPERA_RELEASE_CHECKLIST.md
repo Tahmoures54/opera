@@ -36,6 +36,7 @@
 - [ ] Exercise dossier draft, submit, independent review, rejection, approval, separate issue and issued PDF/ZIP exports with distinct project accounts.
 - [ ] Verify an incomplete dossier cannot be approved and an issued snapshot cannot be modified.
 - [ ] Verify issued dossier evidence against the configured storage backend and complete a backup/restore rehearsal.
+- [ ] Verify Preservation report filters, due-status counts, tenant scope and spreadsheet-safe CSV export.
 - [ ] Obtain project owner / Operations acceptance.
 
 A successful CI run is necessary but is not evidence of production deployment, durable evidence retention or project acceptance.

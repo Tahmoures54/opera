@@ -1,7 +1,9 @@
-"""Project-scoped equipment preservation plans and inspection workflow."""
+"""Project-scoped equipment preservation plans, inspections and compliance reporting."""
+import csv
 from datetime import date, timedelta
+from io import BytesIO, StringIO
 
-from flask import abort, flash, redirect, render_template, request, url_for
+from flask import abort, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 
 from blueprints.commissioning import commissioning_bp
@@ -63,6 +65,62 @@ def _due_status(plan, today):
     return "ON_SCHEDULE"
 
 
+_PRESERVATION_REPORT_FILTERS = {
+    "ALL", "OVERDUE", "DUE_SOON", "ACTION_REQUIRED", "ACTIVE", "SUSPENDED", "CLOSED",
+}
+
+
+def _preservation_report_data(project, today, status_filter="ALL", equipment_id=None):
+    query = CommissioningPreservationPlan.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    )
+    if equipment_id is not None:
+        query = query.filter_by(equipment_id=equipment_id)
+    plans = query.order_by(
+        CommissioningPreservationPlan.next_due_date,
+        CommissioningPreservationPlan.plan_number,
+    ).all()
+    equipment = CommissioningEquipment.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).order_by(CommissioningEquipment.tag_number).all()
+    equipment_by_id = {item.id: item for item in equipment}
+    user_ids = {plan.assigned_to_id for plan in plans if plan.assigned_to_id is not None}
+    users = User.query.filter(
+        User.company_name == project.company_name, User.id.in_(user_ids or [-1]),
+    ).all()
+    user_by_id = {user.id: user for user in users}
+    rows = []
+    for plan in plans:
+        due_status = _due_status(plan, today)
+        if status_filter != "ALL" and status_filter != due_status and status_filter != plan.status:
+            continue
+        latest = plan.inspections[0] if plan.inspections else None
+        rows.append({
+            "plan": plan,
+            "equipment": equipment_by_id.get(plan.equipment_id),
+            "due_status": due_status,
+            "last_inspection": latest,
+            "assigned_user": user_by_id.get(plan.assigned_to_id),
+        })
+    counts = {
+        "total": len(rows),
+        "overdue": sum(1 for row in rows if row["due_status"] == "OVERDUE"),
+        "due_soon": sum(1 for row in rows if row["due_status"] == "DUE_SOON"),
+        "action_required": sum(1 for row in rows if row["due_status"] == "ACTION_REQUIRED"),
+        "suspended": sum(1 for row in rows if row["due_status"] == "SUSPENDED"),
+        "closed": sum(1 for row in rows if row["due_status"] == "CLOSED"),
+        "on_schedule": sum(1 for row in rows if row["due_status"] == "ON_SCHEDULE"),
+    }
+    return rows, counts, equipment, status_filter, equipment_id
+
+
+def _csv_safe(value):
+    text = "" if value is None else str(value)
+    if text.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")):
+        return "'" + text
+    return text
+
+
 @commissioning_bp.get("/projects/<int:project_id>/preservation")
 @login_required
 def preservation_index(project_id):
@@ -104,6 +162,86 @@ def preservation_index(project_id):
         counts=counts, today=today, can_manage=has_permission(project.id, "preservation.manage"),
         can_execute=any(has_permission(project.id, p) for p in ("preservation.execute", "preservation.manage")),
     )
+
+
+@commissioning_bp.get("/projects/<int:project_id>/preservation/report")
+@login_required
+def preservation_report(project_id):
+    project = _require(project_id, "preservation.view", "preservation.manage", "project.manage")
+    status_filter = (request.args.get("status") or "ALL").strip().upper()
+    if status_filter not in _PRESERVATION_REPORT_FILTERS:
+        abort(400, description="Invalid preservation report status filter.")
+    equipment_id = request.args.get("equipment_id", type=int)
+    if request.args.get("equipment_id") and equipment_id is None:
+        abort(400, description="Equipment filter must be a numeric equipment ID.")
+    if equipment_id is not None:
+        CommissioningEquipment.query.filter_by(
+            id=equipment_id, company_name=project.company_name, project_id=project.id,
+        ).first_or_404()
+    rows, counts, equipment, status_filter, equipment_id = _preservation_report_data(
+        project, date.today(), status_filter, equipment_id,
+    )
+    return render_template(
+        "commissioning/preservation_report.html",
+        project=project, rows=rows, counts=counts, equipment=equipment,
+        status_filter=status_filter, selected_equipment_id=equipment_id,
+        today=date.today(), filters=sorted(_PRESERVATION_REPORT_FILTERS),
+    )
+
+
+@commissioning_bp.get("/projects/<int:project_id>/preservation/report.csv")
+@login_required
+def preservation_report_csv(project_id):
+    project = _require(project_id, "preservation.view", "preservation.manage", "project.manage")
+    status_filter = (request.args.get("status") or "ALL").strip().upper()
+    if status_filter not in _PRESERVATION_REPORT_FILTERS:
+        abort(400, description="Invalid preservation report status filter.")
+    equipment_id = request.args.get("equipment_id", type=int)
+    if request.args.get("equipment_id") and equipment_id is None:
+        abort(400, description="Equipment filter must be a numeric equipment ID.")
+    if equipment_id is not None:
+        CommissioningEquipment.query.filter_by(
+            id=equipment_id, company_name=project.company_name, project_id=project.id,
+        ).first_or_404()
+    rows, _counts, _equipment, _status_filter, _equipment_id = _preservation_report_data(
+        project, date.today(), status_filter, equipment_id,
+    )
+    output = StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow([
+        "Project", "Plan Number", "Equipment Tag", "Activity", "Procedure Reference",
+        "Procedure Revision", "Interval Days", "Last Inspection", "Last Result",
+        "Next Due Date", "Due Status", "Responsible Company", "Assigned User",
+        "Latest Findings", "Corrective Action",
+    ])
+    for row in rows:
+        plan = row["plan"]
+        latest = row["last_inspection"]
+        equipment_item = row["equipment"]
+        assigned_user = row["assigned_user"]
+        values = [
+            project.project_code, plan.plan_number,
+            equipment_item.tag_number if equipment_item else "Equipment unavailable",
+            plan.activity, plan.procedure_reference, plan.procedure_revision,
+            plan.interval_days,
+            latest.performed_at.isoformat() if latest else "",
+            latest.result if latest else "",
+            plan.next_due_date.isoformat(), row["due_status"],
+            plan.responsible_company or "",
+            assigned_user.full_name if assigned_user else "",
+            latest.findings if latest else "",
+            latest.corrective_action if latest else "",
+        ]
+        writer.writerow([_csv_safe(value) for value in values])
+    payload = BytesIO(output.getvalue().encode("utf-8-sig"))
+    response = send_file(
+        payload, mimetype="text/csv; charset=utf-8", as_attachment=True,
+        download_name=f"{project.project_code}-preservation-{date.today().isoformat()}.csv",
+        max_age=0,
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @commissioning_bp.post("/projects/<int:project_id>/preservation-plans")

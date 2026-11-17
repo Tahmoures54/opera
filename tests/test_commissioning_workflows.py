@@ -2066,3 +2066,69 @@ def test_controlled_dossier_permissions_and_tenant_isolation(client, app, opera_
     _login_id(client, opera_setup["outsider"])
     hidden_page = client.get(base)
     assert hidden_page.status_code == 404
+
+
+def test_preservation_compliance_report_filters_and_safe_csv(client, app, opera_setup):
+    with app.app_context():
+        equipment = CommissioningEquipment(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], tag_number="P-REPORT-001",
+            equipment_type="Pump", description="Preservation reporting pump",
+        )
+        db.session.add(equipment)
+        db.session.commit()
+        equipment_id = equipment.id
+
+    _login_id(client, opera_setup["manager"])
+    base = f"/commissioning/projects/{opera_setup['project']}"
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    soon = (date.today() + timedelta(days=3)).isoformat()
+    overdue = client.post(f"{base}/preservation-plans", data={
+        "plan_number": "PRES-REPORT-OVERDUE",
+        "equipment_id": str(equipment_id),
+        "activity": '=HYPERLINK("https://example.invalid")',
+        "procedure_reference": "OEM-PRES-REPORT",
+        "procedure_revision": "A",
+        "interval_days": "30",
+        "next_due_date": yesterday,
+    })
+    due_soon = client.post(f"{base}/preservation-plans", data={
+        "plan_number": "PRES-REPORT-SOON",
+        "equipment_id": str(equipment_id),
+        "activity": "Check desiccant condition per approved procedure",
+        "procedure_reference": "OEM-PRES-REPORT",
+        "procedure_revision": "A",
+        "interval_days": "30",
+        "next_due_date": soon,
+    })
+    assert overdue.status_code == 302
+    assert due_soon.status_code == 302
+
+    report_url = f"{base}/preservation/report"
+    all_rows = client.get(report_url)
+    assert all_rows.status_code == 200
+    assert b"Preservation Compliance Report" in all_rows.data
+    assert b"PRES-REPORT-OVERDUE" in all_rows.data
+    assert b"PRES-REPORT-SOON" in all_rows.data
+    overdue_rows = client.get(f"{report_url}?status=OVERDUE")
+    assert overdue_rows.status_code == 200
+    assert b"PRES-REPORT-OVERDUE" in overdue_rows.data
+    assert b"PRES-REPORT-SOON" not in overdue_rows.data
+
+    csv_report = client.get(f"{base}/preservation/report.csv?status=OVERDUE")
+    assert csv_report.status_code == 200
+    assert csv_report.mimetype == "text/csv"
+    assert csv_report.data.startswith(b"\xef\xbb\xbf")
+    assert b"PRES-REPORT-OVERDUE" in csv_report.data
+    assert b"PRES-REPORT-SOON" not in csv_report.data
+    assert b"'=HYPERLINK" in csv_report.data
+
+    invalid_filter = client.get(f"{report_url}?status=UNRECOGNIZED")
+    assert invalid_filter.status_code == 400
+    invalid_equipment = client.get(f"{report_url}?equipment_id=not-a-number")
+    assert invalid_equipment.status_code == 400
+
+    _login_id(client, opera_setup["viewer"])
+    assert client.get(report_url).status_code == 200
+    _login_id(client, opera_setup["outsider"])
+    assert client.get(report_url).status_code == 404
