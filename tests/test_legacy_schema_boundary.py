@@ -6,7 +6,6 @@ import models_commissioning  # noqa: F401
 def test_only_opera_and_shared_identity_models_are_registered():
     retired_tables = {
         "project",
-        "document_sequence",
         "material_requisition",
         "material_master",
         "supplier_material",
@@ -29,7 +28,7 @@ def test_only_opera_and_shared_identity_models_are_registered():
         "material_request",
     }
     assert retired_tables.isdisjoint(db.metadata.tables)
-    assert {"user", "account_recovery_token", "contact_inquiry"}.issubset(db.metadata.tables)
+    assert {"user", "account_recovery_token", "contact_inquiry", "document_sequence"}.issubset(db.metadata.tables)
 
 
 def test_user_model_no_longer_exposes_materialhub_workspace_columns():
