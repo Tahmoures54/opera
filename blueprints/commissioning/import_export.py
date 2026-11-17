@@ -99,6 +99,12 @@ def _set_safe(cell, value):
         cell.data_type = "s"
 
 
+def _append_safe(sheet, values):
+    row = sheet.max_row + 1
+    for column, value in enumerate(values, start=1):
+        _set_safe(sheet.cell(row=row, column=column), value)
+
+
 def _new_workbook():
     workbook = Workbook()
     first = workbook.active
@@ -134,19 +140,19 @@ def _export_workbook(project):
     workbook = _new_workbook()
     systems, subsystems, equipment, tasks, system_by_id, subsystem_by_id = _project_records(project)
     for item in systems:
-        workbook["Systems"].append([
+        _append_safe(workbook["Systems"], [
             item.system_code, item.name, item.description, item.p_and_id_ref, item.weight_percent,
         ])
     for item in subsystems:
         system = system_by_id.get(item.system_id)
-        workbook["Subsystems"].append([
+        _append_safe(workbook["Subsystems"], [
             system.system_code if system else "", item.subsystem_code, item.name,
             item.description, item.weight_percent, item.mc_target_date, item.rf_target_date,
         ])
     for item in equipment:
         subsystem = subsystem_by_id.get(item.subsystem_id)
         system = system_by_id.get(subsystem.system_id) if subsystem else None
-        workbook["Equipment"].append([
+        _append_safe(workbook["Equipment"], [
             item.tag_number, system.system_code if system else "",
             subsystem.subsystem_code if subsystem else "", item.equipment_type,
             item.description, item.manufacturer, item.model_number, item.serial_no, item.status,
@@ -155,7 +161,7 @@ def _export_workbook(project):
         subsystem = subsystem_by_id.get(item.subsystem_id)
         system = system_by_id.get(item.system_id)
         equipment_tag = next((eq.tag_number for eq in equipment if eq.id == item.equipment_id), "")
-        workbook["Tasks"].append([
+        _append_safe(workbook["Tasks"], [
             item.task_number, system.system_code if system else "",
             subsystem.subsystem_code if subsystem else "", equipment_tag,
             item.activity_type.value, item.title, item.description, item.discipline,
@@ -191,15 +197,20 @@ def _read_rows(workbook, errors):
             continue
         indices = {name: header_values.index(name) for name in headers}
         rows = []
-        for row_number, values in enumerate(
-            sheet.iter_rows(min_row=2, values_only=True), start=2,
+        for row_number, cells in enumerate(
+            sheet.iter_rows(min_row=2), start=2,
         ):
             if row_number > MAX_ROWS_PER_SHEET + 1:
                 errors.append({"sheet": sheet_name, "row": row_number, "field": "row",
                                "message": f"Maximum {MAX_ROWS_PER_SHEET} data rows exceeded."})
                 break
-            if not any(value not in (None, "") for value in values):
+            if not any(cell.value not in (None, "") for cell in cells):
                 continue
+            if any(cell.data_type == "f" for cell in cells):
+                errors.append({"sheet": sheet_name, "row": row_number, "field": "formula",
+                               "message": "Formula cells are not accepted; replace formulas with reviewed values."})
+                continue
+            values = [cell.value for cell in cells]
             rows.append({
                 "_row": row_number,
                 **{name: values[index] if index < len(values) else None
@@ -364,16 +375,7 @@ def _import_workbook(project, planned):
             company_name=project.company_name, project_id=project.id,
         ).all()
     }
-    subsystems = {
-        (systems_by_id.system_code, item.subsystem_code): item
-        for item in CommissioningSubsystem.query.join(
-            CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
-        ).filter(
-            CommissioningSubsystem.company_name == project.company_name,
-            CommissioningSystem.project_id == project.id,
-        ).all()
-        for systems_by_id in [systems.get(systems_by_id.system_code) if False else None]
-    } if False else {}
+    subsystems = {}
     for item in CommissioningSubsystem.query.join(
         CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
     ).filter(
@@ -522,7 +524,7 @@ def import_engineering_registers(project_id):
 
     errors = []
     try:
-        workbook = load_workbook(BytesIO(raw), read_only=True, data_only=True)
+        workbook = load_workbook(BytesIO(raw), read_only=True, data_only=False)
     except Exception:
         abort(400, description="The uploaded file is not a valid .xlsx workbook.")
     parsed = _read_rows(workbook, errors)
