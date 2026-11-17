@@ -299,7 +299,7 @@
 
   <header class="mh-topbar">
     {% if current_user.is_authenticated %}
-      <button class="mh-menu" type="button" onclick="document.body.classList.toggle('mh-sidebar-open')" aria-label="Toggle navigation">
+      <button class="mh-menu" type="button" onclick="const isOpen = document.body.classList.toggle('mh-sidebar-open'); this.setAttribute('aria-expanded', String(isOpen));" aria-label="Toggle navigation" aria-expanded="false">
         <i class="fas fa-bars"></i>
       </button>
     {% endif %}
@@ -335,7 +335,7 @@
 
   <div class="mh-body">
     {% if current_user.is_authenticated %}
-      <div class="mh-sidebar-backdrop" onclick="document.body.classList.remove('mh-sidebar-open')"></div>
+      <button class="mh-sidebar-backdrop" type="button" aria-label="Close navigation" onclick="document.body.classList.remove('mh-sidebar-open'); const menu = document.querySelector('.mh-menu'); if (menu) menu.setAttribute('aria-expanded', 'false');"></button>
       <div class="mh-layout">
         <aside class="mh-sidebar">
           <div class="mh-nav-label">OPERA</div>
@@ -343,7 +343,7 @@
             <a href="{{ url_for('commissioning.dashboard') }}"><i class="fas fa-industry"></i> Commissioning Projects</a>
           </nav>
           <div class="mh-nav-label">Account</div>
-          <nav class="mh-nav">
+          <nav class="mh-nav" aria-label="Account navigation">
             <a href="{{ url_for('help.help') }}"><i class="fas fa-question-circle"></i> Help Center</a>
             <a href="{{ url_for('auth.change_password') }}"><i class="fas fa-key"></i> Change Password</a>
             <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Sign out</a>
