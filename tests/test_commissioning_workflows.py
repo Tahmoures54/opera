@@ -2228,6 +2228,19 @@ def test_numeric_checksheet_measurement_limits_and_audit(client, app, opera_setu
     })
     assert invalid_limits.status_code == 400
 
+    unsupported_precision = client.post(template_url, data={
+        "template_code": "PUMP-MEAS-PRECISION",
+        "title": "Unsupported measurement precision",
+        "sheet_type": "PRE_COMM_A",
+        "discipline": "MECHANICAL",
+        "items_json": json.dumps([{
+            "description": "Excess precision", "unit": "mm/s",
+            "measurement_type": "NUMERIC",
+            "minimum_value": "0.123456789", "mandatory": True,
+        }]),
+    })
+    assert unsupported_precision.status_code == 400
+
     missing_unit = client.post(template_url, data={
         "template_code": "PUMP-MEAS-NOUNIT",
         "title": "Missing unit template",
