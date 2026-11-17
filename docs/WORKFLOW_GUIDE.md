@@ -105,3 +105,16 @@ Project managers can add finish-to-start (FS) predecessor links between tasks in
 The dependency graph rejects self-links, duplicate links and circular sequences. Removing a link is permission-controlled and audited. This release intentionally implements FS only; SS, FF and SF relationships, negative leads, automatic date rescheduling and critical-path calculations are not implied. A lag is recorded for planning visibility and is not yet used to automatically move planned dates.
 
 Dependencies are an execution control, not a substitute for approved project logic. The project scheduler remains responsible for validating the sequence and planned dates.
+
+
+## 12. Weighted progress measurement
+
+The operations dashboard can save progress snapshots at project, system or subsystem scope. Each snapshot records the reporting date, signed Check Sheet count and weight, Punch closure counts, and commissioning task completion.
+
+- Check Sheet count progress is signed-off sheets divided by all sheets in the selected scope.
+- Weighted Check Sheet progress is the sum of signed-off sheet weights divided by all sheet weights.
+- Task count progress is completed tasks divided by non-cancelled tasks.
+- Task weighted progress uses estimated man-hours as weights. If all eligible tasks have zero estimated hours, the calculation falls back to task count progress.
+- Cancelled tasks are excluded from task progress. A missing register is reported as 0%, not 100%.
+
+Project, System and Subsystem snapshots are stored independently and audited. The current implementation does not combine the System/Subsystem weight_percent fields into a project-wide roll-up; project weight allocation and progress measurement bases must be approved in the project's progress measurement procedure before contractual reporting.
