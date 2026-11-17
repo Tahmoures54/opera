@@ -3,64 +3,7 @@
 {% block head %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Custom styles for OPERA registration page */
-        .auth-container {
-            @apply min-h-screen bg-gray-100 flex items-center justify-center p-4;
-        }
-        .auth-box {
-            @apply bg-white rounded-lg shadow-xl p-8 max-w-md w-full;
-        }
-        .auth-title {
-            @apply text-2xl font-bold text-gray-800 mb-2 text-center;
-        }
-        .auth-subtitle {
-            @apply text-gray-600 mb-6 text-center;
-        }
-        .input-group label {
-            @apply block text-sm font-medium text-gray-700 mb-1;
-        }
-        .input-group input, .input-group select, .input-group textarea {
-            @apply w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200;
-        }
-        .error {
-            @apply text-red-600 text-sm mt-1;
-        }
-        .captcha-group p {
-            @apply text-gray-700 font-medium bg-gray-50 p-3 rounded-md mb-2;
-        }
-        .auth-btn {
-            @apply w-full bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed;
-        }
-        .terms-group label {
-            @apply text-gray-700 text-sm;
-        }
-        .qr-wrapper {
-            @apply flex justify-center my-6;
-        }
-        .qr-code {
-            @apply max-w-[180px] border border-gray-200 p-2 rounded-md;
-        }
-        .register-footer {
-            @apply mt-6 text-center text-gray-600 text-sm;
-        }
-        .footer-links a {
-            @apply text-blue-600 hover:underline mx-2;
-        }
-        .alert {
-            @apply p-3 rounded-md mb-4;
-        }
-        .alert-success {
-            @apply bg-green-100 text-green-700 border border-green-300;
-        }
-        .alert-danger {
-            @apply bg-red-100 text-red-700 border border-red-300;
-        }
-        .alert-info {
-            @apply bg-blue-100 text-blue-700 border border-blue-300;
-        }
-    </style>
-{% endblock %}
+    {% endblock %}
 {% block content %}
 <div class="auth-container">
     <div class="auth-box">
