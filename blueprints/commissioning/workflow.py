@@ -73,7 +73,7 @@ def _measurement_decimal(raw_value, label):
         abort(400, description=f"{label} exceeds the supported numeric precision.")
     if normalized != value or abs(value) >= Decimal("10000000000000000"):
         abort(400, description=f"{label} must fit 16 integer digits and 8 decimal places.")
-    return value
+    return normalized
 
 
 def _validate_template_items(raw):
@@ -709,7 +709,7 @@ def update_checksheet_item(sheet_id, item_id):
                 abort(400, description="Measured value is too long.")
             measured_value = _measurement_decimal(raw_measurement, "Measured value")
             item.measured_value = measured_value
-            item.actual_result = format(measured_value, "f")
+            item.actual_result = format(measured_value.normalize(), "f")
             if item.result_status == ItemResultStatus.OK:
                 if item.minimum_value is not None and measured_value < item.minimum_value:
                     abort(400, description="Measured value is below the approved minimum; record NOK or correct the reading.")
