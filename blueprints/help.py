@@ -13,7 +13,7 @@ def user_guide():
 
 @help_bp.route('/user-guide/fa')
 def user_guide_fa():
-    return redirect(url_for('help.user_guide'))
+    return render_template('help/user_guide_fa.html')
 
 @help_bp.route('/getting-started')
 def getting_started():
