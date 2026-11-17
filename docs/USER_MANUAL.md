@@ -34,3 +34,7 @@ Do not share accounts. Do not overwrite signed records. Report incorrect project
 
 ## Equipment Preservation
 The Preservation page lists equipment-specific preservation plans, their approved procedure references, due dates and inspection history. Only project-approved procedures/OEM instructions may determine preservation activities and intervals. A non-compliant inspection requires corrective action and keeps the plan in ACTION_REQUIRED until a compliant follow-up inspection is recorded. See [PRESERVATION_GUIDE.md](PRESERVATION_GUIDE.md).
+
+
+## Check Sheet templates
+A Check Sheet may be created manually or from an approved project template. Template-based sheets retain a snapshot of the template revision and item definitions used at creation. Mandatory items, failed results, independent QC verification and witness release are enforced before sign-off. See [CHECKSHEET_TEMPLATES.md](CHECKSHEET_TEMPLATES.md).
