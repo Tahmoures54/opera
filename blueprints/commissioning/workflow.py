@@ -880,9 +880,15 @@ def task_register(project_id):
     ).order_by(CommissioningSubsystem.subsystem_code).all()
     equipment = CommissioningEquipment.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(CommissioningEquipment.tag_number).all()
     check_sheets = CheckSheet.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(CheckSheet.sheet_number).all()
+    system_by_id = {item.id: item for item in systems}
+    subsystem_by_id = {item.id: item for item in subsystems}
+    equipment_by_id = {item.id: item for item in equipment}
+    sheet_by_id = {item.id: item for item in check_sheets}
     return render_template(
         "commissioning/task_register.html", project=project, tasks=tasks,
         systems=systems, subsystems=subsystems, equipment=equipment, check_sheets=check_sheets,
+        system_by_id=system_by_id, subsystem_by_id=subsystem_by_id,
+        equipment_by_id=equipment_by_id, sheet_by_id=sheet_by_id,
         activity_types=list(CommissioningTaskType), task_statuses=list(CommissioningTaskStatus),
         can_create=any(has_permission(project.id, p) for p in ("tasks.create", "tasks.manage", "project.manage")),
         selected_activity=activity_filter, selected_status=status_filter, search_term=search_term,
