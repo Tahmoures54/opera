@@ -339,6 +339,9 @@ def test_witness_evidence_upload_download_release_snapshot_and_immutability(clie
 
     _login_id(client, qc_id)
     assert client.get(f"/commissioning/evidence/{attachment_id}").status_code == 200
+
+    _login_id(client, opera_setup["viewer"])
+    assert client.get(f"/commissioning/evidence/{attachment_id}").status_code == 200
     response = client.post(upload_url, data={
         "file": (BytesIO(payload), "unauthorized.pdf"),
     }, content_type="multipart/form-data")
