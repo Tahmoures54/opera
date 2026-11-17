@@ -163,7 +163,7 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
     for h in open_holds:
         result.add_blocker(
             "OPEN_HOLD",
-            f"Hold point not released: {h.title or h.id}",
+            f"Hold point not released (witness record #{h.id})",
             entity_type="witness",
             entity_id=h.id,
         )
