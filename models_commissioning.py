@@ -645,6 +645,89 @@ class CommissioningDossierRequirement(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class CommissioningPreservationPlan(db.Model):
+    """Equipment preservation schedule based only on approved project/OEM instructions."""
+    __tablename__ = "commissioning_preservation_plan"
+    __table_args__ = (
+        UniqueConstraint("company_name", "project_id", "plan_number",
+                         name="uq_comm_preservation_plan_number"),
+        UniqueConstraint("id", "company_name", name="uq_comm_preservation_plan_id_company"),
+        ForeignKeyConstraint(["project_id", "company_name"],
+                             ["commissioning_project.id", "commissioning_project.company_name"],
+                             name="fk_comm_preservation_plan_project_tenant"),
+        ForeignKeyConstraint(["equipment_id", "company_name"],
+                             ["commissioning_equipment.id", "commissioning_equipment.company_name"],
+                             name="fk_comm_preservation_plan_equipment_tenant"),
+        CheckConstraint("interval_days > 0 AND interval_days <= 3650",
+                        name="ck_comm_preservation_interval"),
+        CheckConstraint("length(trim(plan_number)) > 0",
+                        name="ck_comm_preservation_plan_number"),
+        CheckConstraint("length(trim(procedure_reference)) > 0",
+                        name="ck_comm_preservation_procedure_reference"),
+        CheckConstraint("status IN ('ACTIVE','ACTION_REQUIRED','SUSPENDED','CLOSED')",
+                        name="ck_comm_preservation_status"),
+        Index("ix_comm_preservation_due", "company_name", "project_id", "status", "next_due_date"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
+    equipment_id = db.Column(db.Integer, db.ForeignKey("commissioning_equipment.id", ondelete="RESTRICT"), nullable=False)
+    plan_number = db.Column(db.String(80), nullable=False)
+    activity = db.Column(db.String(200), nullable=False)
+    procedure_reference = db.Column(db.String(150), nullable=False)
+    procedure_revision = db.Column(db.String(50), nullable=False)
+    interval_days = db.Column(db.Integer, nullable=False)
+    next_due_date = db.Column(db.Date, nullable=False)
+    last_performed_at = db.Column(db.Date)
+    responsible_company = db.Column(db.String(150))
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    status = db.Column(db.String(30), nullable=False, default="ACTIVE")
+    notes = db.Column(db.Text)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    inspections = db.relationship(
+        "CommissioningPreservationInspection", back_populates="plan",
+        order_by="CommissioningPreservationInspection.performed_at.desc()",
+        lazy="select",
+    )
+
+
+class CommissioningPreservationInspection(db.Model):
+    """Append-only preservation inspection record with procedure/interval snapshot."""
+    __tablename__ = "commissioning_preservation_inspection"
+    __table_args__ = (
+        UniqueConstraint("id", "company_name", name="uq_comm_preservation_inspection_id_company"),
+        ForeignKeyConstraint(["project_id", "company_name"],
+                             ["commissioning_project.id", "commissioning_project.company_name"],
+                             name="fk_comm_preservation_inspection_project_tenant"),
+        ForeignKeyConstraint(["plan_id", "company_name"],
+                             ["commissioning_preservation_plan.id", "commissioning_preservation_plan.company_name"],
+                             name="fk_comm_preservation_inspection_plan_tenant"),
+        CheckConstraint("result IN ('COMPLIANT','NON_COMPLIANT','NOT_APPLICABLE')",
+                        name="ck_comm_preservation_inspection_result"),
+        CheckConstraint("interval_days_snapshot > 0",
+                        name="ck_comm_preservation_inspection_interval"),
+        Index("ix_comm_preservation_inspection_plan_date",
+              "company_name", "plan_id", "performed_at"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey("commissioning_preservation_plan.id", ondelete="RESTRICT"), nullable=False)
+    performed_at = db.Column(db.Date, nullable=False)
+    result = db.Column(db.String(30), nullable=False)
+    findings = db.Column(db.Text)
+    corrective_action = db.Column(db.Text)
+    procedure_reference_snapshot = db.Column(db.String(150), nullable=False)
+    procedure_revision_snapshot = db.Column(db.String(50), nullable=False)
+    interval_days_snapshot = db.Column(db.Integer, nullable=False)
+    next_due_date_after = db.Column(db.Date)
+    performed_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    plan = db.relationship("CommissioningPreservationPlan", back_populates="inspections")
+
+
 class ProgressSnapshot(db.Model):
     __tablename__ = "commissioning_progress_snapshot"
     __table_args__ = (
