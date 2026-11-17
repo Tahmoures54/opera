@@ -11,6 +11,7 @@ OPERA is an independent product focused exclusively on Operations, Pre-commissio
 ## Product capabilities
 
 - Project → System → Subsystem → Equipment hierarchy.
+- Commissioning Task Register with CCK / STS / PIP / PRC / FTS / OTS / PVP activity codes, discipline, progress stage/substage, man-hours, dates and links to equipment and check sheets.
 - Project-scoped membership and OPERA roles, independent from legacy account roles.
 - Pre-commissioning A/B, commissioning C and functional-test check sheets.
 - Sequential numbering, item-level results, independent QC verification, issue/rejection workflow and two-party sign-off.
@@ -69,7 +70,7 @@ The OPERA foundation migration is 20261116_0019, chained after the inherited sch
 8. Raise and resolve punch items. Category A/B punch items block MC certification.
 9. Create subsystem handover packages and progress snapshots.
 
-## OPERA roles
+## Task register\n\nThe task register is a project-scoped execution planning register. It records task number, activity type, title, discipline, project hierarchy, optional equipment and check-sheet links, progress stage/substage, assigned group, estimated/actual man-hours and planned/actual dates. Task status begins at Not Started; controlled execution transitions and dependency sequencing are subsequent increments.\n\n## OPERA roles
 
 | Role | Primary responsibilities |
 |---|---|
@@ -98,7 +99,7 @@ GitHub Actions runs Ruff, Mypy, pytest, Bandit, pip-audit, PostgreSQL integratio
 
 ## Documentation
 
-- [OPERA Phase 1 architecture and migration notes](docs/OPERA_PHASE1.md)
+- [ICAPS Functional & Technical Analysis](docs/ICAPS_ANALYSIS.md)\n- [Functional Gap Analysis](docs/FUNCTIONAL_GAP_ANALYSIS.md)\n- [OPERA Architecture](docs/OPERA_ARCHITECTURE.md)\n- [OPERA Phase 1 architecture and migration notes](docs/OPERA_PHASE1.md)
 - [Production launch checklist](docs/PRODUCTION_LAUNCH.md)
 - [Security policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
