@@ -1120,15 +1120,6 @@ def transition_witness(witness_id):
     _need(witness.project_id, "witness.attend", "witness.manage", "project.manage")
     target = _enum(WitnessStatus, _required("status", 20), "witness status")
     old_status = witness.status
-    before = {
-        "status": old_status.value, "notified_party": witness.notified_party,
-        "notified_at": witness.notified_at.isoformat() if witness.notified_at else None,
-        "attended_by_id": witness.attended_by_id,
-        "attended_at": witness.attended_at.isoformat() if witness.attended_at else None,
-        "result": witness.result, "released_by_id": witness.released_by_id,
-        "released_at": witness.released_at.isoformat() if witness.released_at else None,
-        "remarks": witness.remarks, "evidence": evidence_snapshot,
-    }
     now = datetime.utcnow()
     remarks = (request.form.get("remarks") or "").strip()
     witness_evidence = CommissioningAttachment.query.filter_by(
@@ -1142,6 +1133,15 @@ def transition_witness(witness_id):
         }
         for item in witness_evidence
     ]
+    before = {
+        "status": old_status.value, "notified_party": witness.notified_party,
+        "notified_at": witness.notified_at.isoformat() if witness.notified_at else None,
+        "attended_by_id": witness.attended_by_id,
+        "attended_at": witness.attended_at.isoformat() if witness.attended_at else None,
+        "result": witness.result, "released_by_id": witness.released_by_id,
+        "released_at": witness.released_at.isoformat() if witness.released_at else None,
+        "remarks": witness.remarks, "evidence": evidence_snapshot,
+    }
     if target == WitnessStatus.ATTENDED:
         if not has_permission(witness.project_id, "witness.attend"):
             abort(403)
