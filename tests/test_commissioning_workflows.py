@@ -1084,6 +1084,10 @@ def test_mc_rfc_certificates_capture_immutable_issue_time_evidence(client, app, 
             package_id=package_id, certificate_type="RFC",
         ).one()
         assert rfc_certificate.certificate_type == "RFC"
+        assert rfc_certificate.certificate_date.isoformat() == "2026-11-17"
+        assert rfc_certificate.issued_by_id == opera_setup["manager"]
+        assert rfc_certificate.snapshot_json["certificate"]["issued_by_id"] == opera_setup["manager"]
+        assert rfc_certificate.snapshot_json["certificate"]["issued_at"]
         assert rfc_certificate.snapshot_json["certificate"]["type"] == "RFC"
         assert rfc_certificate.snapshot_json["readiness"]["pending_hold_points"] == 0
         assert rfc_certificate.snapshot_json["witness_points"][0]["status"] == "RELEASED"
