@@ -572,6 +572,12 @@ class ProgressSnapshot(db.Model):
         UniqueConstraint("company_name", "project_id", "system_id", "subsystem_id", "snapshot_date", name="uq_comm_progress_snapshot_scope_date"),
         CheckConstraint("percent_complete >= 0 AND percent_complete <= 100", name="ck_comm_progress_percent_range"),
         CheckConstraint("weighted_percent >= 0 AND weighted_percent <= 100", name="ck_comm_progress_weighted_range"),
+        CheckConstraint("task_percent_complete >= 0 AND task_percent_complete <= 100",
+                        name="ck_comm_progress_task_percent_range"),
+        CheckConstraint("task_weighted_percent >= 0 AND task_weighted_percent <= 100",
+                        name="ck_comm_progress_task_weighted_range"),
+        CheckConstraint("task_estimated_hours >= 0 AND task_completed_hours >= 0",
+                        name="ck_comm_progress_task_hours_nonnegative"),
         ForeignKeyConstraint(["project_id", "company_name"], ["commissioning_project.id", "commissioning_project.company_name"], name="fk_comm_progress_project_tenant"),
         ForeignKeyConstraint(["system_id", "company_name"], ["commissioning_system.id", "commissioning_system.company_name"], name="fk_comm_progress_system_tenant"),
         ForeignKeyConstraint(["subsystem_id", "company_name"], ["commissioning_subsystem.id", "commissioning_subsystem.company_name"], name="fk_comm_progress_subsystem_tenant"),
@@ -589,6 +595,12 @@ class ProgressSnapshot(db.Model):
     punch_closed_count = db.Column(db.Integer, nullable=False, default=0)
     checksheet_total = db.Column(db.Integer, nullable=False, default=0)
     checksheet_signed_off = db.Column(db.Integer, nullable=False, default=0)
+    task_total = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    task_completed = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    task_percent_complete = db.Column(db.Float, nullable=False, default=0.0, server_default="0")
+    task_weighted_percent = db.Column(db.Float, nullable=False, default=0.0, server_default="0")
+    task_estimated_hours = db.Column(db.Float, nullable=False, default=0.0, server_default="0")
+    task_completed_hours = db.Column(db.Float, nullable=False, default=0.0, server_default="0")
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
