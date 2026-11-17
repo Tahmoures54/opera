@@ -32,7 +32,6 @@ LEGACY_TABLES = (
     "material_requisition",
     "supplier_material",
     "material_master",
-    "document_sequence",
     "report_share",
     "material_request",
     "project",
