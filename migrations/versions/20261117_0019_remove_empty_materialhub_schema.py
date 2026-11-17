@@ -1,14 +1,14 @@
 """Drop the unused MaterialHub schema after an empty-data safety check.
 
 Revision ID: 20261117_0019
-Revises: 20261017_0018
+Revises: 20261116_0019
 Create Date: 2026-11-17
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = "20261117_0019"
-down_revision = "20261017_0018"
+down_revision = "20261116_0019"
 branch_labels = None
 depends_on = None
 
