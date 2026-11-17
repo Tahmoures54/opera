@@ -137,6 +137,14 @@ class Config:
     # Misc
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))
     OPERA_UPLOAD_DIR = os.getenv('OPERA_UPLOAD_DIR', os.path.join(INSTANCE_DIR, 'uploads'))
+    IS_SERVERLESS = _is_serverless()
+    OPERA_STORAGE_BACKEND = os.getenv('OPERA_STORAGE_BACKEND', 'local').strip().lower()
+    OPERA_S3_BUCKET = os.getenv('OPERA_S3_BUCKET')
+    OPERA_S3_REGION = os.getenv('OPERA_S3_REGION', os.getenv('AWS_REGION', 'us-east-1'))
+    OPERA_S3_ENDPOINT_URL = os.getenv('OPERA_S3_ENDPOINT_URL')
+    OPERA_S3_ACCESS_KEY_ID = os.getenv('OPERA_S3_ACCESS_KEY_ID')
+    OPERA_S3_SECRET_ACCESS_KEY = os.getenv('OPERA_S3_SECRET_ACCESS_KEY')
+    OPERA_S3_PREFIX = os.getenv('OPERA_S3_PREFIX', 'opera-evidence')
     JSON_SORT_KEYS = False
     PREFERRED_URL_SCHEME = os.getenv(
         'PREFERRED_URL_SCHEME',
