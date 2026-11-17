@@ -77,7 +77,7 @@ def preservation_index(project_id):
     equipment = CommissioningEquipment.query.filter_by(
         company_name=project.company_name, project_id=project.id,
     ).order_by(CommissioningEquipment.tag_number).all()
-    users = User.query.filter_by(company_name=project.company_name, is_active=True).order_by(User.username).all()
+    users = User.query.filter_by(company_name=project.company_name).order_by(User.full_name).all()
     counts = {
         "total": len(plans),
         "overdue": sum(1 for row in plan_rows if row["due_status"] == "OVERDUE"),
@@ -113,7 +113,7 @@ def save_preservation_plan(project_id):
     next_due_date = _parse_date("next_due_date")
     assigned_to_id = request.form.get("assigned_to_id", type=int)
     if assigned_to_id is not None and not User.query.filter_by(
-        id=assigned_to_id, company_name=project.company_name, is_active=True,
+        id=assigned_to_id, company_name=project.company_name,
     ).first():
         abort(400, description="Assigned user must belong to this company.")
     duplicate = CommissioningPreservationPlan.query.filter_by(
