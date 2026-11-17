@@ -27,6 +27,26 @@
     </div>
   </section>
 
+  {% if document_requirement_results %}
+  <section class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">Mandatory document index</div>
+    <div class="card-body">
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Document type</th><th>Discipline</th><th>Qualified</th><th>Approval</th><th>Evidence</th><th>Result</th></tr></thead>
+        <tbody>{% for rule in document_requirement_results %}
+          <tr>
+            <td>{{ rule.name }}</td><td>{{ rule.discipline }}</td>
+            <td>{{ rule.qualifying_count }} / {{ rule.minimum_count }}</td>
+            <td>{{ 'Required' if rule.require_approved else 'Optional' }} <span class="text-muted">({{ rule.approved_count }} approved)</span></td>
+            <td>{{ 'Required' if rule.require_evidence else 'Optional' }} <span class="text-muted">({{ rule.evidence_count }} with evidence)</span></td>
+            <td>{% if rule.passed %}<span class="text-success fw-semibold">PASS</span>{% else %}<span class="text-danger fw-semibold">MISSING</span>{% endif %}</td>
+          </tr>
+        {% endfor %}</tbody>
+      </table></div>
+    </div>
+  </section>
+  {% endif %}
+
   <div class="row g-3 mb-4">
     <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Equipment tags</div><div class="display-6">{{ equipment|length }}</div></div></div></div>
     <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Current documents</div><div class="display-6">{{ documents|length }}</div></div></div></div>
