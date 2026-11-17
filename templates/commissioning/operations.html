@@ -87,11 +87,12 @@
       <section class="card mb-4"><div class="card-header fw-bold">Create Check Sheet</div><div class="card-body">
         <form method="post" action="{{ url_for('commissioning.create_checksheet', project_id=project.id) }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="col-md-4"><input class="form-control" name="title" placeholder="Check sheet title" required maxlength="200"></div>
+          <div class="col-md-3"><input class="form-control" name="title" placeholder="Check sheet title" required maxlength="200"></div>
           <div class="col-md-2"><select class="form-select" name="sheet_type">{% for item in sheet_types %}<option value="{{ item.value }}">{{ item.value }}</option>{% endfor %}</select></div>
           <div class="col-md-3"><select class="form-select" name="subsystem_id" required><option value="">Subsystem</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
-          <div class="col-md-3"><select class="form-select" name="template_id"><option value="">Manual / no template</option>{% for template in checksheet_templates if template.status == 'APPROVED' %}<option value="{{ template.id }}">{{ template.template_code }} Rev {{ template.revision }} — {{ template.title }}</option>{% endfor %}</select></div>
-          <div class="col-md-4"><select class="form-select" name="equipment_id"><option value="">No specific equipment</option>{% for item in equipment %}<option value="{{ item.id }}">{{ item.tag_number }} — {{ item.equipment_type }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><select class="form-select" name="template_id"><option value="">Manual / no template</option>{% for template in checksheet_templates if template.status == 'APPROVED' %}<option value="{{ template.id }}">{{ template.template_code }} Rev {{ template.revision }} — {{ template.title }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><select class="form-select" name="equipment_id"><option value="">No specific equipment</option>{% for item in equipment %}<option value="{{ item.id }}">{{ item.tag_number }} — {{ item.equipment_type }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><input class="form-control" name="discipline" placeholder="Discipline / ANY" maxlength="80"></div>
           <div class="col-12"><button class="btn btn-primary">Create check sheet</button></div>
         </form>
         <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Number</th><th>Title</th><th>Rev</th><th>Status</th><th></th></tr></thead><tbody>{% for sheet in sheets %}<tr><td>{{ sheet.sheet_number }}</td><td>{{ sheet.title }}</td><td>{{ sheet.revision }}</td><td>{{ sheet.status.value|replace('_', ' ')|title }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.checksheet_detail', sheet_id=sheet.id) }}">Details</a></td></tr>{% else %}<tr><td colspan="5" class="text-muted">No check sheets created yet.</td></tr>{% endfor %}</tbody></table></div>
