@@ -26,10 +26,20 @@ def upgrade():
             "ck_comm_check_item_measurement_range",
             "minimum_value IS NULL OR maximum_value IS NULL OR minimum_value <= maximum_value",
         )
+        batch.create_check_constraint(
+            "ck_comm_check_item_numeric_unit",
+            "measurement_type = 'QUALITATIVE' OR (unit IS NOT NULL AND length(trim(unit)) > 0)",
+        )
+        batch.create_check_constraint(
+            "ck_comm_check_item_qualitative_values",
+            "measurement_type = 'NUMERIC' OR (minimum_value IS NULL AND maximum_value IS NULL AND measured_value IS NULL)",
+        )
 
 
 def downgrade():
     with op.batch_alter_table("commissioning_check_sheet_item") as batch:
+        batch.drop_constraint("ck_comm_check_item_qualitative_values", type_="check")
+        batch.drop_constraint("ck_comm_check_item_numeric_unit", type_="check")
         batch.drop_constraint("ck_comm_check_item_measurement_range", type_="check")
         batch.drop_constraint("ck_comm_check_item_measurement_type", type_="check")
         batch.drop_column("measured_value")
