@@ -322,6 +322,7 @@ def operations(project_id):
         can_view_preservation=any(has_permission(project.id, p) for p in ("preservation.view", "preservation.manage")),
         can_upload_handover_evidence=any(has_permission(project.id, p) for p in ("handover.manage", "handover.accept")),
         can_upload_witness_evidence=any(has_permission(project.id, p) for p in ("witness.manage", "witness.attend")),
+        can_view_witness_evidence=any(has_permission(project.id, p) for p in ("witness.view", "witness.manage", "witness.attend")),
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), checksheet_templates=checksheet_templates,
         can_manage_templates=has_permission(project.id, "checksheets.manage"), equipment=equipment,
