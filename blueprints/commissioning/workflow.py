@@ -451,6 +451,14 @@ def create_checksheet(project_id):
                 abort(400, description="This template requires a matching equipment tag.")
             if equipment.equipment_type.strip().upper() != template.equipment_type:
                 abort(400, description="Selected equipment type does not match the approved template.")
+    discipline = (
+        (request.form.get("discipline") or (template.discipline if template else "ANY"))
+        .strip().upper() or "ANY"
+    )
+    if len(discipline) > 80:
+        abort(400, description="Discipline is too long.")
+    if template is not None and template.discipline != "ANY" and discipline != template.discipline:
+        abort(400, description="Selected discipline does not match the approved template.")
     sheet_number = next_checksheet_number(project.company_name, project.project_code, sheet_type)
     template_snapshot = None
     if template is not None:
@@ -468,7 +476,7 @@ def create_checksheet(project_id):
         company_name=project.company_name, project_id=project.id,
         system_id=subsystem.system_id, subsystem_id=subsystem.id,
         equipment_id=equipment.id if equipment else None,
-        sheet_number=sheet_number, sheet_type=sheet_type,
+        sheet_number=sheet_number, sheet_type=sheet_type, discipline=discipline,
         title=_required("title", 200), created_by_id=current_user.id,
         template_id=template.id if template else None,
         template_revision_snapshot=template.revision if template else None,
@@ -753,7 +761,8 @@ def revise_checksheet(sheet_id):
         company_name=previous.company_name, project_id=previous.project_id,
         system_id=previous.system_id, subsystem_id=previous.subsystem_id,
         equipment_id=previous.equipment_id, sheet_number=previous.sheet_number,
-        sheet_type=previous.sheet_type, revision=revision_no, supersedes_id=previous.id,
+        sheet_type=previous.sheet_type, discipline=previous.discipline,
+        revision=revision_no, supersedes_id=previous.id,
         template_id=previous.template_id,
         template_revision_snapshot=previous.template_revision_snapshot,
         template_title_snapshot=previous.template_title_snapshot,
