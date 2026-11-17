@@ -26,10 +26,23 @@ Existing model families observed:
 - Progress Snapshot.
 - Audit Log, Attachment, Signature and Project Membership.
 
-New task-register branch adds:
+Task-register:
 - Commissioning Task with project/system/subsystem/equipment references.
-- Activity taxonomy: CCK, STS, PIP, PRC, FTS, OTS and PVP, based on the historical project ICAPS manual evidence.
+- Activity taxonomy: CCK, STS, PIP, PRC, FTS, OTS and PVP.
 - Discipline, progress stage/substage, assigned group, man-hour estimates/actuals, planned/actual dates and task status.
+- Finish-to-start Task Dependency with lag.
+
+## Readiness / Certificate Engine (P1 completed)
+
+`services/commissioning_readiness.py` provides:
+
+- `evaluate_subsystem_readiness(company_name, subsystem_id)` → structured result with:
+  - `is_ready_for_mc` / `is_ready_for_rf` / `is_ready_for_rfsu`
+  - blocker/warning issues (open Punch A/B, unsigned required sheets, open Hold points, incomplete tasks)
+  - metrics dictionary
+- `calculate_subsystem_progress(...)` → weighted progress from CheckSheet weights + Task estimated man-hours.
+
+Rules follow the public OPERCOM intent (system-subsystem approach, punch clearance before MC/RFSU, signed check sheets) while remaining an independent OPERA implementation.
 
 ## Target relationship model
 
@@ -39,7 +52,7 @@ Company / Tenant
        ├── System
        │    └── Subsystem
        │         ├── Equipment / Tag
-       │         ├── Commissioning Tasks
+       │         ├── Commissioning Tasks (+ dependencies)
        │         ├── Check Sheets
        │         ├── Punch Items
        │         └── Handover / Dossier
@@ -62,13 +75,14 @@ Company / Tenant
 
 ## Next architectural increments
 
+- Wire ReadinessResult into Handover Package creation and UI.
 - Normalize task-to-discipline and task-to-document associations if project requirements confirm many-to-many relationships.
-- Introduce a configurable progress sequence and predecessor/dependency model.
+- Introduce a configurable progress sequence and richer predecessor rules.
 - Add a Document Register and controlled document revision/transmittal model.
 - Add a reusable template catalog for Check Sheets and test procedures.
-- Add a certificate/readiness engine that evaluates required evidence and unresolved punch constraints.
+- Certificate/readiness PDF artefacts and full dossier packaging.
 - Introduce an object-storage interface (local adapter for development; durable S3-compatible or Vercel-supported provider in production).
-- Centralize state transition services so routes cannot bypass workflow invariants.
+- Centralize remaining state transition services so routes cannot bypass workflow invariants.
 
 ## Non-goals
 
