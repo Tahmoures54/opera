@@ -60,6 +60,22 @@ def _required(name, limit=5000):
 
 
 
+def _measurement_decimal(raw_value, label):
+    try:
+        value = Decimal(str(raw_value))
+    except (InvalidOperation, TypeError, ValueError):
+        abort(400, description=f"{label} must be a valid decimal number.")
+    if not value.is_finite():
+        abort(400, description=f"{label} must be finite.")
+    try:
+        normalized = value.quantize(Decimal("0.00000001"))
+    except InvalidOperation:
+        abort(400, description=f"{label} exceeds the supported numeric precision.")
+    if normalized != value or abs(value) >= Decimal("10000000000000000"):
+        abort(400, description=f"{label} must fit 16 integer digits and 8 decimal places.")
+    return value
+
+
 def _validate_template_items(raw):
     try:
         items = json.loads(raw)
@@ -90,12 +106,9 @@ def _validate_template_items(raw):
             raw_value = item.get(key)
             if raw_value in (None, ""):
                 return None
-            try:
-                value = Decimal(str(raw_value))
-            except (InvalidOperation, TypeError, ValueError):
+            if len(str(raw_value)) > 40:
                 abort(400, description=f"Template item {index} has an invalid {key}.")
-            if not value.is_finite() or len(str(raw_value)) > 40:
-                abort(400, description=f"Template item {index} has an invalid {key}.")
+            value = _measurement_decimal(raw_value, f"Template item {index} {key}")
             return format(value, "f")
 
         minimum_value = parse_limit("minimum_value")
@@ -691,12 +704,9 @@ def update_checksheet_item(sheet_id, item_id):
         if item.result_status in (ItemResultStatus.OK, ItemResultStatus.NOK) and not raw_measurement:
             abort(400, description="A numeric measurement is required for OK/NOK items.")
         if raw_measurement:
-            try:
-                measured_value = Decimal(raw_measurement)
-            except (InvalidOperation, TypeError, ValueError):
-                abort(400, description="Measured value must be a valid number.")
-            if not measured_value.is_finite() or len(raw_measurement) > 40:
-                abort(400, description="Measured value must be a finite number.")
+            if len(raw_measurement) > 40:
+                abort(400, description="Measured value is too long.")
+            measured_value = _measurement_decimal(raw_measurement, "Measured value")
             item.measured_value = measured_value
             item.actual_result = format(measured_value, "f")
             if item.result_status == ItemResultStatus.OK:
