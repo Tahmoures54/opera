@@ -1,7 +1,7 @@
 # OPERA Functional Gap Analysis
 
-**Baseline:** `main` at merge commit `23f087ab972fefc13545670657de8395f82828fc`, 17 November 2026.  
-**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39 and #40. PR #39 CI run `44084364501` and PR #40 CI run `44086055925` passed `quality`, `integration` and `docker` jobs on their respective PR heads. This is a code-level capability assessment, not production acceptance.
+**Baseline:** main at merge commit c1945633f592db4823558921b0abd109a9abce58, 17 November 2026.  
+**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40 and #42. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. This is a code-level capability assessment, not production acceptance.
 
 ## Status definitions
 - **Implemented baseline:** code, route/UI and automated workflow coverage exist for the stated bounded scope.
@@ -18,7 +18,7 @@
 | OPERCOM activity taxonomy | Implemented baseline | CCK, STS, PIP, PRC, FTS, OTS, PVP | Project-approved catalog, templates and applicability rules |
 | Task Register | Implemented baseline | Task creation, controlled state transitions, actual dates, audit events | Task-to-multiple-disciplines/document links and configurable workflow templates |
 | Task sequencing | Implemented bounded scope | Finish-to-start dependencies, lag storage, duplicate/self/cycle and project-scope validation; predecessor completion gate | SS/FF/SF, leads, automatic rescheduling and critical-path calculation |
-| Check Sheet execution | Implemented bounded scope | Issue, item results, independent QC verification, two-party sign-off, rejection/rework, controlled revisions and immutability | Reusable template catalogue, richer measurements, controlled witness matrix and qualified e-signatures |
+| Check Sheet execution | Implemented bounded scope | Issue, item results, independent QC verification, two-party sign-off, rejection/rework, controlled revisions; project-scoped DRAFT/APPROVED/RETIRED templates with immutable approved revisions, execution snapshots, equipment/discipline matching, mandatory/optional items, acceptance criteria, units and witness-release gates | Advanced measurement capture, configurable result vocabularies, qualified e-signatures, cross-project template sharing and generated blank form packs |
 | Punch List | Implemented bounded scope | Raise/assign, corrective action, closure, audited reopen, history, verification and waiver evidence; milestone blocking categories are project-configurable | Project-configurable category definitions/meanings, waiver authority matrix and further clearance workflow controls |
 | Witness / Hold / Review | Partial | Scheduling, attendance/release; Hold-point blocking can be configured per MC/RFC/RFSU gate | Witness/review point requirements, overdue escalation and full authority matrix remain incomplete |
 | MC / RFC / RFSU | Implemented bounded scope | Immutable MC/RFC certificates; project-configurable Punch, Check Sheet, Hold-point and RFSU task rules; invalid policy fails closed; policy and gate issues captured in certificate snapshots | Project-specific signatory matrix, qualified electronic signatures and further procedure-linked approvals |
@@ -44,7 +44,7 @@
 ## Recommended implementation order
 1. Full dossier PDF/ZIP compilation, revision control and approval workflow.
 2. Durable evidence storage and security/retention/restore controls.
-3. Reusable revision-controlled Check Sheet/Test Sheet templates and project instantiation.
+3. Advanced Check Sheet measurement capture, configurable result vocabularies and generated blank/test form packs.
 4. Preservation reminders, plan revisions, templates and compliance reporting.
 5. Work logs/manpower and expanded reports.
 6. Further document-control and engineering import/revision workflows.
