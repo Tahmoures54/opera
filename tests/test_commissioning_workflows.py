@@ -1,4 +1,6 @@
 """End-to-end tests for OPERA operational workflows."""
+from datetime import datetime
+
 import pytest
 
 from extensions import db
@@ -8,7 +10,7 @@ from models_commissioning import (
     CommissioningMembership, MembershipRole, CheckSheet, CheckSheetItem,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, PunchItem,
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
-    CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, CommissioningAuditLog,
+    CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, ProgressSnapshot, CommissioningAuditLog,
     CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
 )
 
@@ -672,5 +674,84 @@ def test_task_dependencies_are_project_and_tenant_scoped(client, app, opera_setu
     response = client.post(
         f"/commissioning/projects/{opera_setup['project']}/tasks/{task_id}/dependencies",
         data={"predecessor_task_id": str(task_id), "lag_days": "0"},
+    )
+    assert response.status_code == 404
+
+
+def test_scoped_progress_snapshot_calculates_weighted_sheet_and_task_completion(client, app, opera_setup):
+    with app.app_context():
+        signed_sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="PROG-CS-001", sheet_type=CheckSheetType.PRE_COMM_A,
+            title="Completed walkdown", sheet_weight=3,
+            created_by_id=opera_setup["manager"],
+        )
+        open_sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="PROG-CS-002", sheet_type=CheckSheetType.PRE_COMM_A,
+            title="Open walkdown", sheet_weight=1,
+            created_by_id=opera_setup["manager"],
+        )
+        completed_task = CommissioningTask(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            task_number="PROG-TASK-001", title="Completed task",
+            activity_type=CommissioningTaskType.CCK, discipline="Mechanical",
+            estimated_man_hours=8, status=CommissioningTaskStatus.COMPLETED,
+            created_by_id=opera_setup["manager"],
+        )
+        active_task = CommissioningTask(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            task_number="PROG-TASK-002", title="Active task",
+            activity_type=CommissioningTaskType.STS, discipline="Mechanical",
+            estimated_man_hours=2, status=CommissioningTaskStatus.IN_PROGRESS,
+            created_by_id=opera_setup["manager"],
+        )
+        cancelled_task = CommissioningTask(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            task_number="PROG-TASK-003", title="Cancelled task",
+            activity_type=CommissioningTaskType.PIP, discipline="Piping",
+            estimated_man_hours=100, status=CommissioningTaskStatus.CANCELLED,
+            created_by_id=opera_setup["manager"],
+        )
+        db.session.add_all([signed_sheet, open_sheet, completed_task, active_task, cancelled_task])
+        db.session.commit()
+        signed_sheet.status = CheckSheetStatus.SIGNED_OFF
+        signed_sheet.signed_by_client_id = opera_setup["client"]
+        signed_sheet.signed_by_contractor_id = opera_setup["manager"]
+        signed_sheet.signed_at = datetime.utcnow()
+        db.session.commit()
+
+    _login_id(client, opera_setup["manager"])
+    response = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/reports/snapshot",
+        data={"scope": f"subsystem:{opera_setup['subsystem']}", "snapshot_date": "2026-11-17"},
+    )
+    assert response.status_code == 302
+    with app.app_context():
+        snapshot = ProgressSnapshot.query.filter_by(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+        ).one()
+        assert snapshot.checksheet_total == 2
+        assert snapshot.checksheet_signed_off == 1
+        assert snapshot.weighted_percent == 75.0
+        assert snapshot.task_total == 2
+        assert snapshot.task_completed == 1
+        assert snapshot.task_percent_complete == 50.0
+        assert snapshot.task_weighted_percent == 80.0
+        assert snapshot.task_estimated_hours == 10.0
+        assert snapshot.task_completed_hours == 8.0
+
+
+def test_progress_snapshot_rejects_foreign_scope(client, opera_setup):
+    _login_id(client, opera_setup["outsider"])
+    response = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/reports/snapshot",
+        data={"scope": f"subsystem:{opera_setup['subsystem']}", "snapshot_date": "2026-11-17"},
     )
     assert response.status_code == 404
