@@ -338,7 +338,7 @@ def render_subsystem_dossier_pdf(snapshot: dict) -> bytes:
             [Paragraph(_pdf_text(str(value if value is not None else "—")), cell_style) for value in row]
             for row in rows
         ])
-        table = Table(data, repeatRows=1, hAlign="LEFT")
+        table = Table(data, colWidths=[document.width / len(headers)] * len(headers), repeatRows=1, hAlign="LEFT")
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#24364b")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
