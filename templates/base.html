@@ -30,6 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/opera-ui.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/documentation.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/command-palette.css') }}">
@@ -342,12 +343,6 @@
             <a href="{{ url_for('commissioning.dashboard') }}"><i class="fas fa-industry"></i> Commissioning Projects</a>
           </nav>
           <div class="mh-nav-label">Account</div>
-          <nav class="mh-nav">
-            <a href="{{ url_for('help.help') }}"><i class="fas fa-question-circle"></i> Help Center</a>
-            <a href="{{ url_for('auth.change_password') }}"><i class="fas fa-key"></i> Change Password</a>
-            <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Sign out</a>
-          </nav>
-          <div class="mh-nav-label">Support</div>
           <nav class="mh-nav">
             <a href="{{ url_for('help.help') }}"><i class="fas fa-question-circle"></i> Help Center</a>
             <a href="{{ url_for('auth.change_password') }}"><i class="fas fa-key"></i> Change Password</a>
