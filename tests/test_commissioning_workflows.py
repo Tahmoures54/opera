@@ -7,7 +7,8 @@ from models_commissioning import (
     CommissioningProject, CommissioningSystem, CommissioningSubsystem,
     CommissioningMembership, MembershipRole, CheckSheet, CheckSheetItem,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, PunchItem,
-    PunchCategory, PunchSeverity, PunchStatus,
+    PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
+    CommissioningTaskType, CommissioningTaskStatus, CommissioningAuditLog,
 )
 
 
@@ -373,3 +374,79 @@ def test_task_register_enforces_project_role_and_company_boundary(client, app, o
     assert client.get(url).status_code == 200
     _login(client, outsider)
     assert client.get(url).status_code == 404
+
+
+def test_task_lifecycle_transitions_are_controlled_and_audited(client, app, opera_setup):
+    from models import User
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+    _login(client, manager)
+    project_id = opera_setup["project"]
+    created = client.post(
+        f"/commissioning/projects/{project_id}/tasks",
+        data={
+            "task_number": "FLOW-TASK-001", "title": "Verify instrument air package",
+            "activity_type": CommissioningTaskType.CCK.value, "discipline": "Instrumentation",
+            "system_id": opera_setup["system"], "subsystem_id": opera_setup["subsystem"],
+            "estimated_man_hours": "4",
+        },
+    )
+    assert created.status_code == 302
+    with app.app_context():
+        task = CommissioningTask.query.filter_by(task_number="FLOW-TASK-001").one()
+        task_id = task.id
+    base = f"/commissioning/projects/{project_id}/tasks/{task_id}/transition"
+
+    invalid = client.post(base, data={"status": CommissioningTaskStatus.COMPLETED.value})
+    assert invalid.status_code == 409
+
+    ready = client.post(base, data={"status": CommissioningTaskStatus.READY.value})
+    assert ready.status_code == 302
+    started = client.post(base, data={"status": CommissioningTaskStatus.IN_PROGRESS.value})
+    assert started.status_code == 302
+
+    missing_reason = client.post(base, data={"status": CommissioningTaskStatus.BLOCKED.value})
+    assert missing_reason.status_code == 400
+    blocked = client.post(base, data={
+        "status": CommissioningTaskStatus.BLOCKED.value, "reason": "Awaiting isolation certificate",
+    })
+    assert blocked.status_code == 302
+
+    resumed = client.post(base, data={"status": CommissioningTaskStatus.IN_PROGRESS.value})
+    assert resumed.status_code == 302
+    completed = client.post(base, data={"status": CommissioningTaskStatus.COMPLETED.value})
+    assert completed.status_code == 302
+
+    with app.app_context():
+        task = db.session.get(CommissioningTask, task_id)
+        events = CommissioningAuditLog.query.filter_by(
+            company_name="Contractor A", entity_type="CommissioningTask",
+            entity_id=task_id, action="TASK_STATUS_CHANGED",
+        ).all()
+        assert task.status == CommissioningTaskStatus.COMPLETED
+        assert task.actual_start_date is not None
+        assert task.actual_finish_date is not None
+        assert len(events) == 5
+        assert any((event.after_json or {}).get("reason") == "Awaiting isolation certificate" for event in events)
+
+
+def test_task_lifecycle_requires_manager_permission(client, app, opera_setup):
+    from models import User
+    with app.app_context():
+        viewer = db.session.get(User, opera_setup["viewer"])
+        task = CommissioningTask(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            task_number="FLOW-TASK-002", title="Viewer cannot execute", discipline="Mechanical",
+            activity_type=CommissioningTaskType.STS,
+        )
+        db.session.add(task)
+        db.session.commit()
+        task_id = task.id
+    _login(client, viewer)
+    response = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/tasks/{task_id}/transition",
+        data={"status": CommissioningTaskStatus.READY.value},
+    )
+    assert response.status_code == 403
+
