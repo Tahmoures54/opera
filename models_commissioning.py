@@ -119,7 +119,8 @@ class HandoverStatus(enum.Enum):
     DRAFT = "DRAFT"
     MC_PENDING = "MC_PENDING"
     MC_CERTIFIED = "MC_CERTIFIED"
-    RF_PENDING = "RF_PENDING"
+    RFC_PENDING = "RFC_PENDING"
+    RF_PENDING = "RFC_PENDING"  # Backward-compatible Python alias
     RFC_CERTIFIED = "RFC_CERTIFIED"
     RF_CERTIFIED = "RFC_CERTIFIED"  # Backward-compatible Python alias
     RFSU = "RFSU"
