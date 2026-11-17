@@ -37,7 +37,7 @@
 1. **Evidence durability:** the S3-compatible storage adapter is merged, and serverless uploads fail closed when local storage is selected. Production evidence use still requires bucket configuration, migration/checksum verification of any existing files, provider access/retention controls and a successful backup/restore rehearsal.
 2. **Readiness policy:** current A/B Punch and Check Sheet defaults must be reviewed and approved against the project's completion procedure, ITPs, contract and authority matrix.
 3. **Electronic signatures:** authenticated acknowledgement is not a qualified cryptographic signature.
-4. **Dossier:** controlled revision, review, approval and issue workflow is implemented in the pending branch. It is an OPERA record-control mechanism, not a qualified electronic signature or automatic contractual acceptance. Project-specific section/authority rules and staging acceptance remain required.
+4. **Dossier:** controlled revision, review, approval and issue workflow is implemented on main by PR #43. It is an OPERA record-control mechanism, not a qualified electronic signature or automatic contractual acceptance. Project-specific section/authority rules and staging acceptance remain required.
 5. **Preservation:** automated reminders, recurring schedules, plan revisions and advanced compliance reports are not implemented; evidence retention depends on completing production S3 configuration and backup controls.
 6. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
