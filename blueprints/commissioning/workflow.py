@@ -7,7 +7,7 @@ from sqlalchemy import or_
 from extensions import db
 from models import User
 from models_commissioning import (
-    CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus,
+    CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskDependency, CommissioningTaskType, CommissioningTaskStatus,
     CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
@@ -819,6 +819,22 @@ def transition_task(project_id, task_id):
         abort(400, description="A reason is required when blocking or cancelling a task.")
     if current in (CommissioningTaskStatus.COMPLETED, CommissioningTaskStatus.CANCELLED) and not reason:
         abort(400, description="A reason is required to reopen a completed task.")
+    if target in (CommissioningTaskStatus.READY, CommissioningTaskStatus.IN_PROGRESS):
+        predecessor_ids = [
+            row.predecessor_task_id for row in CommissioningTaskDependency.query.filter_by(
+                company_name=project.company_name, project_id=project.id,
+                successor_task_id=task.id,
+            ).all()
+        ]
+        if predecessor_ids:
+            incomplete_predecessors = CommissioningTask.query.filter(
+                CommissioningTask.company_name == project.company_name,
+                CommissioningTask.project_id == project.id,
+                CommissioningTask.id.in_(predecessor_ids),
+                CommissioningTask.status != CommissioningTaskStatus.COMPLETED,
+            ).count()
+            if incomplete_predecessors:
+                abort(409, description="All finish-to-start predecessor tasks must be completed first.")
     before = {"status": current.value, "actual_start_date": task.actual_start_date.isoformat() if task.actual_start_date else None,
               "actual_finish_date": task.actual_finish_date.isoformat() if task.actual_finish_date else None}
     now = datetime.utcnow()
@@ -944,11 +960,20 @@ def task_register(project_id):
     subsystem_by_id = {item.id: item for item in subsystems}
     equipment_by_id = {item.id: item for item in equipment}
     sheet_by_id = {item.id: item for item in check_sheets}
+    dependency_rows = CommissioningTaskDependency.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).all()
+    dependencies_by_task = {}
+    for dependency in dependency_rows:
+        dependencies_by_task.setdefault(dependency.successor_task_id, []).append(dependency)
+    task_by_id = {item.id: item for item in tasks}
+
     return render_template(
         "commissioning/task_register.html", project=project, tasks=tasks,
         systems=systems, subsystems=subsystems, equipment=equipment, check_sheets=check_sheets,
         system_by_id=system_by_id, subsystem_by_id=subsystem_by_id,
         equipment_by_id=equipment_by_id, sheet_by_id=sheet_by_id,
+        dependencies_by_task=dependencies_by_task, task_by_id=task_by_id,
         activity_types=list(CommissioningTaskType), task_statuses=list(CommissioningTaskStatus),
         can_create=any(has_permission(project.id, p) for p in ("tasks.create", "tasks.manage", "project.manage")),
         can_manage_tasks=any(has_permission(project.id, p) for p in ("tasks.manage", "project.manage")),
@@ -1270,4 +1295,92 @@ def subsystem_dossier(project_id, subsystem_id):
         open_critical_punches=open_critical_punches, open_other_punches=open_other_punches,
         pending_holds=pending_holds, incomplete_tasks=incomplete_tasks,
     )
+
+
+
+@commissioning_bp.post("/projects/<int:project_id>/tasks/<int:task_id>/dependencies")
+@login_required
+def add_task_dependency(project_id, task_id):
+    """Add a validated finish-to-start predecessor without permitting cycles."""
+    _need(project_id, "tasks.manage", "project.manage")
+    project = get_project(project_id)
+    successor = CommissioningTask.query.filter_by(
+        id=task_id, company_name=project.company_name, project_id=project.id,
+    ).first_or_404()
+    predecessor = CommissioningTask.query.filter_by(
+        id=request.form.get("predecessor_task_id", type=int),
+        company_name=project.company_name, project_id=project.id,
+    ).first_or_404()
+    if predecessor.id == successor.id:
+        abort(400, description="A task cannot depend on itself.")
+    if CommissioningTaskDependency.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        predecessor_task_id=predecessor.id, successor_task_id=successor.id,
+    ).first():
+        abort(409, description="This predecessor is already linked.")
+    try:
+        lag_days = int(request.form.get("lag_days") or 0)
+    except (TypeError, ValueError):
+        abort(400, description="Lag days must be a non-negative whole number.")
+    if lag_days < 0:
+        abort(400, description="Lag days cannot be negative.")
+
+    graph = {}
+    for edge in CommissioningTaskDependency.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).all():
+        graph.setdefault(edge.predecessor_task_id, set()).add(edge.successor_task_id)
+    pending, visited = [successor.id], set()
+    while pending:
+        node = pending.pop()
+        if node == predecessor.id:
+            abort(409, description="This dependency would create a circular task sequence.")
+        if node not in visited:
+            visited.add(node)
+            pending.extend(graph.get(node, ()))
+
+    dependency = CommissioningTaskDependency(
+        company_name=project.company_name, project_id=project.id,
+        predecessor_task_id=predecessor.id, successor_task_id=successor.id,
+        dependency_type="FINISH_TO_START", lag_days=lag_days,
+        created_by_id=current_user.id,
+    )
+    db.session.add(dependency)
+    add_audit_event(project.company_name, "CommissioningTask", successor.id,
+                    "TASK_DEPENDENCY_ADDED",
+                    after={"predecessor_task_id": predecessor.id,
+                           "predecessor_task_number": predecessor.task_number,
+                           "dependency_type": "FINISH_TO_START", "lag_days": lag_days})
+    db.session.commit()
+    flash(f"Predecessor {predecessor.task_number} linked to {successor.task_number}.", "success")
+    return redirect(url_for("commissioning.task_register", project_id=project.id))
+
+
+@commissioning_bp.post("/projects/<int:project_id>/tasks/<int:task_id>/dependencies/<int:dependency_id>/remove")
+@login_required
+def remove_task_dependency(project_id, task_id, dependency_id):
+    """Remove a task link with an auditable change record."""
+    _need(project_id, "tasks.manage", "project.manage")
+    project = get_project(project_id)
+    successor = CommissioningTask.query.filter_by(
+        id=task_id, company_name=project.company_name, project_id=project.id,
+    ).first_or_404()
+    dependency = CommissioningTaskDependency.query.filter_by(
+        id=dependency_id, company_name=project.company_name, project_id=project.id,
+        successor_task_id=successor.id,
+    ).first_or_404()
+    predecessor = CommissioningTask.query.filter_by(
+        id=dependency.predecessor_task_id, company_name=project.company_name,
+        project_id=project.id,
+    ).first()
+    add_audit_event(project.company_name, "CommissioningTask", successor.id,
+                    "TASK_DEPENDENCY_REMOVED",
+                    before={"predecessor_task_id": dependency.predecessor_task_id,
+                            "predecessor_task_number": predecessor.task_number if predecessor else None,
+                            "dependency_type": dependency.dependency_type,
+                            "lag_days": dependency.lag_days})
+    db.session.delete(dependency)
+    db.session.commit()
+    flash("Task dependency removed.", "success")
+    return redirect(url_for("commissioning.task_register", project_id=project.id))
 
