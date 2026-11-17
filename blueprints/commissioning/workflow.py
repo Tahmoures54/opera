@@ -779,6 +779,52 @@ def create_progress_snapshot(project_id):
     return redirect(url_for("commissioning.operations", project_id=project.id))
 
 
+@commissioning_bp.post("/projects/<int:project_id>/tasks/<int:task_id>/transition")
+@login_required
+def transition_task(project_id, task_id):
+    """Apply a controlled task lifecycle transition with an append-only audit event."""
+    _need(project_id, "tasks.manage", "project.manage")
+    project = get_project(project_id)
+    task = CommissioningTask.query.filter_by(
+        id=task_id, company_name=project.company_name, project_id=project.id
+    ).first_or_404()
+    target = _enum(CommissioningTaskStatus, _required("status", 30), "status")
+    reason = (request.form.get("reason") or "").strip()[:2000]
+    current = task.status
+    transitions = {
+        CommissioningTaskStatus.NOT_STARTED: {CommissioningTaskStatus.READY, CommissioningTaskStatus.CANCELLED},
+        CommissioningTaskStatus.READY: {CommissioningTaskStatus.IN_PROGRESS, CommissioningTaskStatus.BLOCKED, CommissioningTaskStatus.CANCELLED},
+        CommissioningTaskStatus.IN_PROGRESS: {CommissioningTaskStatus.BLOCKED, CommissioningTaskStatus.COMPLETED, CommissioningTaskStatus.CANCELLED},
+        CommissioningTaskStatus.BLOCKED: {CommissioningTaskStatus.IN_PROGRESS, CommissioningTaskStatus.CANCELLED},
+        CommissioningTaskStatus.COMPLETED: {CommissioningTaskStatus.IN_PROGRESS},
+        CommissioningTaskStatus.CANCELLED: set(),
+    }
+    if target not in transitions.get(current, set()):
+        abort(409, description=f"Transition from {current.value} to {target.value} is not allowed.")
+    if target in (CommissioningTaskStatus.BLOCKED, CommissioningTaskStatus.CANCELLED) and not reason:
+        abort(400, description="A reason is required when blocking or cancelling a task.")
+    if current in (CommissioningTaskStatus.COMPLETED, CommissioningTaskStatus.CANCELLED) and not reason:
+        abort(400, description="A reason is required to reopen a completed task.")
+    before = {"status": current.value, "actual_start_date": task.actual_start_date.isoformat() if task.actual_start_date else None,
+              "actual_finish_date": task.actual_finish_date.isoformat() if task.actual_finish_date else None}
+    now = datetime.utcnow()
+    task.status = target
+    if target == CommissioningTaskStatus.IN_PROGRESS and task.actual_start_date is None:
+        task.actual_start_date = now.date()
+    if target == CommissioningTaskStatus.COMPLETED:
+        task.actual_finish_date = now.date()
+    if target == CommissioningTaskStatus.IN_PROGRESS and current == CommissioningTaskStatus.COMPLETED:
+        task.actual_finish_date = None
+    after = {"status": target.value, "reason": reason or None,
+             "actual_start_date": task.actual_start_date.isoformat() if task.actual_start_date else None,
+             "actual_finish_date": task.actual_finish_date.isoformat() if task.actual_finish_date else None}
+    add_audit_event(project.company_name, "CommissioningTask", task.id, "TASK_STATUS_CHANGED",
+                    before=before, after=after)
+    db.session.commit()
+    flash(f"Task {task.task_number} status updated to {target.value.replace('_', ' ').title()}.", "success")
+    return redirect(url_for("commissioning.task_register", project_id=project.id))
+
+
 @commissioning_bp.route("/projects/<int:project_id>/tasks", methods=["GET", "POST"])
 @login_required
 def task_register(project_id):
