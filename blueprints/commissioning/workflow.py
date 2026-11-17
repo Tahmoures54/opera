@@ -268,7 +268,11 @@ def update_checksheet_item(sheet_id, item_id):
     item = CheckSheetItem.query.filter_by(
         id=item_id, company_name=sheet.company_name, check_sheet_id=sheet.id
     ).first_or_404()
-    old = item.result_status.value
+    old = {
+        "result": item.result_status.value,
+        "actual_result": item.actual_result,
+        "remarks": item.remarks,
+    }
     item.actual_result = (request.form.get("actual_result") or "").strip() or None
     item.result_status = _enum(ItemResultStatus, _required("result_status", 20), "result")
     if item.result_status in (ItemResultStatus.OK, ItemResultStatus.NOK) and not item.actual_result:
@@ -277,9 +281,19 @@ def update_checksheet_item(sheet_id, item_id):
     item.verified_by_id, item.verified_at = None, None
     item.remarks = (request.form.get("remarks") or "").strip() or None
     item.operator_id = current_user.id
-    sheet.status = CheckSheetStatus.IN_PROGRESS
-    add_audit_event(sheet.company_name, "CheckSheetItem", item.id, "CHECKSHEET_ITEM_RESULT",
-                    before={"result": old}, after={"result": item.result_status.value})
+    # Keep a rejected sheet in REJECTED while it is being corrected so the
+    # explicit reissue action remains available after the rework is saved.
+    if sheet.status != CheckSheetStatus.REJECTED:
+        sheet.status = CheckSheetStatus.IN_PROGRESS
+    add_audit_event(
+        sheet.company_name, "CheckSheetItem", item.id, "CHECKSHEET_ITEM_RESULT",
+        before=old,
+        after={
+            "result": item.result_status.value,
+            "actual_result": item.actual_result,
+            "remarks": item.remarks,
+        },
+    )
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
 
