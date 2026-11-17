@@ -74,6 +74,7 @@ def upgrade():
     )
 
     with op.batch_alter_table("commissioning_check_sheet") as batch_op:
+        batch_op.add_column(sa.Column("discipline", sa.String(length=80), nullable=False, server_default="ANY"))
         batch_op.add_column(sa.Column("template_id", sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column("template_revision_snapshot", sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column("template_title_snapshot", sa.String(length=200), nullable=True))
@@ -106,6 +107,7 @@ def downgrade():
         batch_op.drop_constraint("fk_comm_check_template_tenant", type_="foreignkey")
         batch_op.drop_column("template_snapshot_json")
         batch_op.drop_column("template_title_snapshot")
+        batch_op.drop_column("discipline")
         batch_op.drop_column("template_revision_snapshot")
         batch_op.drop_column("template_id")
 
