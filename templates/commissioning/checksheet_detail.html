@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container py-4">
   <a href="{{ url_for('commissioning.operations', project_id=sheet.project_id) }}">Back to project operations</a>
-  <div class="d-flex justify-content-between flex-wrap gap-2 mt-3 mb-4"><div><h1 class="h3">{{ sheet.title }}</h1><div class="text-muted">{{ sheet.sheet_number }} · Rev {{ sheet.revision }} · {{ sheet.sheet_type.value|replace('_', ' ')|title }}</div></div><span class="badge bg-primary align-self-start">{{ sheet.status.value|replace('_', ' ')|title }}</span></div>
+  <div class="d-flex justify-content-between flex-wrap gap-2 mt-3 mb-4"><div><h1 class="h3">{{ sheet.title }}</h1><div class="text-muted">{{ sheet.sheet_number }} · Rev {{ sheet.revision }} · {{ sheet.sheet_type.value|replace('_', ' ')|title }} · {{ sheet.discipline }}</div></div><span class="badge bg-primary align-self-start">{{ sheet.status.value|replace('_', ' ')|title }}</span></div>
   {% if sheet.template_title_snapshot %}
   <div class="alert alert-light border"><strong>Template:</strong> {{ sheet.template_snapshot_json.template_code if sheet.template_snapshot_json else 'Template' }} · {{ sheet.template_title_snapshot }} · Rev {{ sheet.template_revision_snapshot }}
     {% if sheet.template_snapshot_json and sheet.template_snapshot_json.acceptance_criteria %}<div class="small mt-1"><strong>Template acceptance criteria:</strong> {{ sheet.template_snapshot_json.acceptance_criteria }}</div>{% endif %}
