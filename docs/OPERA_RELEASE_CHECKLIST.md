@@ -15,7 +15,8 @@
 - [ ] Configure production secrets and PostgreSQL connection settings.
 - [ ] Rehearse the current Alembic head upgrade on a production-like staging database.
 - [ ] Take and verify a production database backup before migration.
-- [ ] Configure durable private object storage for evidence files; local filesystem storage is not suitable for Vercel/serverless persistence.
+- [ ] Configure `OPERA_STORAGE_BACKEND=s3`, bucket, region and (if needed) endpoint/credentials for durable private evidence storage; local uploads are blocked on serverless runtimes.
+- [ ] Migrate existing local evidence objects to the bucket and verify every stored SHA-256 checksum.
 - [ ] Verify object access controls, encryption, retention, malware scanning and off-host backup.
 - [ ] Perform paired database/evidence backup and restore rehearsal.
 - [ ] Verify deployment health, HTTPS, logging, monitoring and rollback procedure.
