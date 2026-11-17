@@ -13,6 +13,7 @@
 - Controlled engineering Document Register with revision history, file evidence metadata, review and approval decisions.
 - OPERA-owned XLSX engineering data exchange for Systems, Subsystems, Equipment and Tasks, including dry-run validation, SHA-256 workbook confirmation, atomic create-only import and audit.
 - Subsystem completion dossier/readiness view consolidating documents, Check Sheets, Punch items, witness/hold points, equipment and tasks.
+- Project-configurable dossier document index with discipline, minimum-count, approval and attachment-record rules, evaluated against current document revisions.
 - Immutable MC and RFC certificates with issue-time evidence snapshots; separate RFSU gate and Operations Acceptance transition.
 - Project-configurable readiness policy for Punch blockers, required Check Sheet types, Hold-point gates, Check Sheet presence and RFSU task completion; invalid policy fails closed and certificate snapshots retain the effective policy.
 - Scoped progress snapshots with Check Sheet and Task count/weight metrics and Punch counts.
