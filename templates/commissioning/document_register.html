@@ -42,7 +42,7 @@
             <td class="text-nowrap"><strong>{{ doc.document_number }}</strong><div class="small text-muted">Revision {{ doc.revision }}</div></td>
             <td>{{ doc.title }}<div class="small text-muted">{{ doc.document_type }}{% if doc.purpose %} · {{ doc.purpose }}{% endif %}</div></td>
             <td>{{ doc.discipline }}</td>
-            <td><small>{{ doc.system_id or '—' }} / {{ doc.subsystem_id or '—' }}</small></td>
+            <td><small>{{ system_by_id.get(doc.system_id).system_code if system_by_id.get(doc.system_id) else '—' }} / {{ subsystem_by_id.get(doc.subsystem_id).subsystem_code if subsystem_by_id.get(doc.subsystem_id) else '—' }}{% if doc.equipment_id and equipment_by_id.get(doc.equipment_id) %}<div>{{ equipment_by_id.get(doc.equipment_id).tag_number }}</div>{% endif %}</small></td>
             <td>
               {% set color = 'success' if doc.status.value == 'APPROVED' else ('danger' if doc.status.value == 'REJECTED' else ('primary' if doc.status.value == 'IN_REVIEW' else ('secondary' if doc.status.value == 'SUPERSEDED' else 'warning'))) %}
               <span class="badge bg-{{ color }}">{{ doc.status.value|replace('_',' ')|title }}</span>
