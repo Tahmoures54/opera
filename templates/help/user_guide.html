@@ -2,15 +2,26 @@
 {% block title %} — OPERA User Guide{% endblock %}
 {% block content %}
 <div class="container py-5">
-  <h1 class="h2 mb-2">OPERA User Guide</h1><p class="text-muted mb-4">Commissioning and start-up workflow reference</p>
-  <div class="card"><div class="card-body">
-    <h2 class="h5">1. Project setup</h2><p>Create a project, define systems and subsystems, and assign project members using OPERA roles. Membership is tenant-scoped and does not alter the inherited account role.</p>
-    <h2 class="h5 mt-4">2. Check sheets</h2><p>Create a pre-commissioning, commissioning or functional-test sheet. Add inspection items and acceptance criteria, issue the sheet, then record actual results. OK/N/A items require independent QC verification. Contractor and client sign-off must be performed by different authenticated users.</p>
-    <h2 class="h5 mt-4">3. Punch List</h2><p>Raise A/B/C/D punch items, assign them to active project members, set target dates and move them through controlled status transitions. Verification and waiver require the appropriate project permission and leave an immutable history.</p>
-    <h2 class="h5 mt-4">4. Witness and Hold Points</h2><p>Schedule a point against a check sheet and optional item, record notification, attendance, result and release. Required witness items cannot be signed off until released.</p>
-    <h2 class="h5 mt-4">5. MC, RF, RFSU and handover</h2><p>MC certification is blocked until all subsystem check sheets are signed and category A/B punch items are cleared. Continue through RF certification and RFSU, then record operations acceptance or rejection.</p>
-    <h2 class="h5 mt-4">6. Progress evidence</h2><p>Progress snapshots capture signed-off check-sheet ratios, weighted completion and open/closed punch counts. Audit events, signatures and revisions provide traceability.</p>
-    <p class="text-muted small mt-4 mb-0">Electronic sign-off in this release is an authenticated acknowledgement, not a qualified cryptographic signature.</p>
+  <div class="mb-4">
+    <span class="badge bg-primary-subtle text-primary mb-2">OPERA · User documentation</span>
+    <h1 class="h2 mb-2">OPERA User Guide</h1>
+    <p class="text-muted mb-0">A practical guide to commissioning readiness, evidence and handover.</p>
+  </div>
+  <div class="card border-0 shadow-sm"><div class="card-body p-4 p-lg-5">
+    <h2 class="h5">1. Project setup</h2><p>Create a project, define systems and subsystems, register equipment and assign project members using OPERA roles. Membership is tenant-scoped and does not alter the inherited account role.</p>
+    <h2 class="h5 mt-4">2. Check sheets</h2><p>Create the applicable Pre-Commissioning, Commissioning or Functional Test check sheet. Define inspection items and acceptance criteria, issue the controlled sheet, record actual results and complete the required QC verification and contractor/client sign-offs. Signed-off revisions are not edited in place.</p>
+    <h2 class="h5 mt-4">3. Punch List</h2><p>Raise A/B/C/D punch items against the correct subsystem or equipment, assign an owner and target date, record corrective evidence and request closure. Independent verification and authorized waivers must retain their audit history.</p>
+    <h2 class="h5 mt-4">4. Witness and Hold Points</h2><p>Schedule the required witness, hold or review point, record notification and attendance, document the result and release the point through the authorized project role. Follow the project's approved inspection and test plan.</p>
+    <h2 class="h5 mt-4">5. Readiness milestones and handover</h2>
+    <div class="list-group list-group-numbered mb-3">
+      <div class="list-group-item"><strong>MC — Mechanical Completion</strong><div class="small text-muted">Confirms that construction/mechanical completion evidence and the applicable pre-commissioning prerequisites have been accepted.</div></div>
+      <div class="list-group-item"><strong>RFC — Ready for Commissioning</strong><div class="small text-muted">Confirms that the subsystem is released to enter commissioning under the approved project procedure.</div></div>
+      <div class="list-group-item"><strong>RFSU — Ready for Start-Up</strong><div class="small text-muted">Confirms that commissioning and start-up prerequisites have been met and the system is ready for the start-up authorization process.</div></div>
+      <div class="list-group-item"><strong>Operations Acceptance</strong><div class="small text-muted">Records the authorized Operations acceptance or rejection of the handover package.</div></div>
+    </div>
+    <div class="alert alert-info"><strong>Implementation note:</strong> In the current OPERA release, the certificate stored internally as type <code>RF</code> is the Ready for Commissioning (RFC) certificate. There is no separate Ready-for-Start-Up certificate type named RF; RFSU is the implemented next milestone. The displayed workflow must not be interpreted as an additional RF stage. Project contracts and approved procedures take precedence if they define these abbreviations differently.</div>
+    <h2 class="h5 mt-4">6. Progress and evidence</h2><p>Progress snapshots and issue-time certificate snapshots preserve the records available at the time of capture. An indicator or snapshot is not a substitute for an authorized certificate, signed dossier or contractual acceptance.</p>
+    <p class="text-muted small mt-4 mb-0">Electronic sign-off in this release is an authenticated acknowledgement, not a qualified cryptographic signature. Contractual authority and acceptance criteria remain governed by approved project procedures.</p>
   </div></div>
 </div>
 {% endblock %}
