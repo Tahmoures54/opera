@@ -800,6 +800,14 @@ def task_register(project_id):
             system_id=system.id,
         ).first_or_404()
         equipment_id = request.form.get("equipment_id", type=int)
+        check_sheet_id = request.form.get("check_sheet_id", type=int)
+        if check_sheet_id is not None:
+            linked_sheet = CheckSheet.query.filter_by(
+                id=check_sheet_id, company_name=project.company_name,
+                project_id=project.id, system_id=system.id, subsystem_id=subsystem.id,
+            ).first()
+            if linked_sheet is None:
+                abort(400, description="Check sheet must belong to the selected system and subsystem.")
         if equipment_id is not None:
             equipment = CommissioningEquipment.query.filter_by(
                 id=equipment_id, company_name=project.company_name,
@@ -826,7 +834,7 @@ def task_register(project_id):
         task = CommissioningTask(
             company_name=project.company_name, project_id=project.id,
             system_id=system.id, subsystem_id=subsystem.id, equipment_id=equipment_id,
-            task_number=task_number, title=_required("title", 200),
+            check_sheet_id=check_sheet_id, task_number=task_number, title=_required("title", 200),
             description=(request.form.get("description") or "").strip()[:5000] or None,
             activity_type=activity, discipline=_required("discipline", 80),
             progress_stage=(request.form.get("progress_stage") or "").strip()[:80] or None,
@@ -871,9 +879,10 @@ def task_register(project_id):
         CommissioningSubsystem.status != "ARCHIVED",
     ).order_by(CommissioningSubsystem.subsystem_code).all()
     equipment = CommissioningEquipment.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(CommissioningEquipment.tag_number).all()
+    check_sheets = CheckSheet.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(CheckSheet.sheet_number).all()
     return render_template(
         "commissioning/task_register.html", project=project, tasks=tasks,
-        systems=systems, subsystems=subsystems, equipment=equipment,
+        systems=systems, subsystems=subsystems, equipment=equipment, check_sheets=check_sheets,
         activity_types=list(CommissioningTaskType), task_statuses=list(CommissioningTaskStatus),
         can_create=any(has_permission(project.id, p) for p in ("tasks.create", "tasks.manage", "project.manage")),
         selected_activity=activity_filter, selected_status=status_filter, search_term=search_term,
