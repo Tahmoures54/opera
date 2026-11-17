@@ -71,8 +71,9 @@
               {% if can_manage_tasks and task.status.value not in ('CANCELLED',) %}
               <form method="post" action="{{ url_for('commissioning.transition_task', project_id=project.id, task_id=task.id) }}" class="mt-2" style="min-width:190px">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <select class="form-select form-select-sm mb-1" name="status" aria-label="New task status">
-                  {% for status in task_statuses %}<option value="{{ status.value }}" {% if status == task.status %}selected{% endif %}>{{ status.value|replace('_',' ')|title }}</option>{% endfor %}
+                <select class="form-select form-select-sm mb-1" name="status" aria-label="New task status" required>
+                  <option value="" selected disabled>Select next status</option>
+                  {% for status in task_statuses %}{% if status != task.status %}<option value="{{ status.value }}">{{ status.value|replace('_',' ')|title }}</option>{% endif %}{% endfor %}
                 </select>
                 <input class="form-control form-control-sm mb-1" name="reason" maxlength="2000" placeholder="Reason (required for block/cancel/reopen)">
                 <button class="btn btn-sm btn-outline-primary w-100" type="submit">Update status</button>
