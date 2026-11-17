@@ -1770,7 +1770,7 @@ def save_dossier_requirement(project_id):
 @commissioning_bp.get("/projects/<int:project_id>/subsystems/<int:subsystem_id>/dossier")
 @login_required
 def subsystem_dossier(project_id, subsystem_id):
-    """Consolidated, evidence-based readiness view for one commissioning subsystem."""
+    """Consolidated, evidence-based readiness view and configurable document index."""
     _need(project_id, "structure.view", "handover.view", "handover.manage",
           "handover.accept", "reports.view", "project.manage")
     project = get_project(project_id)
@@ -1781,19 +1781,27 @@ def subsystem_dossier(project_id, subsystem_id):
         CommissioningSubsystem.company_name == project.company_name,
         CommissioningSystem.project_id == project.id,
     ).first_or_404()
+
     documents_all = CommissioningDocument.query.filter_by(
         company_name=project.company_name, project_id=project.id,
         subsystem_id=subsystem.id,
-    ).order_by(CommissioningDocument.document_number,
-               CommissioningDocument.revision_sequence.desc()).all()
+    ).order_by(
+        CommissioningDocument.document_number,
+        CommissioningDocument.revision_sequence.desc(),
+    ).all()
     latest_documents = {}
     for document in documents_all:
         latest_documents.setdefault(document.document_number, document)
     documents = list(latest_documents.values())
-    sheets = CheckSheet.query.filter_by(
+
+    all_sheets = CheckSheet.query.filter_by(
         company_name=project.company_name, project_id=project.id,
         subsystem_id=subsystem.id,
-    ).order_by(CheckSheet.sheet_number).all()
+    ).order_by(CheckSheet.sheet_number, CheckSheet.revision.desc()).all()
+    superseded_sheet_ids = {
+        item.supersedes_id for item in all_sheets if item.supersedes_id is not None
+    }
+    sheets = [item for item in all_sheets if item.id not in superseded_sheet_ids]
     punches = PunchItem.query.filter_by(
         company_name=project.company_name, project_id=project.id,
         subsystem_id=subsystem.id,
@@ -1813,6 +1821,7 @@ def subsystem_dossier(project_id, subsystem_id):
         company_name=project.company_name, project_id=project.id,
         subsystem_id=subsystem.id,
     ).order_by(CommissioningEquipment.tag_number).all()
+
     document_ids = [item.id for item in documents]
     attachments = CommissioningAttachment.query.filter(
         CommissioningAttachment.company_name == project.company_name,
@@ -1825,31 +1834,95 @@ def subsystem_dossier(project_id, subsystem_id):
 
     unsigned_sheets = [item for item in sheets if item.status != CheckSheetStatus.SIGNED_OFF]
     unapproved_documents = [item for item in documents if item.status != DocumentStatus.APPROVED]
+    readiness_policy, policy_errors = normalize_readiness_policy(project.readiness_policy_json)
+    mc_blocking_categories = set(readiness_policy["punch_blocking_categories"]["MC"])
     open_critical_punches = [
         item for item in punches
-        if item.category in (PunchCategory.A, PunchCategory.B)
-        and item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED)
+        if item.category.value in mc_blocking_categories
+        and item.status in (PunchStatus.OPEN, PunchStatus.IN_PROGRESS)
     ]
     open_other_punches = [
         item for item in punches
-        if item.category not in (PunchCategory.A, PunchCategory.B)
-        and item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED)
+        if item.category.value not in mc_blocking_categories
+        and item.status in (PunchStatus.OPEN, PunchStatus.IN_PROGRESS)
     ]
     pending_holds = [
         item for item in witnesses
-        if item.type == WitnessType.HOLD
+        if "MC" in readiness_policy["hold_point_blocking_gates"]
+        and item.type == WitnessType.HOLD
         and item.status not in (WitnessStatus.RELEASED, WitnessStatus.CANCELLED)
     ]
-    incomplete_tasks = [item for item in tasks if item.status != CommissioningTaskStatus.COMPLETED]
+    incomplete_tasks = [
+        item for item in tasks
+        if item.status not in (CommissioningTaskStatus.COMPLETED, CommissioningTaskStatus.CANCELLED)
+    ]
+
+    dossier_requirements = CommissioningDossierRequirement.query.filter_by(
+        company_name=project.company_name, project_id=project.id, is_active=True,
+    ).order_by(
+        CommissioningDossierRequirement.document_type,
+        CommissioningDossierRequirement.discipline,
+    ).all()
+    document_requirement_results = []
+    if dossier_requirements:
+        for requirement in dossier_requirements:
+            matching = [
+                item for item in documents
+                if item.document_type.strip().casefold() == requirement.document_type.strip().casefold()
+                and (
+                    requirement.discipline == "ANY"
+                    or item.discipline.strip().casefold() == requirement.discipline.strip().casefold()
+                )
+            ]
+            qualifying = [
+                item for item in matching
+                if (not requirement.require_approved or item.status == DocumentStatus.APPROVED)
+                and (not requirement.require_evidence or bool(evidence_by_document.get(item.id)))
+            ]
+            approved_count = sum(1 for item in matching if item.status == DocumentStatus.APPROVED)
+            evidence_count = sum(1 for item in matching if evidence_by_document.get(item.id))
+            passed = len(qualifying) >= requirement.minimum_count
+            discipline_label = "Any discipline" if requirement.discipline == "ANY" else requirement.discipline
+            document_requirement_results.append({
+                "name": requirement.document_type,
+                "discipline": discipline_label,
+                "minimum_count": requirement.minimum_count,
+                "matching_count": len(matching),
+                "qualifying_count": len(qualifying),
+                "approved_count": approved_count,
+                "evidence_count": evidence_count,
+                "require_approved": requirement.require_approved,
+                "require_evidence": requirement.require_evidence,
+                "passed": passed,
+                "detail": f"{len(qualifying)} of {requirement.minimum_count} required current documents qualify",
+            })
+        document_gate_passed = all(item["passed"] for item in document_requirement_results)
+        document_gate_detail = "; ".join(
+            f"{item['name']} ({item['discipline']}): {item['qualifying_count']}/{item['minimum_count']}"
+            for item in document_requirement_results
+        )
+        document_gate_name = "Configured dossier index"
+    else:
+        # Preserve the existing safe default until a project manager configures
+        # the mandatory index: at least one current document and all approved.
+        document_gate_passed = bool(documents) and not unapproved_documents
+        document_gate_detail = (
+            f"{len(documents) - len(unapproved_documents)} of {len(documents)} current revisions approved"
+            if documents else "No current engineering documents registered"
+        )
+        document_gate_name = "Current engineering documents"
+
     gates = [
         {"name": "Check Sheets", "passed": bool(sheets) and not unsigned_sheets,
-         "detail": f"{len(sheets) - len(unsigned_sheets)} of {len(sheets)} signed off"},
-        {"name": "Current engineering documents", "passed": bool(documents) and not unapproved_documents,
-         "detail": f"{len(documents) - len(unapproved_documents)} of {len(documents)} current revisions approved"},
-        {"name": "Category A / B Punch", "passed": not open_critical_punches,
-         "detail": f"{len(open_critical_punches)} open critical Punch items"},
-        {"name": "Hold points", "passed": not pending_holds,
-         "detail": f"{len(pending_holds)} pending Hold points"},
+         "detail": f"{len(sheets) - len(unsigned_sheets)} of {len(sheets)} current revisions signed off"},
+        {"name": document_gate_name, "passed": document_gate_passed,
+         "detail": document_gate_detail},
+        {"name": "Configured MC Punch categories", "passed": not open_critical_punches,
+         "detail": f"{len(open_critical_punches)} open blocking Punch items"},
+        {"name": "MC Hold points", "passed": not pending_holds,
+         "detail": f"{len(pending_holds)} blocking Hold points"},
+        {"name": "Readiness policy", "passed": not policy_errors,
+         "detail": "; ".join(policy_errors) if policy_errors else "Valid project readiness policy"},
     ]
     readiness_passed = all(item["passed"] for item in gates)
     return render_template(
@@ -1860,8 +1933,9 @@ def subsystem_dossier(project_id, subsystem_id):
         unsigned_sheets=unsigned_sheets, unapproved_documents=unapproved_documents,
         open_critical_punches=open_critical_punches, open_other_punches=open_other_punches,
         pending_holds=pending_holds, incomplete_tasks=incomplete_tasks,
+        dossier_requirements=dossier_requirements,
+        document_requirement_results=document_requirement_results,
     )
-
 
 
 @commissioning_bp.post("/projects/<int:project_id>/tasks/<int:task_id>/dependencies")
