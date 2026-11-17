@@ -1,12 +1,13 @@
 # OPERA Release Readiness Checklist
 
-**Code baseline:** `3d2095b0ff3e006f607429f95c0b531f83379f94` (merge commit for PR #39)  
-**CI run:** [44084364501](https://github.com/Tahmoures54/opera/actions/runs/44084364501) — PR head `417654cf6a2db1ac8ff94c3a45426307ab8fdcd9`; all quality-job steps passed.
+**Code baseline:** `23f087ab972fefc13545670657de8395f82828fc` (merge commit for PR #40)  
+**CI run:** [44086055925](https://github.com/Tahmoures54/opera/actions/runs/44086055925) — PR head `283a30c30c1f6bd5fe998636c56e38c70cb5e7e6`; quality, integration and docker jobs passed.
 
 ## Repository and CI
-- [x] Main contains Task, Check Sheet, Punch, document-control, engineering exchange, dossier index, MC/RFC, readiness, Preservation and S3-compatible evidence-storage increments.
+- [x] Main contains Task, Check Sheet, Punch, document-control, engineering exchange, dossier index and working PDF/ZIP exports, MC/RFC, readiness, Preservation and S3-compatible evidence-storage increments.
 - [x] `quality`, `integration` and `docker` checks passed on the earlier baseline `ca37db49224160628e9fb28d3b7d51930acc099f`.
-- [x] PR #39 `quality` job passed on head commit `417654cf6a2db1ac8ff94c3a45426307ab8fdcd9` (Ruff, Mypy, migration/script checks, core Pytest, commissioning Pytest, Bandit and pip-audit).
+- [x] PR #39 `quality`, `integration` and `docker` jobs passed on head commit `417654cf6a2db1ac8ff94c3a45426307ab8fdcd9`.
+- [x] PR #40 `quality`, `integration` and `docker` jobs passed on head commit `283a30c30c1f6bd5fe998636c56e38c70cb5e7e6`.
 - [ ] Reconcile and remove obsolete remote feature branches after confirming merged ancestry; retain any branch with unmerged work.
 - [ ] Confirm no stale or duplicate pull requests remain open.
 
