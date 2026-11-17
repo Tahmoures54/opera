@@ -33,8 +33,6 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.CheckConstraint("certificate_type IN ('MC', 'RF')",
                            name="ck_comm_certificate_type"),
-        sa.ForeignKeyConstraint(["company_name"], ["commissioning_project.company_name"],
-                                name="fk_comm_certificate_company"),
         sa.ForeignKeyConstraint(["issued_by_id"], ["user.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["package_id", "company_name"],
                                 ["commissioning_handover_package.id", "commissioning_handover_package.company_name"],
