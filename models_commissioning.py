@@ -536,6 +536,7 @@ class WitnessPoint(db.Model):
     type = db.Column(_enum(WitnessType, "commissioning_witness_type"), nullable=False)
     notified_party = db.Column(db.String(200))
     scheduled_at = db.Column(db.DateTime, nullable=False)
+    notified_at = db.Column(db.DateTime)
     attended_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
     attended_at = db.Column(db.DateTime)
     result = db.Column(db.String(30))

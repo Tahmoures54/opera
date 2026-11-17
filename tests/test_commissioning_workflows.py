@@ -170,6 +170,128 @@ def test_checksheet_two_party_signoff_and_immutable_revision(client, app, opera_
         assert sheet.signed_at is not None
 
 
+def test_witness_hold_lifecycle_requires_notification_release_and_cancellation_reasons(client, app, opera_setup):
+    from models import User
+
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-WIT-00001", sheet_type=CheckSheetType.COMM_C,
+            title="Witness lifecycle test", created_by_id=manager.id,
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        sheet_id = sheet.id
+        manager_id = manager.id
+        qc_id = opera_setup["qc"]
+        project_id = opera_setup["project"]
+
+    _login_id(client, manager_id)
+    base = f"/commissioning/projects/{project_id}/witness"
+    response = client.post(base, data={
+        "check_sheet_id": sheet_id, "type": WitnessType.HOLD.value,
+        "notified_party": "Client QC", "scheduled_at": "2026-11-18T10:00",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        witness = WitnessPoint.query.filter_by(check_sheet_id=sheet_id).one()
+        witness_id = witness.id
+        assert witness.status == WitnessStatus.PLANNED
+        assert witness.notified_at is None
+
+    transition = f"/commissioning/witness/{witness_id}/transition"
+    response = client.post(transition, data={"status": "NOTIFIED"})
+    assert response.status_code == 302
+    with app.app_context():
+        witness = db.session.get(WitnessPoint, witness_id)
+        assert witness.status == WitnessStatus.NOTIFIED
+        assert witness.notified_at is not None
+
+    _login_id(client, qc_id)
+    response = client.post(transition, data={"status": "ATTENDED", "result": "ACCEPTED"})
+    assert response.status_code == 302
+    with app.app_context():
+        witness = db.session.get(WitnessPoint, witness_id)
+        assert witness.status == WitnessStatus.ATTENDED
+        assert witness.attended_by_id == qc_id
+        assert witness.attended_at is not None
+
+    _login_id(client, qc_id)
+    response = client.post(transition, data={
+        "status": "RELEASED", "remarks": "QC cannot release own witness point.",
+    })
+    assert response.status_code == 403
+
+    _login_id(client, manager_id)
+    response = client.post(transition, data={"status": "RELEASED"})
+    assert response.status_code == 400
+    response = client.post(transition, data={
+        "status": "RELEASED", "remarks": "Hold point inspected and released against approved procedure.",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        witness = db.session.get(WitnessPoint, witness_id)
+        assert witness.status == WitnessStatus.RELEASED
+        assert witness.released_by_id == manager_id
+        assert witness.released_at is not None
+        assert witness.remarks.startswith("Hold point inspected")
+        events = CommissioningAuditLog.query.filter_by(
+            entity_type="WitnessPoint", entity_id=witness_id,
+            action="WITNESS_STATUS_CHANGED",
+        ).order_by(CommissioningAuditLog.id).all()
+        assert [event.after_json["status"] for event in events] == [
+            "NOTIFIED", "ATTENDED", "RELEASED",
+        ]
+        assert events[0].after_json["notified_at"]
+        assert events[1].after_json["attended_by_id"] == qc_id
+        assert events[2].after_json["released_by_id"] == manager_id
+        assert events[2].after_json["remarks"].startswith("Hold point inspected")
+
+    response = client.post(base, data={
+        "check_sheet_id": sheet_id, "type": WitnessType.HOLD.value,
+        "notified_party": "Client QC", "scheduled_at": "2026-11-19T09:00",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        hold_point = WitnessPoint.query.filter_by(
+            check_sheet_id=sheet_id, type=WitnessType.HOLD,
+            status=WitnessStatus.PLANNED,
+        ).one()
+        hold_id = hold_point.id
+    response = client.post(
+        f"/commissioning/witness/{hold_id}/transition",
+        data={"status": "CANCELLED", "remarks": "Attempted cancellation"},
+    )
+    assert response.status_code == 409
+    with app.app_context():
+        hold_point = db.session.get(WitnessPoint, hold_id)
+        assert hold_point.status == WitnessStatus.PLANNED
+
+    response = client.post(base, data={
+        "check_sheet_id": sheet_id, "type": WitnessType.REVIEW.value,
+        "notified_party": "Engineering", "scheduled_at": "2026-11-19T10:00",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        cancel_point = WitnessPoint.query.filter_by(
+            check_sheet_id=sheet_id, type=WitnessType.REVIEW,
+        ).one()
+        cancel_id = cancel_point.id
+    cancel_url = f"/commissioning/witness/{cancel_id}/transition"
+    response = client.post(cancel_url, data={"status": "CANCELLED"})
+    assert response.status_code == 400
+    response = client.post(cancel_url, data={
+        "status": "CANCELLED", "remarks": "Procedure superseded; replacement point scheduled.",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        cancel_point = db.session.get(WitnessPoint, cancel_id)
+        assert cancel_point.status == WitnessStatus.CANCELLED
+        assert cancel_point.remarks.startswith("Procedure superseded")
+
+
 def test_viewer_cannot_transition_punch_status(client, app, opera_setup):
     from models import User
     with app.app_context():

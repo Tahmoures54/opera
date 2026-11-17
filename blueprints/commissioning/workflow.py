@@ -1079,25 +1079,32 @@ def create_witness(project_id):
     ).first_or_404()
     item_id = request.form.get("check_sheet_item_id") or None
     if item_id:
-        CheckSheetItem.query.filter_by(id=int(item_id), check_sheet_id=sheet.id,
-                                      company_name=project.company_name).first_or_404()
         item_id = int(item_id)
+        CheckSheetItem.query.filter_by(
+            id=item_id, check_sheet_id=sheet.id, company_name=project.company_name
+        ).first_or_404()
     scheduled_text = _required("scheduled_at", 40)
     try:
         scheduled = datetime.fromisoformat(scheduled_text)
     except ValueError:
         abort(400, description="Invalid scheduled date/time")
+    notified_party = _required("notified_party", 200)
+    witness_type = _enum(WitnessType, _required("type", 20), "witness type")
     witness = WitnessPoint(
         company_name=project.company_name, project_id=project.id, check_sheet_id=sheet.id,
-        check_sheet_item_id=item_id,
-        type=_enum(WitnessType, _required("type", 20), "witness type"),
-        notified_party=(request.form.get("notified_party") or "").strip() or None,
+        check_sheet_item_id=item_id, type=witness_type, notified_party=notified_party,
         scheduled_at=scheduled, status=WitnessStatus.PLANNED,
     )
     db.session.add(witness)
     db.session.flush()
-    add_audit_event(project.company_name, "WitnessPoint", witness.id, "WITNESS_SCHEDULED",
-                    after={"check_sheet_id": sheet.id, "scheduled_at": scheduled.isoformat()})
+    add_audit_event(
+        project.company_name, "WitnessPoint", witness.id, "WITNESS_SCHEDULED",
+        after={
+            "check_sheet_id": sheet.id, "check_sheet_item_id": item_id,
+            "type": witness_type.value, "notified_party": notified_party,
+            "scheduled_at": scheduled.isoformat(), "status": WitnessStatus.PLANNED.value,
+        },
+    )
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=project.id))
 
@@ -1105,32 +1112,74 @@ def create_witness(project_id):
 @commissioning_bp.post("/witness/<int:witness_id>/transition")
 @login_required
 def transition_witness(witness_id):
-    witness = WitnessPoint.query.filter_by(id=witness_id, company_name=current_user.company_name).first_or_404()
+    witness = WitnessPoint.query.filter_by(
+        id=witness_id, company_name=current_user.company_name
+    ).first_or_404()
     _need(witness.project_id, "witness.attend", "witness.manage", "project.manage")
     target = _enum(WitnessStatus, _required("status", 20), "witness status")
+    old_status = witness.status
+    before = {
+        "status": old_status.value, "notified_party": witness.notified_party,
+        "notified_at": witness.notified_at.isoformat() if witness.notified_at else None,
+        "attended_by_id": witness.attended_by_id,
+        "attended_at": witness.attended_at.isoformat() if witness.attended_at else None,
+        "result": witness.result, "released_by_id": witness.released_by_id,
+        "released_at": witness.released_at.isoformat() if witness.released_at else None,
+        "remarks": witness.remarks,
+    }
+    now = datetime.utcnow()
+    remarks = (request.form.get("remarks") or "").strip()
     if target == WitnessStatus.ATTENDED:
         if not has_permission(witness.project_id, "witness.attend"):
             abort(403)
-        if witness.status not in (WitnessStatus.PLANNED, WitnessStatus.NOTIFIED):
-            abort(409)
-        witness.attended_by_id, witness.attended_at = current_user.id, datetime.utcnow()
+        if old_status not in (WitnessStatus.PLANNED, WitnessStatus.NOTIFIED):
+            abort(409, description="Only planned or notified points may be attended")
+        witness.attended_by_id, witness.attended_at = current_user.id, now
         witness.result = _required("result", 30)
+        witness.remarks = remarks or witness.remarks
     elif target == WitnessStatus.RELEASED:
         if not has_permission(witness.project_id, "witness.manage"):
             abort(403)
-        if witness.status != WitnessStatus.ATTENDED:
+        if old_status != WitnessStatus.ATTENDED:
             abort(409, description="Witness point must be attended before release")
-        witness.released_by_id, witness.released_at = current_user.id, datetime.utcnow()
+        if not remarks:
+            abort(400, description="A release note is required for the inspection record")
+        witness.released_by_id, witness.released_at = current_user.id, now
+        witness.remarks = remarks
     elif target == WitnessStatus.NOTIFIED:
-        if not has_permission(witness.project_id, "witness.manage") or witness.status != WitnessStatus.PLANNED:
+        if not has_permission(witness.project_id, "witness.manage"):
             abort(403)
+        if old_status != WitnessStatus.PLANNED:
+            abort(409, description="Only planned points may be notified")
+        if not witness.notified_party:
+            abort(400, description="A notified party is required")
+        witness.notified_at = now
+    elif target == WitnessStatus.CANCELLED:
+        if not has_permission(witness.project_id, "witness.manage"):
+            abort(403)
+        if witness.type == WitnessType.HOLD:
+            abort(409, description="HOLD points cannot be cancelled; use the approved waiver/deviation process")
+        if old_status not in (WitnessStatus.PLANNED, WitnessStatus.NOTIFIED):
+            abort(409, description="Attended or released points cannot be cancelled")
+        if not remarks:
+            abort(400, description="A cancellation reason is required")
+        witness.remarks = remarks
     else:
         abort(400, description="Unsupported witness transition")
-    old = witness.status
     witness.status = target
-    witness.remarks = (request.form.get("remarks") or "").strip() or witness.remarks
-    add_audit_event(witness.company_name, "WitnessPoint", witness.id, "WITNESS_STATUS_CHANGED",
-                    before={"status": old.value}, after={"status": target.value})
+    after = {
+        "status": target.value, "notified_party": witness.notified_party,
+        "notified_at": witness.notified_at.isoformat() if witness.notified_at else None,
+        "attended_by_id": witness.attended_by_id,
+        "attended_at": witness.attended_at.isoformat() if witness.attended_at else None,
+        "result": witness.result, "released_by_id": witness.released_by_id,
+        "released_at": witness.released_at.isoformat() if witness.released_at else None,
+        "remarks": witness.remarks,
+    }
+    add_audit_event(
+        witness.company_name, "WitnessPoint", witness.id, "WITNESS_STATUS_CHANGED",
+        before=before, after=after,
+    )
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=witness.project_id))
 
