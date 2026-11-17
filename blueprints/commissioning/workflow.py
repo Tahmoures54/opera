@@ -1174,3 +1174,100 @@ def create_document_revision(document_id):
     flash(f"Revision {next_revision} created as a new controlled draft.", "success")
     return redirect(url_for("commissioning.document_register", project_id=source.project_id))
 
+
+
+@commissioning_bp.get("/projects/<int:project_id>/subsystems/<int:subsystem_id>/dossier")
+@login_required
+def subsystem_dossier(project_id, subsystem_id):
+    """Consolidated, evidence-based readiness view for one commissioning subsystem."""
+    _need(project_id, "structure.view", "handover.view", "handover.manage",
+          "handover.accept", "reports.view", "project.manage")
+    project = get_project(project_id)
+    subsystem = CommissioningSubsystem.query.join(
+        CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
+    ).filter(
+        CommissioningSubsystem.id == subsystem_id,
+        CommissioningSubsystem.company_name == project.company_name,
+        CommissioningSystem.project_id == project.id,
+    ).first_or_404()
+    documents_all = CommissioningDocument.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        subsystem_id=subsystem.id,
+    ).order_by(CommissioningDocument.document_number,
+               CommissioningDocument.revision_sequence.desc()).all()
+    latest_documents = {}
+    for document in documents_all:
+        latest_documents.setdefault(document.document_number, document)
+    documents = list(latest_documents.values())
+    sheets = CheckSheet.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        subsystem_id=subsystem.id,
+    ).order_by(CheckSheet.sheet_number).all()
+    punches = PunchItem.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        subsystem_id=subsystem.id,
+    ).order_by(PunchItem.punch_number).all()
+    witnesses = WitnessPoint.query.join(
+        CheckSheet, CheckSheet.id == WitnessPoint.check_sheet_id,
+    ).filter(
+        WitnessPoint.company_name == project.company_name,
+        WitnessPoint.project_id == project.id,
+        CheckSheet.subsystem_id == subsystem.id,
+    ).order_by(WitnessPoint.scheduled_at).all()
+    tasks = CommissioningTask.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        subsystem_id=subsystem.id,
+    ).order_by(CommissioningTask.task_number).all()
+    equipment = CommissioningEquipment.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        subsystem_id=subsystem.id,
+    ).order_by(CommissioningEquipment.tag_number).all()
+    document_ids = [item.id for item in documents]
+    attachments = CommissioningAttachment.query.filter(
+        CommissioningAttachment.company_name == project.company_name,
+        CommissioningAttachment.entity_type == "CommissioningDocument",
+        CommissioningAttachment.entity_id.in_(document_ids or [-1]),
+    ).all()
+    evidence_by_document = {}
+    for attachment in attachments:
+        evidence_by_document.setdefault(attachment.entity_id, []).append(attachment)
+
+    unsigned_sheets = [item for item in sheets if item.status != CheckSheetStatus.SIGNED_OFF]
+    unapproved_documents = [item for item in documents if item.status != DocumentStatus.APPROVED]
+    open_critical_punches = [
+        item for item in punches
+        if item.category in (PunchCategory.A, PunchCategory.B)
+        and item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED)
+    ]
+    open_other_punches = [
+        item for item in punches
+        if item.category not in (PunchCategory.A, PunchCategory.B)
+        and item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED)
+    ]
+    pending_holds = [
+        item for item in witnesses
+        if item.type == WitnessType.HOLD
+        and item.status not in (WitnessStatus.RELEASED, WitnessStatus.CANCELLED)
+    ]
+    incomplete_tasks = [item for item in tasks if item.status != CommissioningTaskStatus.COMPLETED]
+    gates = [
+        {"name": "Check Sheets", "passed": bool(sheets) and not unsigned_sheets,
+         "detail": f"{len(sheets) - len(unsigned_sheets)} of {len(sheets)} signed off"},
+        {"name": "Current engineering documents", "passed": bool(documents) and not unapproved_documents,
+         "detail": f"{len(documents) - len(unapproved_documents)} of {len(documents)} current revisions approved"},
+        {"name": "Category A / B Punch", "passed": not open_critical_punches,
+         "detail": f"{len(open_critical_punches)} open critical Punch items"},
+        {"name": "Hold points", "passed": not pending_holds,
+         "detail": f"{len(pending_holds)} pending Hold points"},
+    ]
+    readiness_passed = all(item["passed"] for item in gates)
+    return render_template(
+        "commissioning/subsystem_dossier.html", project=project, subsystem=subsystem,
+        documents=documents, evidence_by_document=evidence_by_document,
+        sheets=sheets, punches=punches, witnesses=witnesses, tasks=tasks,
+        equipment=equipment, gates=gates, readiness_passed=readiness_passed,
+        unsigned_sheets=unsigned_sheets, unapproved_documents=unapproved_documents,
+        open_critical_punches=open_critical_punches, open_other_punches=open_other_punches,
+        pending_holds=pending_holds, incomplete_tasks=incomplete_tasks,
+    )
+
