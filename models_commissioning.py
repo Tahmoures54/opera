@@ -673,35 +673,83 @@ class CommissioningMembership(db.Model):
 
 
 # Signed-off check sheets and their items are immutable through ORM operations.
-from sqlalchemy import event
+from sqlalchemy import event, inspect as sa_inspect, select
 from sqlalchemy.orm import Session
-from sqlalchemy import inspect as sa_inspect
 
 
 @event.listens_for(Session, "before_flush")
 def _protect_signed_check_sheets(session, flush_context, instances):
-    """Reject edits or deletions to a signed-off sheet or any of its items."""
-    for obj in set(session.new).union(session.dirty).union(session.deleted):
-        if isinstance(obj, CheckSheet) and obj.status == CheckSheetStatus.SIGNED_OFF:
-            state = sa_inspect(obj)
-            if obj in session.new:
+    """Enforce sign-off immutability against the persisted state, not a mutable status field."""
+    pending = set(session.new).union(session.dirty).union(session.deleted)
+    changed_sheets = [obj for obj in pending if isinstance(obj, CheckSheet)]
+    persisted_statuses = {}
+    existing_ids = [obj.id for obj in changed_sheets if obj not in session.new and obj.id is not None]
+    if existing_ids:
+        persisted_statuses = dict(
+            session.execute(
+                select(CheckSheet.id, CheckSheet.status).where(CheckSheet.id.in_(existing_ids))
+            ).all()
+        )
+
+    signed_sheet_ids = {
+        sheet_id for sheet_id, status in persisted_statuses.items()
+        if status == CheckSheetStatus.SIGNED_OFF
+    }
+    signoff_fields = {
+        "status", "signed_by_client_id", "signed_by_contractor_id",
+        "signed_at", "updated_at",
+    }
+
+    for sheet in changed_sheets:
+        if sheet in session.new:
+            if sheet.status == CheckSheetStatus.SIGNED_OFF:
                 raise ValueError("New check sheets must start as DRAFT; use the sign-off workflow.")
-            status_history = state.attrs.status.history
-            entering_signoff_now = bool(
-                status_history.has_changes()
-                and status_history.added
-                and status_history.added[0] == CheckSheetStatus.SIGNED_OFF
-            )
-            changed_attributes = {attribute.key for attribute in state.attrs if attribute.history.has_changes()}
-            signoff_fields = {"status", "signed_by_client_id", "signed_by_contractor_id", "signed_at", "updated_at"}
-            signoff_only = entering_signoff_now and changed_attributes.issubset(signoff_fields)
-            already_signed = state.persistent and not signoff_only
-            if obj in session.deleted or (already_signed and session.is_modified(obj, include_collections=True)):
+            continue
+
+        persisted_status = persisted_statuses.get(sheet.id)
+        if persisted_status == CheckSheetStatus.SIGNED_OFF:
+            signed_sheet_ids.add(sheet.id)
+            if sheet in session.deleted or session.is_modified(sheet, include_collections=True):
                 raise ValueError("Signed-off check sheets are immutable; create a new revision.")
-        if isinstance(obj, CheckSheetItem):
-            parent = session.get(CheckSheet, obj.check_sheet_id)
-            if parent is not None and parent.status == CheckSheetStatus.SIGNED_OFF:
-                raise ValueError("Items on a signed-off check sheet are immutable; create a new revision.")
+            continue
+
+        if sheet.status == CheckSheetStatus.SIGNED_OFF:
+            changed_attributes = {
+                attribute.key
+                for attribute in sa_inspect(sheet).attrs
+                if attribute.history.has_changes()
+            }
+            if "status" not in changed_attributes or not changed_attributes.issubset(signoff_fields):
+                raise ValueError("Check sheet content must be finalized before sign-off.")
+            signed_sheet_ids.add(sheet.id)
+
+    changed_items = [obj for obj in pending if isinstance(obj, CheckSheetItem)]
+    parent_ids = set()
+    for item in changed_items:
+        if item.check_sheet_id is not None:
+            parent_ids.add(item.check_sheet_id)
+        parent_ids.update(
+            parent_id for parent_id in sa_inspect(item).attrs.check_sheet_id.history.deleted
+            if parent_id is not None
+        )
+
+    if parent_ids:
+        parent_statuses = session.execute(
+            select(CheckSheet.id, CheckSheet.status).where(CheckSheet.id.in_(parent_ids))
+        ).all()
+        signed_sheet_ids.update(
+            sheet_id for sheet_id, status in parent_statuses
+            if status == CheckSheetStatus.SIGNED_OFF
+        )
+
+    for item in changed_items:
+        item_parent_ids = {item.check_sheet_id} if item.check_sheet_id is not None else set()
+        item_parent_ids.update(
+            parent_id for parent_id in sa_inspect(item).attrs.check_sheet_id.history.deleted
+            if parent_id is not None
+        )
+        if item_parent_ids.intersection(signed_sheet_ids):
+            raise ValueError("Items on a signed-off check sheet are immutable; create a new revision.")
 
 @event.listens_for(Session, "before_flush")
 def _protect_commissioning_evidence(session, flush_context, instances):
