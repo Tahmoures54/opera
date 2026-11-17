@@ -14,7 +14,7 @@
   <meta name="twitter:title" content="OPERA{% block twitter_title %}{% endblock %}">
   <meta name="twitter:description" content="{% block twitter_description %}Commissioning and start-up control for industrial and EPC projects.{% endblock %}">
   {% set _page_title = self.title()|striptags|trim %}
-  {% set _page_title = _page_title|replace('OPERA', '')|replace('| ', '')|replace(' - ', ' — ')|replace('— ', '')|trim(' —-|') %}
+  {% set _page_title = _page_title|replace(' — OPERA ', ' — ')|replace('| OPERA ', ' — ')|replace('OPERA - ', '')|replace('OPERA — ', '')|replace(' - OPERA', '')|replace(' — OPERA', '')|replace('| ', '')|replace(' - ', ' — ')|replace('— ', '')|trim(' —-|') %}
   <title>OPERA — {{ _page_title or 'Commissioning & Start-up' }}</title>
   <script type="application/ld+json">
     {
