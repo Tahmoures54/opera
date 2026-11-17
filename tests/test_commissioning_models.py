@@ -142,3 +142,47 @@ def test_signed_off_check_sheet_metadata_is_immutable(app):
     with pytest.raises(ValueError, match="immutable"):
         db.session.commit()
     db.session.rollback()
+
+
+
+def test_signed_off_check_sheet_cannot_be_reopened_to_edit_items(app):
+    project = _project("Contractor A", "IMMUTABLE-01")
+    system = CommissioningSystem(
+        company_name=project.company_name, project_id=project.id,
+        system_code="SYS", name="System",
+    )
+    db.session.add(system)
+    db.session.flush()
+    subsystem = CommissioningSubsystem(
+        company_name=project.company_name, system_id=system.id,
+        subsystem_code="SUB", name="Subsystem",
+    )
+    db.session.add(subsystem)
+    db.session.flush()
+    sheet = CheckSheet(
+        company_name=project.company_name, project_id=project.id,
+        system_id=system.id, subsystem_id=subsystem.id,
+        sheet_number="IMMUTABLE-01-C-00001", sheet_type=CheckSheetType.COMM_C,
+        title="Immutable signed sheet", status=CheckSheetStatus.DRAFT,
+    )
+    db.session.add(sheet)
+    db.session.flush()
+    item = CheckSheetItem(
+        company_name=project.company_name, check_sheet_id=sheet.id,
+        sequence=1, description="Original inspection item",
+        result_status=ItemResultStatus.OK,
+    )
+    db.session.add(item)
+    db.session.commit()
+
+    sheet.status = CheckSheetStatus.SIGNED_OFF
+    db.session.commit()
+
+    sheet.status = CheckSheetStatus.DRAFT
+    item.description = "Attempted post-sign-off edit"
+    with pytest.raises(ValueError, match="immutable"):
+        db.session.commit()
+    db.session.rollback()
+
+    assert db.session.get(CheckSheet, sheet.id).status is CheckSheetStatus.SIGNED_OFF
+    assert db.session.get(CheckSheetItem, item.id).description == "Original inspection item"
