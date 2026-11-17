@@ -17,6 +17,7 @@
 - Immutable MC and RFC certificates with issue-time evidence snapshots; separate RFSU gate and Operations Acceptance transition.
 - Project-configurable readiness policy for Punch blockers, required Check Sheet types, Hold-point gates, Check Sheet presence and RFSU task completion; invalid policy fails closed and certificate snapshots retain the effective policy.
 - Equipment Preservation plans with approved procedure references/revisions, user-supplied intervals and due dates, append-only inspection history, corrective-action workflow and evidence attachments.
+- Revision-controlled Check Sheet/Test Sheet template library with draft/approval/revision/retirement, item-level acceptance metadata and immutable execution-time snapshots.
 - Scoped progress snapshots with Check Sheet and Task count/weight metrics and Punch counts.
 - Project-scoped role authorization, tenant filters and append-only evidence/audit protections.
 
