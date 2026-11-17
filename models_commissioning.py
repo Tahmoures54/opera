@@ -340,7 +340,7 @@ class CommissioningCheckSheetTemplate(db.Model):
     project_id = db.Column(db.Integer, nullable=False)
     template_code = db.Column(db.String(80), nullable=False)
     title = db.Column(db.String(200), nullable=False)
-    sheet_type = db.Column(_enum(CheckSheetType, "commissioning_check_template_type"), nullable=False)
+    sheet_type = db.Column(_enum(CheckSheetType, "commissioning_check_template_type", length=30), nullable=False)
     discipline = db.Column(db.String(80), nullable=False, default="ANY")
     equipment_type = db.Column(db.String(100))
     revision = db.Column(db.Integer, nullable=False, default=1)
