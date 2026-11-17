@@ -6,3 +6,4 @@ commissioning_bp = Blueprint("commissioning", __name__, url_prefix="/commissioni
 from blueprints.commissioning import project  # noqa: E402,F401
 
 from blueprints.commissioning import workflow  # noqa: E402,F401
+from blueprints.commissioning import import_export  # noqa: E402,F401
