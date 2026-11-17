@@ -1,7 +1,7 @@
 # OPERA Release Notes — Commissioning Implementation Baseline
 
-**Baseline commit:** `ca37db49224160628e9fb28d3b7d51930acc099f`  
-**Verification:** GitHub Actions run `44074781281`; `quality`, `integration` and `docker` checks completed successfully on this commit.
+**Baseline commit:** main merge commit `56bcc9de1a5cec81d4aea68e3ad8d9d8f11e9211` (PR #43).  
+**Verification:** GitHub Actions run `44091665590`; `quality`, PostgreSQL `integration` and `docker` checks completed successfully on the final PR head.
 
 ## Implemented capabilities on main
 - Standalone OPERA product identity and commissioning-focused navigation.

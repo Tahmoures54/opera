@@ -1,7 +1,7 @@
 # OPERA Functional Gap Analysis
 
-**Baseline:** PR #43 head commit 3a200612f40844b91f63d8dfa136f9b8a99b2e1e, based on main commit d2734582146c5faed42043f426eeb94fede7dfea, 17 November 2026.  
-**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40 and #42. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. PR #43 CI run 44090572416 passed quality, PostgreSQL integration and Docker checks. This is a code-level capability assessment, not production acceptance.
+**Baseline:** main merge commit 56bcc9de1a5cec81d4aea68e3ad8d9d8f11e9211, 17 November 2026.  
+**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40 and #42. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. PR #43 was merged after CI run 44091665590 passed quality, PostgreSQL integration and Docker checks on the final PR head. This is a code-level capability assessment, not production acceptance.
 
 ## Status definitions
 - **Implemented baseline:** code, route/UI and automated workflow coverage exist for the stated bounded scope.
@@ -37,7 +37,7 @@
 1. **Evidence durability:** the S3-compatible storage adapter is merged, and serverless uploads fail closed when local storage is selected. Production evidence use still requires bucket configuration, migration/checksum verification of any existing files, provider access/retention controls and a successful backup/restore rehearsal.
 2. **Readiness policy:** current A/B Punch and Check Sheet defaults must be reviewed and approved against the project's completion procedure, ITPs, contract and authority matrix.
 3. **Electronic signatures:** authenticated acknowledgement is not a qualified cryptographic signature.
-4. **Dossier:** controlled revision, review, approval and issue workflow is implemented in the pending branch. It is an OPERA record-control mechanism, not a qualified electronic signature or automatic contractual acceptance. Project-specific section/authority rules and staging acceptance remain required.
+4. **Dossier:** controlled revision, review, approval and issue workflow is implemented on main by PR #43. It is an OPERA record-control mechanism, not a qualified electronic signature or automatic contractual acceptance. Project-specific section/authority rules and staging acceptance remain required.
 5. **Preservation:** automated reminders, recurring schedules, plan revisions and advanced compliance reports are not implemented; evidence retention depends on completing production S3 configuration and backup controls.
 6. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
