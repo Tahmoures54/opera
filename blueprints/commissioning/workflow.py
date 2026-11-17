@@ -576,19 +576,37 @@ def transition_punch(punch_id):
         abort(403)
     if target in (PunchStatus.VERIFIED, PunchStatus.WAIVED) and not has_permission(punch.project_id, "punch.verify"):
         abort(403)
+    history_remarks = (request.form.get("remarks") or "").strip() or None
+    audit_after = {"status": target.value}
     if target == PunchStatus.WAIVED:
-        punch.waiver_reason = _required("reason", 2000)
+        reason = _required("reason", 2000)
+        punch.waiver_reason = reason
         punch.waived_by_id, punch.waived_at = current_user.id, datetime.utcnow()
+        history_remarks = f"Waived: {reason}" + (f" · {history_remarks}" if history_remarks else "")
+        audit_after["waiver_reason"] = reason
     if target == PunchStatus.CLOSED:
+        corrective_action = _required("corrective_action", 2000)
+        punch.corrective_action = corrective_action
         punch.closed_by_id, punch.closed_at = current_user.id, datetime.utcnow()
+        history_remarks = f"Corrective action: {corrective_action}" + (f" · {history_remarks}" if history_remarks else "")
+        audit_after["corrective_action"] = corrective_action
+    if old == PunchStatus.CLOSED and target == PunchStatus.IN_PROGRESS:
+        reopen_reason = _required("reason", 2000)
+        previous_action = punch.corrective_action or "Not recorded"
+        history_remarks = f"Reopened: {reopen_reason}. Previous corrective action: {previous_action}"
+        punch.closed_by_id, punch.closed_at = None, None
+        punch.corrective_action = None
+        audit_after["reopen_reason"] = reopen_reason
+        audit_after["previous_corrective_action"] = previous_action
     if target == PunchStatus.VERIFIED:
         punch.verified_by_id, punch.verified_at = current_user.id, datetime.utcnow()
     punch.status = target
     db.session.add(PunchHistory(company_name=punch.company_name, punch_item_id=punch.id,
         old_status=old, new_status=target, changed_by_id=current_user.id,
-        remarks=(request.form.get("remarks") or "").strip() or None))
+        remarks=history_remarks))
     add_audit_event(punch.company_name, "PunchItem", punch.id, "PUNCH_STATUS_CHANGED",
-                    before={"status": old.value}, after={"status": target.value})
+                    before={"status": old.value, "corrective_action": punch.corrective_action if old == PunchStatus.CLOSED else None},
+                    after=audit_after)
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=punch.project_id))
 
