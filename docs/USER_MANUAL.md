@@ -45,3 +45,12 @@ Open the subsystem's Completion Dossier page to review its current engineering d
 - The ZIP export is rejected if a registered evidence file is missing or its checksum does not match.
 
 Important: these downloads are labelled UNCONTROLLED_WORKING_EXPORT. They are not issued MC/RFC certificates, approved turnover dossiers or proof of contractual acceptance. Dossier revision numbering, review/approval and controlled issue remain separate work.
+
+
+## Reusable Check Sheet and Test Sheet templates
+
+Project managers can create a draft template in Commissioning Operations. A template contains a unique code, title, sheet type, discipline, optional equipment type, overall acceptance criteria and 1–100 inspection items. Each item can define expected result, acceptance criteria, unit, mandatory/optional status and witness requirement.
+
+After approval, a template is immutable. Use Create next revision to prepare changes; the new revision remains a draft until approved. When the new revision is approved, the previous approved revision is retired. Existing Check Sheets retain the exact template revision and item snapshot from which they were created.
+
+When issuing a Check Sheet, at least one mandatory item is required. Sign-off is blocked until all mandatory items are completed, no item is NOK, every completed item has independent QC verification and every required witness point is released. Optional items may remain pending.

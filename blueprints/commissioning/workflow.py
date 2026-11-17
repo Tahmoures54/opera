@@ -1,4 +1,5 @@
 """OPERA operational workflows: membership, check sheets, punch, witness and handover."""
+import json
 from datetime import date, datetime
 from io import BytesIO
 from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
@@ -9,7 +10,7 @@ from extensions import db
 from models import User
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskDependency, CommissioningTaskType, CommissioningTaskStatus,
-    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningPreservationInspection, DocumentStatus,
+    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningPreservationInspection, CommissioningCheckSheetTemplate, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
@@ -55,6 +56,42 @@ def _required(name, limit=5000):
         abort(400, description=f"{name} is too long")
     return value
 
+
+
+def _validate_template_items(raw):
+    try:
+        items = json.loads(raw)
+    except (TypeError, ValueError):
+        abort(400, description="Template items must be valid JSON.")
+    if not isinstance(items, list) or not 1 <= len(items) <= 100:
+        abort(400, description="A template must contain between 1 and 100 items.")
+    normalized = []
+    for index, item in enumerate(items, start=1):
+        if not isinstance(item, dict):
+            abort(400, description=f"Template item {index} must be an object.")
+        description = str(item.get("description") or "").strip()
+        if not description or len(description) > 1000:
+            abort(400, description=f"Template item {index} needs a description (maximum 1000 characters).")
+        for key, limit in (("expected_result", 2000), ("acceptance_criteria", 2000), ("unit", 40)):
+            value = item.get(key)
+            if value is not None and (not isinstance(value, str) or len(value.strip()) > limit):
+                abort(400, description=f"Template item {index} has an invalid {key}.")
+        witness_required = item.get("witness_required", False)
+        mandatory = item.get("mandatory", True)
+        if not isinstance(witness_required, bool) or not isinstance(mandatory, bool):
+            abort(400, description=f"Template item {index} boolean flags must be true or false.")
+        normalized.append({
+            "sequence": index,
+            "description": description,
+            "expected_result": (item.get("expected_result") or "").strip() or None,
+            "acceptance_criteria": (item.get("acceptance_criteria") or "").strip() or None,
+            "unit": (item.get("unit") or "").strip() or None,
+            "witness_required": witness_required,
+            "mandatory": mandatory,
+        })
+    if not any(item["mandatory"] for item in normalized):
+        abort(400, description="A template must contain at least one mandatory item.")
+    return normalized
 
 
 def _positive_int(name):
@@ -108,6 +145,12 @@ def operations(project_id):
         CommissioningDossierRequirement.document_type,
         CommissioningDossierRequirement.discipline,
     ).all()
+    checksheet_templates = CommissioningCheckSheetTemplate.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).order_by(CommissioningCheckSheetTemplate.template_code, CommissioningCheckSheetTemplate.revision.desc()).all()
+    equipment = CommissioningEquipment.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).order_by(CommissioningEquipment.tag_number).all()
     systems = CommissioningSystem.query.filter_by(
         company_name=project.company_name, project_id=project.id,
     ).filter(CommissioningSystem.status != "ARCHIVED").order_by(CommissioningSystem.system_code).all()
@@ -169,7 +212,9 @@ def operations(project_id):
         can_view_preservation=any(has_permission(project.id, p) for p in ("preservation.view", "preservation.manage")),
         can_upload_handover_evidence=any(has_permission(project.id, p) for p in ("handover.manage", "handover.accept")),
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
-        sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
+        sheet_types=list(CheckSheetType), checksheet_templates=checksheet_templates,
+        can_manage_templates=has_permission(project.id, "checksheets.manage"), equipment=equipment,
+        punch_categories=list(PunchCategory),
         punch_severities=list(PunchSeverity), witness_types=list(WitnessType),
         progress=percent, weighted_progress=weighted_progress,
         today=date.today().isoformat(),
@@ -229,32 +274,250 @@ def deactivate_member(project_id, membership_id):
     return redirect(url_for("commissioning.operations", project_id=project_id))
 
 
+@commissioning_bp.post("/projects/<int:project_id>/checksheet-templates")
+@login_required
+def create_checksheet_template(project_id):
+    _need(project_id, "checksheets.manage")
+    project = get_project(project_id)
+    template_code = _required("template_code", 80).upper()
+    if CommissioningCheckSheetTemplate.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        template_code=template_code, revision=1,
+    ).first():
+        abort(409, description="Template code already exists. Create a new revision instead.")
+    discipline = (request.form.get("discipline") or "ANY").strip().upper() or "ANY"
+    equipment_type = (request.form.get("equipment_type") or "").strip().upper() or None
+    if len(discipline) > 80 or (equipment_type is not None and len(equipment_type) > 100):
+        abort(400, description="Template discipline or equipment type is too long.")
+    template = CommissioningCheckSheetTemplate(
+        company_name=project.company_name, project_id=project.id,
+        template_code=template_code, title=_required("title", 200),
+        sheet_type=_enum(CheckSheetType, _required("sheet_type", 30), "sheet type"),
+        discipline=discipline,
+        equipment_type=equipment_type,
+        acceptance_criteria=(request.form.get("acceptance_criteria") or "").strip() or None,
+        revision=1, items_json=_validate_template_items(_required("items_json", 20000)),
+        status="DRAFT", created_by_id=current_user.id,
+    )
+    db.session.add(template)
+    db.session.flush()
+    add_audit_event(
+        project.company_name, "CommissioningCheckSheetTemplate", template.id,
+        "CHECKSHEET_TEMPLATE_CREATED",
+        after={"template_code": template_code, "revision": 1, "status": "DRAFT"},
+    )
+    db.session.commit()
+    flash("Check Sheet template draft created.", "success")
+    return redirect(url_for("commissioning.operations", project_id=project.id))
+
+
+@commissioning_bp.post("/projects/<int:project_id>/checksheet-templates/<int:template_id>/update")
+@login_required
+def update_checksheet_template(project_id, template_id):
+    _need(project_id, "checksheets.manage")
+    project = get_project(project_id)
+    template = CommissioningCheckSheetTemplate.query.filter_by(
+        id=template_id, company_name=project.company_name, project_id=project.id,
+    ).first_or_404()
+    if template.status != "DRAFT":
+        abort(409, description="Only draft templates can be edited. Create a new revision for an approved template.")
+    before = {
+        "title": template.title, "discipline": template.discipline,
+        "equipment_type": template.equipment_type, "items": template.items_json,
+        "acceptance_criteria": template.acceptance_criteria,
+    }
+    template.title = _required("title", 200)
+    discipline = (request.form.get("discipline") or "ANY").strip().upper() or "ANY"
+    equipment_type = (request.form.get("equipment_type") or "").strip().upper() or None
+    if len(discipline) > 80 or (equipment_type is not None and len(equipment_type) > 100):
+        abort(400, description="Template discipline or equipment type is too long.")
+    template.discipline = discipline
+    template.equipment_type = equipment_type
+    template.acceptance_criteria = (request.form.get("acceptance_criteria") or "").strip() or None
+    template.items_json = _validate_template_items(_required("items_json", 20000))
+    after = {
+        "title": template.title, "discipline": template.discipline,
+        "equipment_type": template.equipment_type, "items": template.items_json,
+        "acceptance_criteria": template.acceptance_criteria,
+    }
+    add_audit_event(
+        project.company_name, "CommissioningCheckSheetTemplate", template.id,
+        "CHECKSHEET_TEMPLATE_UPDATED", before=before, after=after,
+    )
+    db.session.commit()
+    flash("Check Sheet template draft updated.", "success")
+    return redirect(url_for("commissioning.operations", project_id=project.id))
+
+
+@commissioning_bp.post("/projects/<int:project_id>/checksheet-templates/<int:template_id>/approve")
+@login_required
+def approve_checksheet_template(project_id, template_id):
+    _need(project_id, "checksheets.manage")
+    project = get_project(project_id)
+    template = CommissioningCheckSheetTemplate.query.filter_by(
+        id=template_id, company_name=project.company_name, project_id=project.id,
+    ).with_for_update().first_or_404()
+    if template.status != "DRAFT" or not template.items_json:
+        abort(409, description="Only a non-empty draft template can be approved.")
+    previous = None
+    if template.supersedes_id is not None:
+        previous = CommissioningCheckSheetTemplate.query.filter_by(
+            id=template.supersedes_id, company_name=project.company_name,
+            project_id=project.id,
+        ).with_for_update().first_or_404()
+        if previous.status != "APPROVED":
+            abort(409, description="The superseded revision is no longer approved.")
+        previous.status = "RETIRED"
+        add_audit_event(
+            project.company_name, "CommissioningCheckSheetTemplate", previous.id,
+            "CHECKSHEET_TEMPLATE_RETIRED",
+            before={"status": "APPROVED"},
+            after={"status": "RETIRED", "superseded_by_id": template.id},
+        )
+    template.status = "APPROVED"
+    template.approved_by_id = current_user.id
+    template.approved_at = datetime.utcnow()
+    add_audit_event(
+        project.company_name, "CommissioningCheckSheetTemplate", template.id,
+        "CHECKSHEET_TEMPLATE_APPROVED",
+        after={"template_code": template.template_code, "revision": template.revision,
+               "approved_by_id": current_user.id, "approved_at": template.approved_at.isoformat()},
+    )
+    db.session.commit()
+    flash("Check Sheet template approved and available for execution.", "success")
+    return redirect(url_for("commissioning.operations", project_id=project.id))
+
+
+@commissioning_bp.post("/projects/<int:project_id>/checksheet-templates/<int:template_id>/revise")
+@login_required
+def revise_checksheet_template(project_id, template_id):
+    _need(project_id, "checksheets.manage")
+    project = get_project(project_id)
+    previous = CommissioningCheckSheetTemplate.query.filter_by(
+        id=template_id, company_name=project.company_name, project_id=project.id,
+    ).with_for_update().first_or_404()
+    if previous.status != "APPROVED":
+        abort(409, description="Only an approved template can be revised.")
+    latest = CommissioningCheckSheetTemplate.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        template_code=previous.template_code,
+    ).order_by(CommissioningCheckSheetTemplate.revision.desc()).first()
+    if latest is None or latest.id != previous.id:
+        abort(409, description="Create the next revision from the latest template revision.")
+    revised = CommissioningCheckSheetTemplate(
+        company_name=project.company_name, project_id=project.id,
+        template_code=previous.template_code, title=previous.title,
+        sheet_type=previous.sheet_type, discipline=previous.discipline,
+        equipment_type=previous.equipment_type, revision=previous.revision + 1,
+        supersedes_id=previous.id, acceptance_criteria=previous.acceptance_criteria,
+        items_json=previous.items_json, status="DRAFT", created_by_id=current_user.id,
+    )
+    db.session.add(revised)
+    db.session.flush()
+    add_audit_event(
+        project.company_name, "CommissioningCheckSheetTemplate", revised.id,
+        "CHECKSHEET_TEMPLATE_REVISION_CREATED",
+        before={"previous_id": previous.id, "revision": previous.revision},
+        after={"template_code": revised.template_code, "revision": revised.revision,
+               "supersedes_id": previous.id},
+    )
+    db.session.commit()
+    flash("New Check Sheet template revision created as a draft.", "success")
+    return redirect(url_for("commissioning.operations", project_id=project.id))
+
+
 @commissioning_bp.route("/projects/<int:project_id>/checksheets/new", methods=["POST"])
 @login_required
 def create_checksheet(project_id):
     _need(project_id, "checksheets.create", "checksheets.manage")
     project = get_project(project_id)
     subsystem_id = _positive_int("subsystem_id")
-    subsystem = CommissioningSubsystem.query.join(CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id).filter(
+    subsystem = CommissioningSubsystem.query.join(
+        CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
+    ).filter(
         CommissioningSubsystem.id == subsystem_id,
         CommissioningSubsystem.company_name == project.company_name,
         CommissioningSystem.project_id == project.id,
     ).first_or_404()
     sheet_type = _enum(CheckSheetType, _required("sheet_type", 30), "sheet type")
+    template = None
+    template_id = request.form.get("template_id", type=int)
+    equipment = None
+    equipment_id = request.form.get("equipment_id", type=int)
+    if equipment_id is not None:
+        equipment = CommissioningEquipment.query.filter_by(
+            id=equipment_id, company_name=project.company_name,
+            project_id=project.id, subsystem_id=subsystem.id,
+        ).first_or_404()
+    if template_id is not None:
+        template = CommissioningCheckSheetTemplate.query.filter_by(
+            id=template_id, company_name=project.company_name,
+            project_id=project.id, status="APPROVED",
+        ).first_or_404()
+        if template.sheet_type != sheet_type:
+            abort(400, description="Selected template type does not match the Check Sheet type.")
+        if template.equipment_type:
+            if equipment is None:
+                abort(400, description="This template requires a matching equipment tag.")
+            if equipment.equipment_type.strip().upper() != template.equipment_type:
+                abort(400, description="Selected equipment type does not match the approved template.")
+    discipline = (
+        (request.form.get("discipline") or (template.discipline if template else "ANY"))
+        .strip().upper() or "ANY"
+    )
+    if len(discipline) > 80:
+        abort(400, description="Discipline is too long.")
+    if template is not None and template.discipline != "ANY" and discipline != template.discipline:
+        abort(400, description="Selected discipline does not match the approved template.")
     sheet_number = next_checksheet_number(project.company_name, project.project_code, sheet_type)
+    template_snapshot = None
+    if template is not None:
+        template_snapshot = {
+            "template_code": template.template_code,
+            "title": template.title,
+            "revision": template.revision,
+            "sheet_type": template.sheet_type.value,
+            "discipline": template.discipline,
+            "equipment_type": template.equipment_type,
+            "acceptance_criteria": template.acceptance_criteria,
+            "items": template.items_json,
+        }
     sheet = CheckSheet(
         company_name=project.company_name, project_id=project.id,
         system_id=subsystem.system_id, subsystem_id=subsystem.id,
-        sheet_number=sheet_number, sheet_type=sheet_type,
+        equipment_id=equipment.id if equipment else None,
+        sheet_number=sheet_number, sheet_type=sheet_type, discipline=discipline,
         title=_required("title", 200), created_by_id=current_user.id,
+        template_id=template.id if template else None,
+        template_revision_snapshot=template.revision if template else None,
+        template_title_snapshot=template.title if template else None,
+        template_snapshot_json=template_snapshot,
         status=CheckSheetStatus.DRAFT,
     )
     db.session.add(sheet)
     db.session.flush()
-    add_audit_event(project.company_name, "CheckSheet", sheet.id, "CHECKSHEET_CREATED",
-                    after={"sheet_number": sheet_number, "revision": 0})
+    if template is not None:
+        for item in template.items_json:
+            db.session.add(CheckSheetItem(
+                company_name=project.company_name, check_sheet_id=sheet.id,
+                sequence=item["sequence"], description=item["description"],
+                expected_result=item.get("expected_result"),
+                acceptance_criteria=item.get("acceptance_criteria"),
+                unit=item.get("unit"), mandatory=item.get("mandatory", True),
+                witness_required=item.get("witness_required", False),
+            ))
+    add_audit_event(
+        project.company_name, "CheckSheet", sheet.id, "CHECKSHEET_CREATED",
+        after={
+            "sheet_number": sheet_number, "revision": 0,
+            "template_id": template.id if template else None,
+            "template_revision": template.revision if template else None,
+            "items_created": len(template.items_json) if template else 0,
+        },
+    )
     db.session.commit()
     return redirect(url_for("commissioning.checksheet_detail", sheet_id=sheet.id))
+
 
 @commissioning_bp.get("/checksheets/<int:sheet_id>")
 @login_required
@@ -291,9 +554,15 @@ def add_checksheet_item(sheet_id):
         abort(409, description="Items can only be added to a draft or rejected sheet")
     sequence = (db.session.query(db.func.max(CheckSheetItem.sequence))
                 .filter_by(company_name=sheet.company_name, check_sheet_id=sheet.id).scalar() or 0) + 1
+    mandatory_values = request.form.getlist("mandatory")
+    mandatory = "1" in mandatory_values if mandatory_values else True
     item = CheckSheetItem(
         company_name=sheet.company_name, check_sheet_id=sheet.id, sequence=sequence,
-        description=_required("description"), expected_result=(request.form.get("expected_result") or "").strip() or None,
+        description=_required("description"),
+        expected_result=(request.form.get("expected_result") or "").strip() or None,
+        acceptance_criteria=(request.form.get("acceptance_criteria") or "").strip() or None,
+        unit=(request.form.get("unit") or "").strip()[:40] or None,
+        mandatory=mandatory,
         witness_required=request.form.get("witness_required") == "1",
     )
     db.session.add(item)
@@ -373,8 +642,11 @@ def issue_checksheet(sheet_id):
         abort(403)
     if sheet.status not in (CheckSheetStatus.DRAFT, CheckSheetStatus.REJECTED):
         abort(409)
-    if not CheckSheetItem.query.filter_by(company_name=sheet.company_name, check_sheet_id=sheet.id).count():
-        abort(409, description="A check sheet needs at least one item before issue")
+    issue_items = CheckSheetItem.query.filter_by(
+        company_name=sheet.company_name, check_sheet_id=sheet.id,
+    ).all()
+    if not issue_items or not any(item.mandatory for item in issue_items):
+        abort(409, description="A check sheet needs at least one mandatory item before issue")
     old_status = sheet.status
     if old_status == CheckSheetStatus.REJECTED:
         # Reissue starts a fresh approval cycle; prior signatures remain in the
@@ -403,12 +675,17 @@ def sign_checksheet(sheet_id):
     if sheet.status not in (CheckSheetStatus.ISSUED, CheckSheetStatus.IN_PROGRESS):
         abort(409, description="Only an issued check sheet can be signed")
     items = CheckSheetItem.query.filter_by(company_name=sheet.company_name, check_sheet_id=sheet.id).all()
-    if not items or any(i.result_status in (ItemResultStatus.PENDING, ItemResultStatus.NOK) for i in items):
-        abort(409, description="All check sheet items must be completed without NOK results")
-    if any(not item.verified_by_id or item.verified_by_id == item.operator_id for item in items):
-        abort(409, description="Every check sheet item requires independent QC verification before sign-off")
-    if any(i.witness_required for i in items):
-        for required_item in (item for item in items if item.witness_required):
+    mandatory_items = [item for item in items if item.mandatory]
+    if (not mandatory_items
+            or any(i.result_status == ItemResultStatus.PENDING for i in mandatory_items)
+            or any(i.result_status == ItemResultStatus.NOK for i in items)):
+        abort(409, description="All mandatory items must be completed and no item may retain an NOK result")
+    review_items = [item for item in items if item.mandatory or item.result_status != ItemResultStatus.PENDING]
+    if any(not item.verified_by_id or item.verified_by_id == item.operator_id for item in review_items):
+        abort(409, description="Every completed mandatory/optional item requires independent QC verification before sign-off")
+    witness_items = [item for item in items if item.witness_required and (item.mandatory or item.result_status != ItemResultStatus.PENDING)]
+    if witness_items:
+        for required_item in witness_items:
             points = WitnessPoint.query.filter_by(
                 company_name=sheet.company_name, check_sheet_id=sheet.id,
                 check_sheet_item_id=required_item.id,
@@ -494,7 +771,12 @@ def revise_checksheet(sheet_id):
         company_name=previous.company_name, project_id=previous.project_id,
         system_id=previous.system_id, subsystem_id=previous.subsystem_id,
         equipment_id=previous.equipment_id, sheet_number=previous.sheet_number,
-        sheet_type=previous.sheet_type, revision=revision_no, supersedes_id=previous.id,
+        sheet_type=previous.sheet_type, discipline=previous.discipline,
+        revision=revision_no, supersedes_id=previous.id,
+        template_id=previous.template_id,
+        template_revision_snapshot=previous.template_revision_snapshot,
+        template_title_snapshot=previous.template_title_snapshot,
+        template_snapshot_json=previous.template_snapshot_json,
         sheet_weight=previous.sheet_weight, title=previous.title,
         status=CheckSheetStatus.DRAFT, created_by_id=current_user.id,
     )
@@ -504,7 +786,9 @@ def revise_checksheet(sheet_id):
         db.session.add(CheckSheetItem(
             company_name=previous.company_name, check_sheet_id=new_sheet.id,
             sequence=old.sequence, description=old.description,
-            expected_result=old.expected_result, witness_required=old.witness_required,
+            expected_result=old.expected_result,
+            acceptance_criteria=old.acceptance_criteria, unit=old.unit,
+            mandatory=old.mandatory, witness_required=old.witness_required,
         ))
     db.session.add(CheckSheetRevision(
         company_name=previous.company_name, sheet_number=previous.sheet_number,
