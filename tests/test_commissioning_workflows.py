@@ -11,7 +11,8 @@ from models_commissioning import (
     CheckSheetType, CheckSheetStatus, ItemResultStatus, PunchItem,
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
     CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, ProgressSnapshot, CommissioningAuditLog,
-    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningAttachment, DocumentStatus,\n    CommissioningPreservationPlan, CommissioningPreservationInspection,
+    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningAttachment, DocumentStatus,
+    CommissioningPreservationPlan, CommissioningPreservationInspection,
     HandoverPackage, HandoverStatus, CommissioningCertificate,
     WitnessPoint, WitnessType, WitnessStatus, PunchHistory,
 )
