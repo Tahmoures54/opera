@@ -1157,6 +1157,8 @@ def transition_witness(witness_id):
     elif target == WitnessStatus.CANCELLED:
         if not has_permission(witness.project_id, "witness.manage"):
             abort(403)
+        if witness.type == WitnessType.HOLD:
+            abort(409, description="HOLD points cannot be cancelled; use the approved waiver/deviation process")
         if old_status not in (WitnessStatus.PLANNED, WitnessStatus.NOTIFIED):
             abort(409, description="Attended or released points cannot be cancelled")
         if not remarks:
