@@ -8,7 +8,7 @@ from extensions import db
 from models import User
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskDependency, CommissioningTaskType, CommissioningTaskStatus,
-    CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
+    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
@@ -100,6 +100,12 @@ def operations(project_id):
           "witness.view", "witness.manage", "handover.view", "handover.manage",
           "reports.view")
     project = get_project(project_id)
+    dossier_requirements = CommissioningDossierRequirement.query.filter_by(
+        company_name=project.company_name, project_id=project.id, is_active=True,
+    ).order_by(
+        CommissioningDossierRequirement.document_type,
+        CommissioningDossierRequirement.discipline,
+    ).all()
     systems = CommissioningSystem.query.filter_by(
         company_name=project.company_name, project_id=project.id,
     ).filter(CommissioningSystem.status != "ARCHIVED").order_by(CommissioningSystem.system_code).all()
@@ -150,6 +156,8 @@ def operations(project_id):
         "commissioning/operations.html", project=project, sheets=sheets,
         punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots,
         certificates_by_package=certificates_by_package, members=members,
+        dossier_requirements=dossier_requirements,
+        can_manage_dossier_requirements=has_permission(project.id, "documents.manage"),
         users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}],
         systems=systems, subsystems=subsystems, system_by_id=system_by_id,
         subsystem_by_id=subsystem_by_id, roles=list(MembershipRole),
