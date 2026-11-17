@@ -29,6 +29,25 @@ class ProjectStatus(enum.Enum):
     CANCELLED = "CANCELLED"
 
 
+class CommissioningTaskType(enum.Enum):
+    CCK = "CCK"  # Conformity Check
+    STS = "STS"  # Static Test
+    PIP = "PIP"  # Piping Test
+    PRC = "PRC"  # Preliminary Check
+    FTS = "FTS"  # Functional Test
+    OTS = "OTS"  # Operational Test
+    PVP = "PVP"  # Piping & Vessel Preparation
+
+
+class CommissioningTaskStatus(enum.Enum):
+    NOT_STARTED = "NOT_STARTED"
+    READY = "READY"
+    IN_PROGRESS = "IN_PROGRESS"
+    BLOCKED = "BLOCKED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
 class CheckSheetType(enum.Enum):
     PRE_COMM_A = "PRE_COMM_A"
     PRE_COMM_B = "PRE_COMM_B"
@@ -195,6 +214,52 @@ class CommissioningEquipment(db.Model):
     serial_no = db.Column(db.String(100))
     specs_json = db.Column(db.JSON)
     status = db.Column(db.String(30), nullable=False, default="ACTIVE")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+
+class CommissioningTask(db.Model):
+    """Project task register aligned to the documented ICAPS task branch concepts.
+
+    Activity codes are evidenced in the available project ICAPS manual; the
+    model is an independent OPERA implementation, not a copied ICAPS schema.
+    """
+    __tablename__ = "commissioning_task"
+    __table_args__ = (
+        UniqueConstraint("company_name", "task_number", name="uq_comm_task_number"),
+        UniqueConstraint("id", "company_name", name="uq_comm_task_id_company"),
+        ForeignKeyConstraint(["project_id", "company_name"], ["commissioning_project.id", "commissioning_project.company_name"], name="fk_comm_task_project_tenant"),
+        ForeignKeyConstraint(["system_id", "company_name"], ["commissioning_system.id", "commissioning_system.company_name"], name="fk_comm_task_system_tenant"),
+        ForeignKeyConstraint(["subsystem_id", "company_name"], ["commissioning_subsystem.id", "commissioning_subsystem.company_name"], name="fk_comm_task_subsystem_tenant"),
+        ForeignKeyConstraint(["equipment_id", "company_name"], ["commissioning_equipment.id", "commissioning_equipment.company_name"], name="fk_comm_task_equipment_tenant"),
+        CheckConstraint("estimated_man_hours >= 0", name="ck_comm_task_estimated_hours_nonnegative"),
+        CheckConstraint("spent_man_hours >= 0", name="ck_comm_task_spent_hours_nonnegative"),
+        Index("ix_comm_task_company_project_status", "company_name", "project_id", "status"),
+        Index("ix_comm_task_company_subsystem_type", "company_name", "subsystem_id", "activity_type"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
+    system_id = db.Column(db.Integer, db.ForeignKey("commissioning_system.id", ondelete="RESTRICT"), nullable=False)
+    subsystem_id = db.Column(db.Integer, db.ForeignKey("commissioning_subsystem.id", ondelete="RESTRICT"), nullable=False)
+    equipment_id = db.Column(db.Integer, db.ForeignKey("commissioning_equipment.id", ondelete="RESTRICT"))
+    task_number = db.Column(db.String(100), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    activity_type = db.Column(_enum(CommissioningTaskType, "commissioning_task_type"), nullable=False)
+    discipline = db.Column(db.String(80), nullable=False)
+    progress_stage = db.Column(db.String(80))
+    progress_substage = db.Column(db.String(80))
+    assigned_group = db.Column(db.String(120))
+    estimated_man_hours = db.Column(db.Float, nullable=False, default=0.0)
+    spent_man_hours = db.Column(db.Float, nullable=False, default=0.0)
+    planned_start_date = db.Column(db.Date)
+    planned_finish_date = db.Column(db.Date)
+    actual_start_date = db.Column(db.Date)
+    actual_finish_date = db.Column(db.Date)
+    status = db.Column(_enum(CommissioningTaskStatus, "commissioning_task_status"), nullable=False, default=CommissioningTaskStatus.NOT_STARTED)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
