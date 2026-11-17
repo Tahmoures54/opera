@@ -1,7 +1,7 @@
 # OPERA Functional Gap Analysis
 
-**Baseline:** `main` at commit `ca37db49224160628e9fb28d3b7d51930acc099f`, 17 November 2026.  
-**Evidence basis:** merged PRs #21–#29 and #31, current models/routes/services, and successful `quality`, `integration` and `docker` checks on the baseline commit. This is a code-level capability assessment, not production acceptance.
+**Baseline:** `main` at merge commit `3d2095b0ff3e006f607429f95c0b531f83379f94`, 17 November 2026.  
+**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31 and #39. PR #39 CI run `44084364501` passed all `quality` job steps on head commit `417654cf6a2db1ac8ff94c3a45426307ab8fdcd9`. This is a code-level capability assessment, not production acceptance.
 
 ## Status definitions
 - **Implemented baseline:** code, route/UI and automated workflow coverage exist for the stated bounded scope.
@@ -29,16 +29,16 @@
 | Progress reporting | Partial | Scoped snapshots, Check Sheet/Task count and weight metrics, Punch counts | Approved project/system roll-up, daily/weekly reports and contractual progress procedure |
 | Preservation | Partial | Project-scoped equipment plans, approved procedure/revision references, user-supplied interval/due date, append-only inspection history, compliant/non-compliant/not-applicable outcomes, corrective action, environmental conditions and evidence attachments | Plan revision editing, recurring calendar/reminders, preservation check-sheet templates, trend/compliance reports and durable production evidence storage |
 | Manpower / resource planning | Partial | Task estimated and spent man-hour fields | Timesheets/work logs, capacity, contractor allocation and approvals |
-| Evidence storage | Partial / production blocker | Private tenant/entity-scoped local storage, extension/content checks, size limit and SHA-256 metadata | Durable private object storage for serverless production, malware scanning, retention and restore rehearsal |
+| Evidence storage | Implemented backend; production acceptance pending | Tenant-scoped local and S3-compatible backends, extension/content checks, size limit, SHA-256 metadata, server-side AES-256 request, serverless rejection of ephemeral local uploads, automated storage tests | Configure a real private bucket, migrate and checksum-verify existing evidence, verify provider-side retention/versioning, malware scanning and paired database/object backup-restore; live provider round-trip remains outstanding |
 | Reporting catalogue | Evidence-limited | OPERA dashboards and stored progress snapshots | Exact ICAPS catalogue/formulas unavailable; do not claim the advertised 30+ report catalogue |
 | Current ICAPS parity | Evidence-limited | Public product capability baseline and historical references documented in ICAPS_ANALYSIS.md | Current release manual, administrator guide, import annex and authorized representative sample files |
 
 ## Critical operational risks before production
-1. **Evidence durability:** local filesystem storage is not suitable for Vercel/serverless persistence. Configure and test durable private object storage before using OPERA as the system of record for project evidence.
+1. **Evidence durability:** the S3-compatible storage adapter is merged, and serverless uploads fail closed when local storage is selected. Production evidence use still requires bucket configuration, migration/checksum verification of any existing files, provider access/retention controls and a successful backup/restore rehearsal.
 2. **Readiness policy:** current A/B Punch and Check Sheet defaults must be reviewed and approved against the project's completion procedure, ITPs, contract and authority matrix.
 3. **Electronic signatures:** authenticated acknowledgement is not a qualified cryptographic signature.
 4. **Dossier:** configurable document index and completeness results exist, but the subsystem page is not yet a generated revision-controlled PDF/ZIP turnover package or approval workflow.
-5. **Preservation:** automated reminders, recurring schedules, plan revisions and advanced compliance reports are not implemented; uploaded evidence still requires durable production storage.
+5. **Preservation:** automated reminders, recurring schedules, plan revisions and advanced compliance reports are not implemented; evidence retention depends on completing production S3 configuration and backup controls.
 6. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
 ## Recommended implementation order
