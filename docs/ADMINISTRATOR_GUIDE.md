@@ -35,3 +35,7 @@ Use unique production secrets, HTTPS, least privilege and separate client/contra
 
 ## Readiness policy
 Use **Commissioning Operations → Readiness policy** to configure the MC, RFC and RFSU blockers. See [READINESS_POLICY.md](READINESS_POLICY.md) for the controls, OPERA defaults, fail-closed behavior and approval requirements. A saved configuration is not a substitute for approval under the project's completion procedure.
+
+
+## Configurable subsystem dossier index
+Project administrators can define mandatory document types, disciplines, minimum counts, approval requirements and evidence requirements from the Commissioning Operations page. Rules are audited and evaluated against current document revisions. See [DOSSIER_INDEX.md](DOSSIER_INDEX.md) for matching, default behavior and limitations.
