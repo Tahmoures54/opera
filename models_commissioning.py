@@ -421,6 +421,8 @@ class CheckSheetItem(db.Model):
         CheckConstraint("sequence >= 1", name="ck_comm_check_item_sequence_positive"),
         CheckConstraint("measurement_type IN ('QUALITATIVE','NUMERIC')", name="ck_comm_check_item_measurement_type"),
         CheckConstraint("minimum_value IS NULL OR maximum_value IS NULL OR minimum_value <= maximum_value", name="ck_comm_check_item_measurement_range"),
+        CheckConstraint("measurement_type = 'QUALITATIVE' OR (unit IS NOT NULL AND length(trim(unit)) > 0)", name="ck_comm_check_item_numeric_unit"),
+        CheckConstraint("measurement_type = 'NUMERIC' OR (minimum_value IS NULL AND maximum_value IS NULL AND measured_value IS NULL)", name="ck_comm_check_item_qualitative_values"),
         UniqueConstraint("id", "company_name", name="uq_comm_check_item_id_company"),
         ForeignKeyConstraint(["check_sheet_id", "company_name"], ["commissioning_check_sheet.id", "commissioning_check_sheet.company_name"], name="fk_comm_check_item_sheet_tenant"),
         Index("ix_comm_check_item_company_sheet", "company_name", "check_sheet_id"),
