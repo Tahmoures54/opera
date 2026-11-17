@@ -24,6 +24,7 @@ OPERA is an independently implemented project completion, pre-commissioning, com
 - OPERA-owned XLSX engineering data exchange for Systems, Subsystems, Equipment and Tasks; dry-run validation, workbook SHA-256 confirmation, atomic create-only import and audit events.
 - Subsystem dossier/readiness view aggregating current documents, Check Sheets, Punch items, Witness/Hold points, equipment and tasks.
 - Project-configurable dossier document index with document type, discipline, minimum count, approval and attachment-record requirements; latest-revision matching and per-rule completeness results.
+- Revision-controlled Check Sheet/Test Sheet template library with draft/approval/revision/retirement lifecycle, item snapshots, mandatory/witness flags and execution instantiation.
 - Immutable MC and RFC certificate records with issue-time evidence snapshots; distinct RFSU readiness gate and Operations Acceptance transition.
 - Project-configurable readiness policy for gate-specific Punch categories, required Check Sheet types, Hold-point blockers, Check Sheet presence and RFSU task completion. Invalid persisted policy fails all gates closed; issued certificate snapshots preserve the effective policy and gate-specific issues.
 - Equipment Preservation plans with procedure/revision references, interval and due-date tracking, append-only inspection history, corrective-action state and evidence attachments.
@@ -48,7 +49,7 @@ The implemented certificate types are MC and RFC. RFSU is a separate readiness/a
 10. Alembic migrations are additive and must be exercised against supported SQLite/PostgreSQL paths before release.
 
 ## Known gaps / next increments
-- Reusable revision-controlled Check Sheet/Test Sheet template catalogue and controlled project instantiation.
+- Advanced measurement capture, configurable result vocabularies, template cross-project library and full PDF form package generation.
 - Further readiness-policy extensions: configurable witness/review point rules, waiver/signatory authority matrix and procedure-revision linkage.
 - Full revision-controlled dossier PDF/ZIP package, dossier approval workflow and durable evidence-byte verification.
 - Production S3 bucket configuration and live provider round-trip; existing evidence migration; provider access controls, retention/versioning, malware scanning and paired database/object backup-restore.
