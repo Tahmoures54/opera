@@ -29,12 +29,12 @@ def require_ready_for_mc(company_name: str, subsystem_id: int) -> ReadinessResul
     return result
 
 
-def require_ready_for_rf(company_name: str, subsystem_id: int) -> ReadinessResult:
+def require_ready_for_rfc(company_name: str, subsystem_id: int) -> ReadinessResult:
     """Abort with 409 if the subsystem is not ready for Ready-for-Commissioning."""
     result = evaluate_subsystem_readiness(company_name, subsystem_id)
     if not result.is_ready_for_rf:
-        msg = _format_blockers(result) or "Subsystem is not ready for RF"
-        abort(409, description=f"RF certification blocked: {msg}")
+        msg = _format_blockers(result) or "Subsystem is not ready for RFC"
+        abort(409, description=f"RFC certification blocked: {msg}")
     return result
 
 
@@ -49,3 +49,7 @@ def require_ready_for_rfsu(company_name: str, subsystem_id: int) -> ReadinessRes
             msg += " | Warnings: " + "; ".join(warnings[:5])
         abort(409, description=f"RFSU blocked: {msg}")
     return result
+
+
+# Backward-compatible import for integrations that used the legacy RF name.
+require_ready_for_rf = require_ready_for_rfc
