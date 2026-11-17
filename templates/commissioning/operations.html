@@ -19,7 +19,7 @@
         <form method="post" action="{{ url_for('commissioning.add_member', project_id=project.id) }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="col-md-6"><select class="form-select" name="user_id" required><option value="">Select an organization user</option>{% for user in users %}<option value="{{ user.id }}">{{ user.full_name }} — {{ user.company_email }}</option>{% endfor %}</select></div>
-          <div class="col-md-4"><select class="form-select" name="role" required>{% for role in roles %}<option value="{{ role.value|replace('_', ' ')|title }}">{{ role.value|replace('_', ' ')|title }}</option>{% endfor %}</select></div>
+          <div class="col-md-4"><select class="form-select" name="role" required>{% for role in roles %}<option value="{{ role.value }}">{{ role.value|replace('_', ' ')|title }}</option>{% endfor %}</select></div>
           <div class="col-md-2"><button class="btn btn-primary w-100">Assign</button></div>
         </form>
         <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>User</th><th>Role</th><th></th></tr></thead><tbody>{% for member in members %}<tr><td>{{ member.user_id }}</td><td>{{ member.role.value|replace('_', ' ')|title }}</td><td><form method="post" action="{{ url_for('commissioning.deactivate_member', project_id=project.id, membership_id=member.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">Remove access</button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted">No members assigned yet.</td></tr>{% endfor %}</tbody></table></div>
