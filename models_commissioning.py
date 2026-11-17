@@ -233,6 +233,7 @@ class CommissioningTask(db.Model):
         ForeignKeyConstraint(["system_id", "company_name"], ["commissioning_system.id", "commissioning_system.company_name"], name="fk_comm_task_system_tenant"),
         ForeignKeyConstraint(["subsystem_id", "company_name"], ["commissioning_subsystem.id", "commissioning_subsystem.company_name"], name="fk_comm_task_subsystem_tenant"),
         ForeignKeyConstraint(["equipment_id", "company_name"], ["commissioning_equipment.id", "commissioning_equipment.company_name"], name="fk_comm_task_equipment_tenant"),
+        ForeignKeyConstraint(["check_sheet_id", "company_name"], ["commissioning_check_sheet.id", "commissioning_check_sheet.company_name"], name="fk_comm_task_check_sheet_tenant"),
         CheckConstraint("estimated_man_hours >= 0", name="ck_comm_task_estimated_hours_nonnegative"),
         CheckConstraint("spent_man_hours >= 0", name="ck_comm_task_spent_hours_nonnegative"),
         Index("ix_comm_task_company_project_status", "company_name", "project_id", "status"),
@@ -244,6 +245,7 @@ class CommissioningTask(db.Model):
     system_id = db.Column(db.Integer, db.ForeignKey("commissioning_system.id", ondelete="RESTRICT"), nullable=False)
     subsystem_id = db.Column(db.Integer, db.ForeignKey("commissioning_subsystem.id", ondelete="RESTRICT"), nullable=False)
     equipment_id = db.Column(db.Integer, db.ForeignKey("commissioning_equipment.id", ondelete="RESTRICT"))
+    check_sheet_id = db.Column(db.Integer, db.ForeignKey("commissioning_check_sheet.id", ondelete="RESTRICT"))
     task_number = db.Column(db.String(100), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
