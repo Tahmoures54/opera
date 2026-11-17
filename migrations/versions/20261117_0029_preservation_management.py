@@ -34,7 +34,7 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.CheckConstraint(
-            "interval_days > 0 AND interval_days <= 3650",
+            "interval_days > 0",
             name="ck_comm_preservation_interval",
         ),
         sa.CheckConstraint(
