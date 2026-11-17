@@ -1263,6 +1263,12 @@ def test_punch_close_requires_corrective_action_and_reopen_requires_reason(clien
 
     missing_reason = client.post(url, data={"status": PunchStatus.IN_PROGRESS.value})
     assert missing_reason.status_code == 400
+    _login_id(client, opera_setup["viewer"])
+    unauthorized_reopen = client.post(url, data={
+        "status": PunchStatus.IN_PROGRESS.value, "reason": "Unauthorized attempt",
+    })
+    assert unauthorized_reopen.status_code == 403
+    _login_id(client, opera_setup["manager"])
     reopened = client.post(url, data={
         "status": PunchStatus.IN_PROGRESS.value,
         "reason": "QC inspection found the leak check evidence incomplete.",
