@@ -292,6 +292,8 @@ class CommissioningTaskDependency(db.Model):
         CheckConstraint("predecessor_task_id != successor_task_id",
                         name="ck_comm_task_dependency_not_self"),
         CheckConstraint("lag_days >= 0", name="ck_comm_task_dependency_lag_nonnegative"),
+        CheckConstraint("dependency_type = 'FINISH_TO_START'",
+                        name="ck_comm_task_dependency_type_fs_only"),
         Index("ix_comm_task_dependency_project_successor",
               "company_name", "project_id", "successor_task_id"),
     )
