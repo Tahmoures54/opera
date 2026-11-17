@@ -1654,6 +1654,119 @@ def create_document_revision(document_id):
 
 
 
+@commissioning_bp.post("/projects/<int:project_id>/dossier-requirements")
+@login_required
+def save_dossier_requirement(project_id):
+    """Create, update or deactivate a project's mandatory dossier-index rule."""
+    _need(project_id, "documents.manage", "project.manage")
+    project = get_project(project_id)
+    action = (request.form.get("action") or "save").strip().lower()
+    raw_requirement_id = (request.form.get("requirement_id") or "").strip()
+    requirement_id = None
+    if raw_requirement_id:
+        try:
+            requirement_id = int(raw_requirement_id)
+        except ValueError:
+            abort(400, description="Invalid dossier requirement identifier.")
+
+    requirement = None
+    if requirement_id is not None:
+        requirement = CommissioningDossierRequirement.query.filter_by(
+            id=requirement_id, company_name=project.company_name,
+            project_id=project.id,
+        ).first_or_404()
+
+    if action == "deactivate":
+        if requirement is None:
+            abort(400, description="A dossier requirement is required.")
+        before = {
+            "document_type": requirement.document_type,
+            "discipline": requirement.discipline,
+            "minimum_count": requirement.minimum_count,
+            "require_approved": requirement.require_approved,
+            "require_evidence": requirement.require_evidence,
+            "is_active": requirement.is_active,
+        }
+        requirement.is_active = False
+        add_audit_event(
+            project.company_name, "CommissioningDossierRequirement",
+            requirement.id, "DOSSIER_REQUIREMENT_DEACTIVATED",
+            before=before, after={**before, "is_active": False},
+        )
+        db.session.commit()
+        flash("Dossier index requirement deactivated.", "success")
+        return redirect(url_for("commissioning.operations", project_id=project.id))
+
+    if action != "save":
+        abort(400, description="Invalid dossier requirement action.")
+
+    document_type = _required("document_type", 80).upper()
+    discipline = (request.form.get("discipline") or "ANY").strip().upper() or "ANY"
+    if len(discipline) > 80:
+        abort(400, description="Discipline is too long.")
+    try:
+        minimum_count = int(_required("minimum_count", 5))
+    except ValueError:
+        abort(400, description="Minimum count must be a whole number.")
+    if not 1 <= minimum_count <= 1000:
+        abort(400, description="Minimum count must be between 1 and 1000.")
+
+    duplicate = CommissioningDossierRequirement.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        document_type=document_type, discipline=discipline,
+    )
+    if requirement is not None:
+        duplicate = duplicate.filter(CommissioningDossierRequirement.id != requirement.id)
+    if duplicate.first():
+        abort(409, description="A requirement already exists for this document type and discipline.")
+
+    require_approved = request.form.get("require_approved") == "on"
+    require_evidence = request.form.get("require_evidence") == "on"
+    if requirement is None:
+        requirement = CommissioningDossierRequirement(
+            company_name=project.company_name, project_id=project.id,
+            document_type=document_type, discipline=discipline,
+            minimum_count=minimum_count, require_approved=require_approved,
+            require_evidence=require_evidence, created_by_id=current_user.id,
+        )
+        db.session.add(requirement)
+        db.session.flush()
+        action_name = "DOSSIER_REQUIREMENT_CREATED"
+        before = None
+    else:
+        before = {
+            "document_type": requirement.document_type,
+            "discipline": requirement.discipline,
+            "minimum_count": requirement.minimum_count,
+            "require_approved": requirement.require_approved,
+            "require_evidence": requirement.require_evidence,
+            "is_active": requirement.is_active,
+        }
+        requirement.document_type = document_type
+        requirement.discipline = discipline
+        requirement.minimum_count = minimum_count
+        requirement.require_approved = require_approved
+        requirement.require_evidence = require_evidence
+        requirement.is_active = True
+        action_name = "DOSSIER_REQUIREMENT_UPDATED"
+
+    after = {
+        "document_type": requirement.document_type,
+        "discipline": requirement.discipline,
+        "minimum_count": requirement.minimum_count,
+        "require_approved": requirement.require_approved,
+        "require_evidence": requirement.require_evidence,
+        "is_active": requirement.is_active,
+    }
+    add_audit_event(
+        project.company_name, "CommissioningDossierRequirement",
+        requirement.id, action_name, before=before, after=after,
+    )
+    db.session.commit()
+    flash("Dossier index requirement saved.", "success")
+    return redirect(url_for("commissioning.operations", project_id=project.id))
+
+
 @commissioning_bp.get("/projects/<int:project_id>/subsystems/<int:subsystem_id>/dossier")
 @login_required
 def subsystem_dossier(project_id, subsystem_id):
