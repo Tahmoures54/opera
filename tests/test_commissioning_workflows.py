@@ -1071,6 +1071,10 @@ def test_mc_rfc_certificates_capture_immutable_issue_time_evidence(client, app, 
     )
     assert certificate_page.status_code == 200
     assert b"Ready for Commissioning (RFC) Certificate" in certificate_page.data
+    legacy_certificate_page = client.get(
+        f"/commissioning/handover/{package_id}/certificates/RF",
+    )
+    assert legacy_certificate_page.status_code == 200
     assert b"MC-CERT-001" not in certificate_page.data
 
     with app.app_context():
@@ -1079,8 +1083,10 @@ def test_mc_rfc_certificates_capture_immutable_issue_time_evidence(client, app, 
         rfc_certificate = CommissioningCertificate.query.filter_by(
             package_id=package_id, certificate_type="RFC",
         ).one()
+        assert rfc_certificate.certificate_type == "RFC"
+        assert rfc_certificate.snapshot_json["certificate"]["type"] == "RFC"
         assert rfc_certificate.snapshot_json["readiness"]["pending_hold_points"] == 0
-        assert rf_certificate.snapshot_json["witness_points"][0]["status"] == "RELEASED"
+        assert rfc_certificate.snapshot_json["witness_points"][0]["status"] == "RELEASED"
         rfc_certificate.snapshot_json = {"tampered": True}
         with pytest.raises(ValueError, match="append-only"):
             db.session.commit()
