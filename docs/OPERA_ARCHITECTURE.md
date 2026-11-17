@@ -23,6 +23,7 @@ OPERA is an independently implemented project completion, pre-commissioning, com
 - Controlled engineering Document Register with revision records, file evidence metadata, review and approval history.
 - OPERA-owned XLSX engineering data exchange for Systems, Subsystems, Equipment and Tasks; dry-run validation, workbook SHA-256 confirmation, atomic create-only import and audit events.
 - Subsystem dossier/readiness view aggregating current documents, Check Sheets, Punch items, Witness/Hold points, equipment and tasks.
+- Controlled subsystem dossier revisions with frozen point-in-time snapshots, independent review, approval, separate issue authorization, append-only review history, SHA-256 integrity checks and controlled PDF/ZIP exports.
 - Project-configurable dossier document index with document type, discipline, minimum count, approval and attachment-record requirements; latest-revision matching and per-rule completeness results.
 - Immutable MC and RFC certificate records with issue-time evidence snapshots; distinct RFSU readiness gate and Operations Acceptance transition.
 - Project-configurable readiness policy for gate-specific Punch categories, required Check Sheet types, Hold-point blockers, Check Sheet presence and RFSU task completion. Invalid persisted policy fails all gates closed; issued certificate snapshots preserve the effective policy and gate-specific issues.
@@ -50,7 +51,7 @@ The implemented certificate types are MC and RFC. RFSU is a separate readiness/a
 ## Known gaps / next increments
 - Advanced measurement capture, configurable result vocabularies, qualified e-signatures, cross-project template sharing and generated blank/test form packs.
 - Further readiness-policy extensions: configurable witness/review point rules, waiver/signatory authority matrix and procedure-revision linkage.
-- Persisted dossier revision numbering, controlled review/approval/rejection, formal issue/sign-off and contractual status; current PDF/ZIP outputs remain explicitly uncontrolled working exports.
+- Project-specific dossier section matrices, configurable reviewer/issuer authority, formal Operations Acceptance linkage and production retention/restore validation for issued dossier evidence.
 - Production S3 bucket configuration and live provider round-trip; existing evidence migration; provider access controls, retention/versioning, malware scanning and paired database/object backup-restore.
 - Automated reminders, recurring calendar planning, OEM interval library, preservation templates and advanced compliance reporting.
 - Daily work logs, approved manpower capacity planning and vendor mobilization.
