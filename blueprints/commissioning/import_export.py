@@ -105,13 +105,18 @@ def _append_safe(sheet, values):
         _set_safe(sheet.cell(row=row, column=column), value)
 
 
-def _new_workbook():
+def _new_workbook(project_code=None):
     workbook = Workbook()
     first = workbook.active
     first.title = "Systems"
     for name, headers in SHEETS.items():
         sheet = first if name == "Systems" else workbook.create_sheet(name)
         sheet.append(headers)
+    metadata = workbook.create_sheet("_OPERA_META")
+    metadata.append(["format", "OPERA_ENGINEERING_DATA_EXCHANGE"])
+    metadata.append(["version", "1"])
+    metadata.append(["project_code", project_code or ""])
+    metadata.sheet_state = "hidden"
     return workbook
 
 
@@ -137,7 +142,7 @@ def _project_records(project):
 
 
 def _export_workbook(project):
-    workbook = _new_workbook()
+    workbook = _new_workbook(project.project_code)
     systems, subsystems, equipment, tasks, system_by_id, subsystem_by_id = _project_records(project)
     for item in systems:
         _append_safe(workbook["Systems"], [
@@ -486,7 +491,7 @@ def download_engineering_template(project_id):
     if not has_permission(project_id, "structure.manage"):
         abort(403)
     project = get_project(project_id)
-    workbook = _new_workbook()
+    workbook = _new_workbook(project.project_code)
     _style_workbook(workbook)
     return send_file(
         _workbook_bytes(workbook),
@@ -536,6 +541,25 @@ def import_engineering_registers(project_id):
         workbook = load_workbook(BytesIO(raw), read_only=True, data_only=False)
     except Exception:
         abort(400, description="The uploaded file is not a valid .xlsx workbook.")
+    metadata = workbook["_OPERA_META"] if "_OPERA_META" in workbook.sheetnames else None
+    if metadata is None:
+        errors.append({"sheet": "_OPERA_META", "row": 1, "field": "format",
+                       "message": "OPERA workbook metadata is missing; download a fresh template."})
+    else:
+        metadata_values = {
+            str(metadata.cell(row=row, column=1).value or "").strip():
+            str(metadata.cell(row=row, column=2).value or "").strip()
+            for row in range(1, 4)
+        }
+        if metadata_values.get("format") != "OPERA_ENGINEERING_DATA_EXCHANGE":
+            errors.append({"sheet": "_OPERA_META", "row": 1, "field": "format",
+                           "message": "Workbook format identifier is invalid."})
+        if metadata_values.get("version") != "1":
+            errors.append({"sheet": "_OPERA_META", "row": 2, "field": "version",
+                           "message": "Unsupported workbook version; download a fresh template."})
+        if metadata_values.get("project_code") != project.project_code:
+            errors.append({"sheet": "_OPERA_META", "row": 3, "field": "project_code",
+                           "message": "Workbook belongs to a different project."})
     parsed = _read_rows(workbook, errors)
     workbook.close()
     planned, validation_errors = _validate_import(project, parsed)
