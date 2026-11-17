@@ -1,7 +1,7 @@
 """OPERA Readiness / Certificate Engine.
 
 Independent implementation of Mechanical Completion (MC), Ready-for-Commissioning
-(RF) and Ready-for-Start-Up (RFSU) evaluation gates.
+(RFC) and Ready-for-Start-Up (RFSU) evaluation gates.
 
 Inspired by public OPERCOM / ICAPS handover concepts (system-subsystem approach,
 punch clearance, check-sheet completion) but uses only OPERA models and
@@ -43,11 +43,15 @@ class ReadinessResult:
     subsystem_id: int
     company_name: str
     is_ready_for_mc: bool = False
-    is_ready_for_rf: bool = False
+    is_ready_for_rf: bool = False  # Legacy internal readiness flag; RFC semantics.
     is_ready_for_rfsu: bool = False
     progress_percent: float = 0.0
     issues: List[ReadinessIssue] = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
+
+    @property
+    def is_ready_for_rfc(self) -> bool:
+        return self.is_ready_for_rf
 
     def add_blocker(self, code: str, message: str, entity_type: str = None, entity_id: int = None):
         self.issues.append(ReadinessIssue(code, "BLOCKER", message, entity_type, entity_id))
@@ -116,12 +120,12 @@ def calculate_subsystem_progress(company_name: str, subsystem_id: int) -> float:
 
 
 def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> ReadinessResult:
-    """Evaluate MC / RF / RFSU readiness for one subsystem.
+    """Evaluate MC / RFC / RFSU readiness for one subsystem.
 
     Rules (OPERA defaults, project-overridable later):
     - MC requires: all Pre-Comm A/B sheets signed-off, no open Punch A/B, no open Hold points.
-    - RF requires: MC conditions + all Comm C / Functional Test sheets signed-off.
-    - RFSU requires: RF conditions + no remaining open Punch A/B and all tasks COMPLETED or CANCELLED.
+    - RFC requires: MC conditions + all Comm C / Functional Test sheets signed-off.
+    - RFSU requires: RFC conditions + no remaining open Punch A/B and all tasks COMPLETED or CANCELLED.
     """
     subsystem = CommissioningSubsystem.query.filter_by(
         id=subsystem_id, company_name=company_name
@@ -163,7 +167,7 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
             entity_id=s.id,
         )
 
-    # --- Commissioning sheets (RF) ---
+    # --- Commissioning sheets (RFC) ---
     comm_types = [CheckSheetType.COMM_C, CheckSheetType.FUNCTIONAL_TEST]
     unsigned_comm = _unsigned_required_sheets(company_name, subsystem_id, comm_types)
     for s in unsigned_comm:
