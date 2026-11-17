@@ -53,6 +53,10 @@ def upgrade():
         "UPDATE commissioning_handover_package SET status = 'RFC_CERTIFIED' "
         "WHERE status = 'RF_CERTIFIED'"
     )
+    op.execute(
+        "UPDATE commissioning_handover_package SET status = 'RFC_PENDING' "
+        "WHERE status = 'RF_PENDING'"
+    )
 
     with op.batch_alter_table("commissioning_certificate", recreate="always") as batch:
         batch.create_check_constraint(
@@ -72,6 +76,10 @@ def downgrade():
     op.execute(
         "UPDATE commissioning_handover_package SET status = 'RF_CERTIFIED' "
         "WHERE status = 'RFC_CERTIFIED'"
+    )
+    op.execute(
+        "UPDATE commissioning_handover_package SET status = 'RF_PENDING' "
+        "WHERE status = 'RFC_PENDING'"
     )
 
     with op.batch_alter_table("commissioning_certificate", recreate="always") as batch:
