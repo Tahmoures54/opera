@@ -12,7 +12,7 @@ from models_commissioning import (
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
-    WitnessPoint, WitnessType, WitnessStatus, HandoverPackage, HandoverStatus,
+    WitnessPoint, WitnessType, WitnessStatus, HandoverPackage, HandoverStatus, CommissioningCertificate,
     ProgressSnapshot, CommissioningSignature, CommissioningAttachment,
 )
 from services.commissioning_access import (
@@ -672,6 +672,140 @@ def create_handover(project_id):
                     after={"package_number": package_no, "subsystem_id": subsystem.id})
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=project.id))
+
+
+def _completion_certificate_snapshot(package, certificate_type, certificate_number, certificate_date):
+    """Capture issue-time evidence; later register changes never rewrite a certificate."""
+    project = get_project(package.project_id, package.company_name)
+    subsystem = CommissioningSubsystem.query.join(
+        CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
+    ).filter(
+        CommissioningSubsystem.id == package.subsystem_id,
+        CommissioningSubsystem.company_name == package.company_name,
+        CommissioningSystem.project_id == package.project_id,
+    ).first_or_404()
+
+    all_sheets = CheckSheet.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(CheckSheet.sheet_number, CheckSheet.revision.desc()).all()
+    superseded_sheet_ids = {
+        item.supersedes_id for item in all_sheets if item.supersedes_id is not None
+    }
+    sheets = [item for item in all_sheets if item.id not in superseded_sheet_ids]
+
+    all_documents = CommissioningDocument.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(CommissioningDocument.document_number,
+               CommissioningDocument.revision_sequence.desc()).all()
+    latest_documents = {}
+    for item in all_documents:
+        latest_documents.setdefault(item.document_number, item)
+    documents = list(latest_documents.values())
+
+    punches = PunchItem.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(PunchItem.punch_number).all()
+    witnesses = WitnessPoint.query.join(
+        CheckSheet, CheckSheet.id == WitnessPoint.check_sheet_id,
+    ).filter(
+        WitnessPoint.company_name == package.company_name,
+        WitnessPoint.project_id == package.project_id,
+        CheckSheet.subsystem_id == package.subsystem_id,
+    ).order_by(WitnessPoint.scheduled_at).all()
+    tasks = CommissioningTask.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(CommissioningTask.task_number).all()
+    equipment = CommissioningEquipment.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(CommissioningEquipment.tag_number).all()
+    issuer = User.query.filter_by(
+        id=current_user.id, company_name=package.company_name,
+    ).first_or_404()
+
+    open_critical = [
+        item for item in punches
+        if item.category in (PunchCategory.A, PunchCategory.B)
+        and item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED)
+    ]
+    pending_holds = [
+        item for item in witnesses
+        if item.type == WitnessType.HOLD
+        and item.status not in (WitnessStatus.RELEASED, WitnessStatus.CANCELLED)
+    ]
+    return {
+        "certificate": {
+            "type": certificate_type,
+            "number": certificate_number,
+            "date": certificate_date.isoformat(),
+            "issued_by": issuer.full_name,
+            "issued_by_id": issuer.id,
+            "issued_at": datetime.utcnow().isoformat(),
+        },
+        "project": {
+            "code": project.project_code, "name": project.name,
+            "client": project.client, "contractor": project.contractor,
+        },
+        "subsystem": {
+            "code": subsystem.subsystem_code, "name": subsystem.name,
+        },
+        "package": {"number": package.package_number},
+        "readiness": {
+            "current_check_sheets_total": len(sheets),
+            "current_check_sheets_signed": sum(
+                1 for item in sheets if item.status == CheckSheetStatus.SIGNED_OFF
+            ),
+            "open_category_a_b_punch": len(open_critical),
+            "current_documents_total": len(documents),
+            "current_documents_approved": sum(
+                1 for item in documents if item.status == DocumentStatus.APPROVED
+            ),
+            "pending_hold_points": len(pending_holds),
+            "tasks_total": len(tasks),
+            "tasks_completed": sum(
+                1 for item in tasks if item.status == CommissioningTaskStatus.COMPLETED
+            ),
+        },
+        "check_sheets": [{
+            "number": item.sheet_number, "revision": item.revision,
+            "title": item.title, "type": item.sheet_type.value,
+            "status": item.status.value,
+            "client_signatory_id": item.signed_by_client_id,
+            "contractor_signatory_id": item.signed_by_contractor_id,
+            "signed_at": item.signed_at.isoformat() if item.signed_at else None,
+        } for item in sheets],
+        "documents": [{
+            "number": item.document_number, "revision": item.revision,
+            "title": item.title, "type": item.document_type,
+            "discipline": item.discipline, "status": item.status.value,
+        } for item in documents],
+        "punch_items": [{
+            "number": item.punch_number, "category": item.category.value,
+            "severity": item.severity.value, "status": item.status.value,
+            "description": item.description,
+            "target_closure_date": item.target_closure_date.isoformat() if item.target_closure_date else None,
+        } for item in punches],
+        "witness_points": [{
+            "type": item.type.value, "status": item.status.value,
+            "scheduled_at": item.scheduled_at.isoformat(),
+            "notified_party": item.notified_party,
+        } for item in witnesses],
+        "tasks": [{
+            "number": item.task_number, "activity": item.activity_type.value,
+            "title": item.title, "discipline": item.discipline,
+            "status": item.status.value,
+            "planned_finish": item.planned_finish_date.isoformat() if item.planned_finish_date else None,
+            "actual_finish": item.actual_finish_date.isoformat() if item.actual_finish_date else None,
+        } for item in tasks],
+        "equipment": [{
+            "tag": item.tag_number, "type": item.equipment_type,
+            "description": item.description,
+        } for item in equipment],
+    }
 
 
 @commissioning_bp.post("/handover/<int:package_id>/transition")
