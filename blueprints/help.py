@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for
 
 help_bp = Blueprint('help', __name__, template_folder='templates')
 
@@ -13,7 +13,7 @@ def user_guide():
 
 @help_bp.route('/user-guide/fa')
 def user_guide_fa():
-    return render_template('help/user_guide_fa.html')
+    return redirect(url_for('help.user_guide'))
 
 @help_bp.route('/getting-started')
 def getting_started():
