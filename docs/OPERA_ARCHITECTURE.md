@@ -24,6 +24,7 @@ OPERA is an independently implemented project completion, pre-commissioning, com
 - OPERA-owned XLSX engineering data exchange for Systems, Subsystems, Equipment and Tasks; dry-run validation, workbook SHA-256 confirmation, atomic create-only import and audit events.
 - Subsystem dossier/readiness view aggregating current documents, Check Sheets, Punch items, Witness/Hold points, equipment and tasks.
 - Immutable MC and RFC certificate records with issue-time evidence snapshots; distinct RFSU readiness gate and Operations Acceptance transition.
+- Project-configurable readiness policy for gate-specific Punch categories, required Check Sheet types, Hold-point blockers, Check Sheet presence and RFSU task completion. Invalid persisted policy fails all gates closed; issued certificate snapshots preserve the effective policy and gate-specific issues.
 - Progress snapshots with Check Sheet and Task count/weight metrics and Punch counts.
 - Tenant-scoped project membership, server-side role permissions and append-only audit/evidence records.
 
@@ -43,7 +44,8 @@ The implemented certificate types are MC and RFC. RFSU is a separate readiness/a
 8. Alembic migrations are additive and must be exercised against supported SQLite/PostgreSQL paths before release.
 
 ## Known gaps / next increments
-- Project-configurable readiness policy: required Check Sheet templates/types, Punch category blocking per milestone, Hold/Witness rules, waivers and authorized signatories.
+- Reusable revision-controlled Check Sheet/Test Sheet template catalogue and controlled project instantiation.
+- Further readiness-policy extensions: configurable witness/review point rules, waiver/signatory authority matrix and procedure-revision linkage.
 - Reusable, revision-controlled Check Sheet/Test Sheet template catalogue and controlled project instantiation.
 - Full indexed dossier compilation, missing-evidence rules, revisioned PDF package and ZIP evidence export.
 - Durable private object storage adapter, access controls, retention, malware scanning and paired database/object backup-restore.
