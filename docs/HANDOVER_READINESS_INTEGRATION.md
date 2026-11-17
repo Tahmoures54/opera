@@ -20,7 +20,7 @@ Inside `transition_handover`, replace the existing sheet/punch checks for each g
 ```python
 from services.commissioning_handover_gates import (
     require_ready_for_mc,
-    require_ready_for_rfc,
+    require_ready_for_rfcc,
     require_ready_for_rfsu,
 )
 ```
@@ -42,7 +42,7 @@ if target == HandoverStatus.MC_CERTIFIED:
 ### 3. RFC_CERTIFIED branch
 
 ```python
-elif target == HandoverStatus.RF_CERTIFIED:
+elif target == HandoverStatus.RFC_CERTIFIED:
     if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.MC_CERTIFIED:
         abort(403)
     require_ready_for_rf(package.company_name, subsystem_id)
@@ -63,14 +63,14 @@ elif target == HandoverStatus.RFSU:
 ## Behaviour after the patch
 
 - Attempting MC while any Punch A/B is open, any Hold is unreleased, or any Pre-Comm A/B sheet is not SIGNED_OFF → HTTP 409 with a list of concrete blockers.
-- RF additionally requires all Comm-C and Functional-Test sheets to be signed-off.
+- RFC additionally requires all Comm-C and Functional-Test sheets to be signed-off.
 - RFSU additionally requires every task in the subsystem to be COMPLETED or CANCELLED.
 
 ## Verification
 
 1. Create a subsystem with one open Punch A → MC transition must fail with a clear message.
 2. Clear the punch and sign all Pre-Comm sheets → MC succeeds.
-3. Leave a Comm-C sheet unsigned → RF fails.
+3. Leave a Comm-C sheet unsigned → RFC fails.
 4. Complete remaining tasks → RFSU succeeds.
 
 ## Notes
