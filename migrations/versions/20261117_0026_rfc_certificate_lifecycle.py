@@ -13,6 +13,18 @@ depends_on = None
 
 
 def upgrade():
+    # RFC_CERTIFIED is longer than the legacy RF_CERTIFIED value. Widen the
+    # existing PostgreSQL/MySQL varchar before migrating stored state values.
+    bind = op.get_bind()
+    if bind.dialect.name != "sqlite":
+        op.alter_column(
+            "commissioning_handover_package",
+            "status",
+            existing_type=sa.String(length=12),
+            type_=sa.String(length=30),
+            existing_nullable=False,
+        )
+
     # Drop the old two-character check before updating RF -> RFC.
     with op.batch_alter_table("commissioning_certificate", recreate="always") as batch:
         batch.drop_constraint("ck_comm_certificate_type", type_="check")
@@ -59,6 +71,16 @@ def downgrade():
         "UPDATE commissioning_handover_package SET status = 'RF_PENDING' "
         "WHERE status = 'RFC_PENDING'"
     )
+
+    bind = op.get_bind()
+    if bind.dialect.name != "sqlite":
+        op.alter_column(
+            "commissioning_handover_package",
+            "status",
+            existing_type=sa.String(length=30),
+            type_=sa.String(length=12),
+            existing_nullable=False,
+        )
 
     with op.batch_alter_table("commissioning_certificate", recreate="always") as batch:
         batch.alter_column(
