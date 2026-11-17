@@ -7,7 +7,7 @@
 
 The original `transition_handover` contains long ad-hoc queries for punch clearance and sheet sign-off. Those checks are now centralized in the Readiness Engine so that:
 
-- MC / RF / RFSU rules stay consistent with progress reporting.
+- MC / RFC / RFSU rules stay consistent with progress reporting.
 - Error messages list every blocker instead of a single generic sentence.
 - Future project-specific rule overrides can live in one place.
 
@@ -20,7 +20,7 @@ Inside `transition_handover`, replace the existing sheet/punch checks for each g
 ```python
 from services.commissioning_handover_gates import (
     require_ready_for_mc,
-    require_ready_for_rf,
+    require_ready_for_rfc,
     require_ready_for_rfsu,
 )
 ```
@@ -39,15 +39,15 @@ if target == HandoverStatus.MC_CERTIFIED:
     # ... keep existing certificate_number / date / CommissioningCertificate creation ...
 ```
 
-### 3. RF_CERTIFIED branch
+### 3. RFC_CERTIFIED branch
 
 ```python
 elif target == HandoverStatus.RF_CERTIFIED:
     if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.MC_CERTIFIED:
         abort(403)
     require_ready_for_rf(package.company_name, subsystem_id)
-    package.status, package.rf_issued_by_id = target, current_user.id
-    # ... keep existing RF certificate issuance ...
+    package.status, package.rfc_issued_by_id = target, current_user.id
+    # ... keep existing RFC certificate issuance ...
 ```
 
 ### 4. RFSU branch
