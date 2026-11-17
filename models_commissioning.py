@@ -419,6 +419,8 @@ class CheckSheetItem(db.Model):
     __table_args__ = (
         UniqueConstraint("company_name", "check_sheet_id", "sequence", name="uq_comm_check_item_sequence"),
         CheckConstraint("sequence >= 1", name="ck_comm_check_item_sequence_positive"),
+        CheckConstraint("measurement_type IN ('QUALITATIVE','NUMERIC')", name="ck_comm_check_item_measurement_type"),
+        CheckConstraint("minimum_value IS NULL OR maximum_value IS NULL OR minimum_value <= maximum_value", name="ck_comm_check_item_measurement_range"),
         UniqueConstraint("id", "company_name", name="uq_comm_check_item_id_company"),
         ForeignKeyConstraint(["check_sheet_id", "company_name"], ["commissioning_check_sheet.id", "commissioning_check_sheet.company_name"], name="fk_comm_check_item_sheet_tenant"),
         Index("ix_comm_check_item_company_sheet", "company_name", "check_sheet_id"),
@@ -431,6 +433,10 @@ class CheckSheetItem(db.Model):
     expected_result = db.Column(db.Text)
     acceptance_criteria = db.Column(db.Text)
     unit = db.Column(db.String(40))
+    measurement_type = db.Column(db.String(20), nullable=False, default="QUALITATIVE")
+    minimum_value = db.Column(db.Numeric(20, 6))
+    maximum_value = db.Column(db.Numeric(20, 6))
+    measured_value = db.Column(db.Numeric(20, 6))
     mandatory = db.Column(db.Boolean, nullable=False, default=True)
     actual_result = db.Column(db.Text)
     result_status = db.Column(_enum(ItemResultStatus, "commissioning_item_result_status"), nullable=False, default=ItemResultStatus.PENDING)
