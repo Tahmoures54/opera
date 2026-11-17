@@ -104,6 +104,14 @@ def operations(project_id):
     members = CommissioningMembership.query.filter_by(company_name=project.company_name, project_id=project.id, is_active=True).all()
     punch_ids = [item.id for item in punches]
     package_ids = [item.id for item in packages]
+    certificates = CommissioningCertificate.query.filter(
+        CommissioningCertificate.company_name == project.company_name,
+        CommissioningCertificate.project_id == project.id,
+        CommissioningCertificate.package_id.in_(package_ids or [-1]),
+    ).order_by(CommissioningCertificate.issued_at).all()
+    certificates_by_package = {}
+    for certificate in certificates:
+        certificates_by_package.setdefault(certificate.package_id, {})[certificate.certificate_type] = certificate
     evidence = CommissioningAttachment.query.filter(
         CommissioningAttachment.company_name == project.company_name,
         CommissioningAttachment.entity_type.in_(["PunchItem", "HandoverPackage"]),
@@ -132,7 +140,8 @@ def operations(project_id):
     ) if total_sheet_weight else 0.0
     return render_template(
         "commissioning/operations.html", project=project, sheets=sheets,
-        punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots, members=members,
+        punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots,
+        certificates_by_package=certificates_by_package, members=members,
         users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}],
         systems=systems, subsystems=subsystems, system_by_id=system_by_id,
         subsystem_by_id=subsystem_by_id, roles=list(MembershipRole),
@@ -898,6 +907,31 @@ def transition_handover(package_id):
                     before={"status": old.value}, after={"status": target.value})
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=package.project_id))
+
+
+@commissioning_bp.get("/handover/<int:package_id>/certificates/<string:certificate_type>")
+@login_required
+def completion_certificate(package_id, certificate_type):
+    """Render the immutable issue-time MC/RF certificate for print or PDF export."""
+    package = HandoverPackage.query.filter_by(
+        id=package_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(package.project_id, "handover.view", "handover.manage",
+          "handover.accept", "project.manage")
+    certificate_type = certificate_type.upper()
+    if certificate_type not in ("MC", "RF"):
+        abort(404)
+    certificate = CommissioningCertificate.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        package_id=package.id, certificate_type=certificate_type,
+    ).first_or_404()
+    return render_template(
+        "commissioning/completion_certificate.html",
+        project=get_project(package.project_id), package=package,
+        certificate=certificate, snapshot=certificate.snapshot_json,
+    )
+
+
 
 
 
