@@ -8,7 +8,8 @@ from models_commissioning import (
     CommissioningMembership, MembershipRole, CheckSheet, CheckSheetItem,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, PunchItem,
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
-    CommissioningTaskType, CommissioningTaskStatus, CommissioningAuditLog,\n    CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
+    CommissioningTaskType, CommissioningTaskStatus, CommissioningAuditLog,
+    CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
 )
 
 
