@@ -99,7 +99,7 @@
                   <td>{{ inspection.corrective_action or '—' }}</td>
                   <td>{{ inspection.procedure_reference_snapshot }} Rev {{ inspection.procedure_revision_snapshot }} · {{ inspection.interval_days_snapshot }} days</td>
                   <td>
-                    {% for attachment in inspection.attachments if inspection.attachments is defined %}
+                    {% for attachment in attachments_by_inspection.get(inspection.id, []) %}
                     <a href="{{ url_for('commissioning.download_evidence', attachment_id=attachment.id) }}">{{ attachment.filename }}</a>
                     {% endfor %}
                     {% if can_execute %}
