@@ -685,7 +685,9 @@ def create_handover(project_id):
 
 def _completion_certificate_snapshot(package, certificate_type, certificate_number, certificate_date):
     """Capture issue-time evidence; later register changes never rewrite a certificate."""
-    project = get_project(package.project_id, package.company_name)
+    project = CommissioningProject.query.filter_by(
+        id=package.project_id, company_name=package.company_name,
+    ).first_or_404()
     subsystem = CommissioningSubsystem.query.join(
         CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
     ).filter(
@@ -828,8 +830,14 @@ def transition_handover(package_id):
     if target == HandoverStatus.MC_CERTIFIED:
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.DRAFT:
             abort(403)
-        sheets = CheckSheet.query.filter_by(company_name=package.company_name,
-            project_id=package.project_id, subsystem_id=subsystem_id).all()
+        all_sheets = CheckSheet.query.filter_by(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=subsystem_id,
+        ).order_by(CheckSheet.sheet_number, CheckSheet.revision.desc()).all()
+        superseded_sheet_ids = {
+            item.supersedes_id for item in all_sheets if item.supersedes_id is not None
+        }
+        sheets = [item for item in all_sheets if item.id not in superseded_sheet_ids]
         if not sheets or any(s.status != CheckSheetStatus.SIGNED_OFF for s in sheets):
             abort(409, description="All subsystem check sheets must be signed off before MC certification")
         open_critical = PunchItem.query.filter_by(company_name=package.company_name,
