@@ -1580,6 +1580,16 @@ def test_preservation_plan_inspection_cycle_and_immutable_history(client, app, o
         "corrective_action": "Reapply inhibitor according to OEM procedure",
     })
     assert non_compliant.status_code == 302
+    action_required_suspend = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/preservation-plans/{plan_id}/status",
+        data={"status": "SUSPENDED"},
+    )
+    assert action_required_suspend.status_code == 409
+    action_required_reactivate = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/preservation-plans/{plan_id}/status",
+        data={"status": "ACTIVE"},
+    )
+    assert action_required_reactivate.status_code == 409
 
     with app.app_context():
         plan = db.session.get(CommissioningPreservationPlan, plan_id)
