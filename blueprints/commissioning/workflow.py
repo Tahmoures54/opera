@@ -8,7 +8,7 @@ from extensions import db
 from models import User
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskDependency, CommissioningTaskType, CommissioningTaskStatus,
-    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, DocumentStatus,
+    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningPreservationInspection, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
@@ -1032,6 +1032,10 @@ _ATTACHMENT_PERMISSIONS = {
         "upload": ("documents.create", "documents.manage"),
         "view": ("documents.view", "documents.create", "documents.manage", "documents.review", "documents.approve"),
     },
+    "CommissioningPreservationInspection": {
+        "upload": ("preservation.execute", "preservation.manage"),
+        "view": ("preservation.view", "preservation.execute", "preservation.manage", "project.manage"),
+    },
 }
 
 
@@ -1053,6 +1057,11 @@ def _attachment_entity(entity_type, entity_id):
         return entity, entity.project_id
     if entity_type == "CommissioningDocument":
         entity = CommissioningDocument.query.filter_by(
+            id=entity_id, company_name=current_user.company_name
+        ).first_or_404()
+        return entity, entity.project_id
+    if entity_type == "CommissioningPreservationInspection":
+        entity = CommissioningPreservationInspection.query.filter_by(
             id=entity_id, company_name=current_user.company_name
         ).first_or_404()
         return entity, entity.project_id
@@ -1102,6 +1111,8 @@ def upload_evidence(entity_type, entity_id):
         return redirect(url_for("commissioning.checksheet_detail", sheet_id=entity_id))
     if entity_type == "CommissioningDocument":
         return redirect(url_for("commissioning.document_register", project_id=project_id))
+    if entity_type == "CommissioningPreservationInspection":
+        return redirect(url_for("commissioning.preservation_index", project_id=project_id))
     return redirect(url_for("commissioning.operations", project_id=project_id))
 
 
