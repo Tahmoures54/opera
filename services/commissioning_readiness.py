@@ -85,11 +85,17 @@ def _unsigned_required_sheets(company_name: str, subsystem_id: int, sheet_types:
 
 
 def _open_hold_points(company_name: str, subsystem_id: int):
+    """Return unreleased Hold points linked to check sheets in this subsystem."""
     return (
-        WitnessPoint.query.filter_by(company_name=company_name, subsystem_id=subsystem_id)
-        .filter(WitnessPoint.witness_type == WitnessType.HOLD)
-        .filter(WitnessPoint.status != WitnessStatus.RELEASED)
-        .filter(WitnessPoint.status != WitnessStatus.CANCELLED)
+        WitnessPoint.query.join(
+            CheckSheet, CheckSheet.id == WitnessPoint.check_sheet_id,
+        )
+        .filter(
+            WitnessPoint.company_name == company_name,
+            CheckSheet.subsystem_id == subsystem_id,
+            WitnessPoint.type == WitnessType.HOLD,
+            WitnessPoint.status.notin_([WitnessStatus.RELEASED, WitnessStatus.CANCELLED]),
+        )
         .all()
     )
 
