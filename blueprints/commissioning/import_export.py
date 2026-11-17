@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from hashlib import sha256
+import math
 from io import BytesIO
 from pathlib import Path
 import re
@@ -15,7 +16,7 @@ from flask import abort, flash, redirect, render_template, request, send_file, s
 from flask_login import current_user, login_required
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
 from models_commissioning import (
@@ -68,6 +69,8 @@ def _number(value, field, default=0.0, maximum=None):
     if value in (None, ""):
         return default
     number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{field} must be a finite number")
     if number < 0 or (maximum is not None and number > maximum):
         raise ValueError(f"{field} must be between 0 and {maximum}" if maximum is not None
                          else f"{field} cannot be negative")
@@ -116,7 +119,8 @@ def _new_workbook(project_code=None):
     metadata = workbook.create_sheet("_OPERA_META")
     metadata.append(["format", "OPERA_ENGINEERING_DATA_EXCHANGE"])
     metadata.append(["version", "1"])
-    metadata.append(["project_code", project_code or ""])
+    metadata.append(["project_code", ""])
+    _set_safe(metadata["B3"], project_code or "")
     metadata.sheet_state = "hidden"
     return workbook
 
@@ -592,7 +596,7 @@ def import_engineering_registers(project_id):
         abort(403)
     try:
         _import_workbook(project, planned)
-    except IntegrityError:
+    except SQLAlchemyError:
         db.session.rollback()
         errors.append({"sheet": "Database", "row": "—", "field": "integrity",
                        "message": "A database constraint rejected the import. No rows were committed; check duplicate or conflicting identifiers."})
