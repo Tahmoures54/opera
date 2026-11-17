@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Register - MaterialHub{% endblock %}
+{% block title %}Register - OPERA{% endblock %}
 {% block head %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for MaterialHub registration page */
+        /* Custom styles for OPERA registration page */
         .auth-container {
             @apply min-h-screen bg-gray-100 flex items-center justify-center p-4;
         }
@@ -65,7 +65,7 @@
 <div class="auth-container">
     <div class="auth-box">
         {% if registered %}
-            <h2 class="auth-title">Welcome to MaterialHub!</h2>
+            <h2 class="auth-title">Welcome to OPERA!</h2>
             <p class="auth-subtitle">Secure your account with two-factor authentication.</p>
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -108,8 +108,8 @@
             </form>
         {% else %}
             <div class="form-header">
-                <h2 class="auth-title">Create Your Account</h2>
-                <p class="auth-subtitle">Join MaterialHub to streamline material management.</p>
+                <h2 class="auth-title">Create your OPERA account</h2>
+                <p class="auth-subtitle">Join OPERA to streamline material management.</p>
             </div>
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -212,7 +212,7 @@
             </form>
         {% endif %}
         <div class="register-footer">
-            <p>© {{ current_year }} MaterialHub. All Rights Reserved.</p>
+            <p>© {{ current_year }} OPERA. All Rights Reserved.</p>
             <div class="footer-links">
                 <a href="{{ url_for('auth.privacy_policy') }}">Privacy Policy</a>
                 <a href="{{ url_for('auth.terms_of_service') }}">Terms of Service</a>
