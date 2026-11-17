@@ -5,6 +5,16 @@ import models_commissioning  # noqa: F401
 
 def test_only_opera_and_shared_identity_models_are_registered():
     retired_tables = {
+        "material_document",
+        "material_price_history",
+        "material_trace",
+        "schedule_risk",
+        "supplier_score",
+        "supplier_invoice",
+        "material_receipt",
+        "rfq",
+        "rfq_supplier",
+        "three_way_match",
         "project",
         "material_requisition",
         "material_master",
