@@ -122,8 +122,8 @@ def save_preservation_plan(project_id):
         interval_days = int(_required("interval_days", 5))
     except ValueError:
         abort(400, description="Interval must be a whole number of days.")
-    if not 1 <= interval_days <= 3650:
-        abort(400, description="Interval must be between 1 and 3650 days.")
+    if interval_days < 1:
+        abort(400, description="Interval must be a positive number of days.")
     next_due_date = _parse_date("next_due_date")
     assigned_to_id = request.form.get("assigned_to_id", type=int)
     if assigned_to_id is not None and not User.query.filter_by(
