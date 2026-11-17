@@ -83,6 +83,9 @@ def operations(project_id):
           "witness.view", "witness.manage", "handover.view", "handover.manage",
           "reports.view")
     project = get_project(project_id)
+    systems = CommissioningSystem.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).filter(CommissioningSystem.status != "ARCHIVED").order_by(CommissioningSystem.system_code).all()
     sheets = CheckSheet.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(CheckSheet.created_at.desc()).all()
     punches = PunchItem.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(PunchItem.raised_at.desc()).all()
     witnesses = WitnessPoint.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(WitnessPoint.scheduled_at.desc()).all()
@@ -106,6 +109,8 @@ def operations(project_id):
                 CommissioningSystem.project_id == project.id,
                 CommissioningSubsystem.status != "ARCHIVED")
         .order_by(CommissioningSubsystem.subsystem_code).all())
+    system_by_id = {item.id: item for item in systems}
+    subsystem_by_id = {item.id: item for item in subsystems}
     total = len(sheets)
     signed = sum(1 for item in sheets if item.status == CheckSheetStatus.SIGNED_OFF)
     punch_open = sum(1 for item in punches if item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED))
@@ -113,7 +118,9 @@ def operations(project_id):
     return render_template(
         "commissioning/operations.html", project=project, sheets=sheets,
         punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots, members=members,
-        users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}], subsystems=subsystems, roles=list(MembershipRole),
+        users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}],
+        systems=systems, subsystems=subsystems, system_by_id=system_by_id,
+        subsystem_by_id=subsystem_by_id, roles=list(MembershipRole),
         evidence_by_entity=evidence_by_entity,
         can_upload_punch_evidence=any(has_permission(project.id, p) for p in ("punch.raise", "punch.assign", "punch.verify")),
         can_upload_handover_evidence=any(has_permission(project.id, p) for p in ("handover.manage", "handover.accept")),
@@ -765,31 +772,119 @@ def download_evidence(attachment_id):
 @commissioning_bp.post("/projects/<int:project_id>/reports/snapshot")
 @login_required
 def create_progress_snapshot(project_id):
+    """Save project, system or subsystem progress using check-sheet and task weights."""
     _need(project_id, "project.manage")
     project = get_project(project_id)
     snapshot_date = _date("snapshot_date") or date.today()
-    sheets = CheckSheet.query.filter_by(company_name=project.company_name, project_id=project.id).all()
-    punches = PunchItem.query.filter_by(company_name=project.company_name, project_id=project.id).all()
-    signed = sum(1 for s in sheets if s.status == CheckSheetStatus.SIGNED_OFF)
-    completed_punches = sum(1 for p in punches if p.status in (PunchStatus.VERIFIED, PunchStatus.WAIVED))
-    total = len(sheets)
-    percent = round((signed / total) * 100, 2) if total else 0.0
-    weighted = round(sum(s.sheet_weight for s in sheets if s.status == CheckSheetStatus.SIGNED_OFF) /
-                     sum(s.sheet_weight for s in sheets) * 100, 2) if sheets and sum(s.sheet_weight for s in sheets) else 0.0
-    snapshot = ProgressSnapshot.query.filter_by(company_name=project.company_name,
-        project_id=project.id, system_id=None, subsystem_id=None, snapshot_date=snapshot_date).first()
+    scope = (request.form.get("scope") or "project").strip()
+    system_id = None
+    subsystem_id = None
+    subsystem_ids = None
+
+    if scope.startswith("system:"):
+        try:
+            system_id = int(scope.split(":", 1)[1])
+        except ValueError:
+            abort(400, description="Invalid system scope.")
+        system = CommissioningSystem.query.filter_by(
+            id=system_id, company_name=project.company_name, project_id=project.id,
+        ).first_or_404()
+        subsystem_ids = [
+            item.id for item in CommissioningSubsystem.query.filter_by(
+                company_name=project.company_name, system_id=system.id,
+            ).all()
+        ]
+    elif scope.startswith("subsystem:"):
+        try:
+            subsystem_id = int(scope.split(":", 1)[1])
+        except ValueError:
+            abort(400, description="Invalid subsystem scope.")
+        subsystem = CommissioningSubsystem.query.join(
+            CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
+        ).filter(
+            CommissioningSubsystem.id == subsystem_id,
+            CommissioningSubsystem.company_name == project.company_name,
+            CommissioningSystem.project_id == project.id,
+        ).first_or_404()
+        system_id = subsystem.system_id
+        subsystem_ids = [subsystem.id]
+    elif scope != "project":
+        abort(400, description="Unsupported progress scope.")
+
+    sheets_query = CheckSheet.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    )
+    punches_query = PunchItem.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    )
+    tasks_query = CommissioningTask.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    )
+    if subsystem_id is not None:
+        sheets_query = sheets_query.filter_by(subsystem_id=subsystem_id)
+        punches_query = punches_query.filter_by(subsystem_id=subsystem_id)
+        tasks_query = tasks_query.filter_by(subsystem_id=subsystem_id)
+    elif system_id is not None:
+        sheets_query = sheets_query.filter_by(system_id=system_id)
+        punches_query = punches_query.filter(PunchItem.subsystem_id.in_(subsystem_ids or [-1]))
+        tasks_query = tasks_query.filter_by(system_id=system_id)
+
+    sheets = sheets_query.all()
+    punches = punches_query.all()
+    tasks = tasks_query.filter(
+        CommissioningTask.status != CommissioningTaskStatus.CANCELLED,
+    ).all()
+    signed = sum(1 for sheet in sheets if sheet.status == CheckSheetStatus.SIGNED_OFF)
+    completed_punches = sum(
+        1 for punch in punches if punch.status in (PunchStatus.VERIFIED, PunchStatus.WAIVED)
+    )
+    total_sheets = len(sheets)
+    percent = round((signed / total_sheets) * 100, 2) if total_sheets else 0.0
+    total_sheet_weight = sum(sheet.sheet_weight for sheet in sheets)
+    weighted = round(
+        sum(sheet.sheet_weight for sheet in sheets if sheet.status == CheckSheetStatus.SIGNED_OFF)
+        / total_sheet_weight * 100, 2
+    ) if total_sheet_weight else 0.0
+
+    total_tasks = len(tasks)
+    completed_tasks = sum(1 for task in tasks if task.status == CommissioningTaskStatus.COMPLETED)
+    task_percent = round(completed_tasks / total_tasks * 100, 2) if total_tasks else 0.0
+    estimated_hours = sum(task.estimated_man_hours for task in tasks)
+    completed_hours = sum(
+        task.estimated_man_hours for task in tasks
+        if task.status == CommissioningTaskStatus.COMPLETED
+    )
+    task_weighted = round(completed_hours / estimated_hours * 100, 2) if estimated_hours > 0 else task_percent
+
+    snapshot = ProgressSnapshot.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+        system_id=system_id, subsystem_id=subsystem_id, snapshot_date=snapshot_date,
+    ).first()
     if snapshot is None:
-        snapshot = ProgressSnapshot(company_name=project.company_name, project_id=project.id,
-            snapshot_date=snapshot_date)
+        snapshot = ProgressSnapshot(
+            company_name=project.company_name, project_id=project.id,
+            system_id=system_id, subsystem_id=subsystem_id, snapshot_date=snapshot_date,
+        )
         db.session.add(snapshot)
     snapshot.percent_complete, snapshot.weighted_percent = percent, weighted
+    snapshot.checksheet_total, snapshot.checksheet_signed_off = total_sheets, signed
+    snapshot.punch_open_count = len(punches) - completed_punches
+    snapshot.punch_closed_count = completed_punches
+    snapshot.task_total, snapshot.task_completed = total_tasks, completed_tasks
+    snapshot.task_percent_complete, snapshot.task_weighted_percent = task_percent, task_weighted
+    snapshot.task_estimated_hours, snapshot.task_completed_hours = estimated_hours, completed_hours
     db.session.flush()
-    snapshot.punch_open_count, snapshot.punch_closed_count = len(punches)-completed_punches, completed_punches
-    snapshot.checksheet_total, snapshot.checksheet_signed_off = total, signed
-    add_audit_event(project.company_name, "ProgressSnapshot", snapshot.id or 0,
-                    "PROGRESS_SNAPSHOT_CREATED", after={"percent_complete": percent, "weighted_percent": weighted})
+    add_audit_event(
+        project.company_name, "ProgressSnapshot", snapshot.id or 0,
+        "PROGRESS_SNAPSHOT_CREATED",
+        after={
+            "scope": scope, "percent_complete": percent, "weighted_percent": weighted,
+            "task_percent_complete": task_percent, "task_weighted_percent": task_weighted,
+            "task_total": total_tasks, "task_completed": completed_tasks,
+        },
+    )
     db.session.commit()
-    flash("Progress report saved successfully.", "success")
+    flash("Scoped progress snapshot saved successfully.", "success")
     return redirect(url_for("commissioning.operations", project_id=project.id))
 
 
