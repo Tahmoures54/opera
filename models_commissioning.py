@@ -274,6 +274,38 @@ class CommissioningTask(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class CommissioningTaskDependency(db.Model):
+    """Finish-to-start predecessor link between tasks in the same project."""
+    __tablename__ = "commissioning_task_dependency"
+    __table_args__ = (
+        UniqueConstraint("company_name", "predecessor_task_id", "successor_task_id",
+                         name="uq_comm_task_dependency_pair"),
+        ForeignKeyConstraint(["project_id", "company_name"],
+                             ["commissioning_project.id", "commissioning_project.company_name"],
+                             name="fk_comm_task_dependency_project_tenant"),
+        ForeignKeyConstraint(["predecessor_task_id", "company_name"],
+                             ["commissioning_task.id", "commissioning_task.company_name"],
+                             name="fk_comm_task_dependency_predecessor_tenant"),
+        ForeignKeyConstraint(["successor_task_id", "company_name"],
+                             ["commissioning_task.id", "commissioning_task.company_name"],
+                             name="fk_comm_task_dependency_successor_tenant"),
+        CheckConstraint("predecessor_task_id != successor_task_id",
+                        name="ck_comm_task_dependency_not_self"),
+        CheckConstraint("lag_days >= 0", name="ck_comm_task_dependency_lag_nonnegative"),
+        Index("ix_comm_task_dependency_project_successor",
+              "company_name", "project_id", "successor_task_id"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
+    predecessor_task_id = db.Column(db.Integer, db.ForeignKey("commissioning_task.id", ondelete="RESTRICT"), nullable=False)
+    successor_task_id = db.Column(db.Integer, db.ForeignKey("commissioning_task.id", ondelete="RESTRICT"), nullable=False)
+    dependency_type = db.Column(db.String(20), nullable=False, default="FINISH_TO_START")
+    lag_days = db.Column(db.Integer, nullable=False, default=0)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
 class CheckSheet(db.Model):
     __tablename__ = "commissioning_check_sheet"
     __table_args__ = (
