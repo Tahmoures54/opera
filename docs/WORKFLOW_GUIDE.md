@@ -46,3 +46,21 @@ Existing snapshots are based on stored check-sheet and Punch data. The new Task 
 
 ## 8. Production evidence
 Use only actual project records. Do not use sample/demo records as evidence of completion. Every rejected, reopened, waived or approved action must retain its reason and audit history.
+
+
+## Commissioning task execution lifecycle
+
+The Task Register supports controlled execution-state changes for project managers and commissioning managers:
+
+- `NOT_STARTED → READY`
+- `READY → IN_PROGRESS`
+- `READY → BLOCKED`
+- `IN_PROGRESS → BLOCKED`
+- `IN_PROGRESS → COMPLETED`
+- `BLOCKED → IN_PROGRESS`
+- `NOT_STARTED / READY / IN_PROGRESS / BLOCKED → CANCELLED` (where explicitly permitted by the transition matrix)
+- `COMPLETED → IN_PROGRESS` for a controlled reopen.
+
+The application rejects transitions outside the matrix. A reason is mandatory when blocking or cancelling a task and when reopening a completed task. First entry into `IN_PROGRESS` records the actual start date; completion records the actual finish date. Reopening clears the prior actual finish date but preserves the first actual start date. Every accepted transition writes a tenant-scoped audit event with before/after state and reason in the same database transaction.
+
+This is an OPERA workflow design informed by commissioning execution needs; it is not a claim that every ICAPS release uses these exact status labels or transition rules. Project-specific procedures and the licensed ICAPS version remain authoritative.
