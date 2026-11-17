@@ -7,7 +7,7 @@ from sqlalchemy import or_
 from extensions import db
 from models import User
 from models_commissioning import (
-    CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus,
+    CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus,\n    CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
