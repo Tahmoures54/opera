@@ -61,7 +61,7 @@ def create_project():
         code = _text("project_code", 50, True)
         name = _text("name", 200, True)
         if CommissioningProject.query.filter_by(company_name=current_user.company_name, project_code=code).first():
-            flash("کد پروژه قبلاً ثبت شده است.", "warning")
+            flash("This project code is already in use.", "warning")
             return render_template("commissioning/project_form.html"), 409
         project = CommissioningProject(
             company_name=current_user.company_name,
@@ -87,7 +87,7 @@ def create_project():
         ))
         add_audit_event(current_user.company_name, "CommissioningProject", project.id, "PROJECT_CREATED", after={"project_code": code, "name": name})
         db.session.commit()
-        flash("پروژه OPERA ایجاد شد.", "success")
+        flash("OPERA project created successfully.", "success")
         return redirect(url_for("commissioning.project_detail", project_id=project.id))
     return render_template("commissioning/project_form.html")
 
@@ -121,7 +121,7 @@ def edit_project(project_id):
         project.description = _text("description", 5000)
         add_audit_event(project.company_name, "CommissioningProject", project.id, "PROJECT_UPDATED", before=before, after={"name": project.name, "client": project.client, "contractor": project.contractor})
         db.session.commit()
-        flash("اطلاعات پروژه به‌روزرسانی شد.", "success")
+        flash("Project details updated successfully.", "success")
         return redirect(url_for("commissioning.project_detail", project_id=project.id))
     return render_template("commissioning/project_form.html", project=project)
 
@@ -202,7 +202,7 @@ def create_system(project_id):
     if request.method == "POST":
         code = _text("system_code", 50, True)
         if CommissioningSystem.query.filter_by(company_name=project.company_name, project_id=project.id, system_code=code).first():
-            flash("کد سیستم تکراری است.", "warning")
+            flash("This system code is already in use.", "warning")
             return render_template("commissioning/structure_form.html", kind="system", project=project), 409
         try:
             weight = float(request.form.get("weight_percent") or 0)
@@ -266,7 +266,7 @@ def create_subsystem(system_id):
     if request.method == "POST":
         code = _text("subsystem_code", 50, True)
         if CommissioningSubsystem.query.filter_by(company_name=project.company_name, system_id=system.id, subsystem_code=code).first():
-            flash("کد زیرسیستم تکراری است.", "warning")
+            flash("This subsystem code is already in use.", "warning")
             return render_template("commissioning/structure_form.html", kind="subsystem", project=project), 409
         try:
             weight = float(request.form.get("weight_percent") or 0)
