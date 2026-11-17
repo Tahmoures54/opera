@@ -872,6 +872,50 @@ def transition_handover(package_id):
     elif target == HandoverStatus.RF_CERTIFIED:
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.MC_CERTIFIED:
             abort(403)
+        # RF certification requires all current Check Sheets, controlled documents
+        # and Hold points to be released for the target subsystem.
+        all_sheets = CheckSheet.query.filter_by(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=subsystem_id,
+        ).order_by(CheckSheet.sheet_number, CheckSheet.revision.desc()).all()
+        superseded_sheet_ids = {
+            item.supersedes_id for item in all_sheets if item.supersedes_id is not None
+        }
+        current_sheets = [item for item in all_sheets if item.id not in superseded_sheet_ids]
+        if not current_sheets or any(
+            item.status != CheckSheetStatus.SIGNED_OFF for item in current_sheets
+        ):
+            abort(409, description="All current subsystem Check Sheets must be signed off before RF certification")
+        open_critical = PunchItem.query.filter_by(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=subsystem_id,
+        ).filter(
+            PunchItem.category.in_([PunchCategory.A, PunchCategory.B]),
+            PunchItem.status.notin_([PunchStatus.VERIFIED, PunchStatus.WAIVED]),
+        ).count()
+        if open_critical:
+            abort(409, description="Category A/B punch items must be cleared before RF certification")
+        all_documents = CommissioningDocument.query.filter_by(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=subsystem_id,
+        ).order_by(CommissioningDocument.document_number,
+                   CommissioningDocument.revision_sequence.desc()).all()
+        latest_documents = {}
+        for document in all_documents:
+            latest_documents.setdefault(document.document_number, document)
+        if any(document.status != DocumentStatus.APPROVED for document in latest_documents.values()):
+            abort(409, description="All current subsystem engineering documents must be approved before RF certification")
+        pending_holds = WitnessPoint.query.join(
+            CheckSheet, CheckSheet.id == WitnessPoint.check_sheet_id,
+        ).filter(
+            WitnessPoint.company_name == package.company_name,
+            WitnessPoint.project_id == package.project_id,
+            CheckSheet.subsystem_id == subsystem_id,
+            WitnessPoint.type == WitnessType.HOLD,
+            WitnessPoint.status.notin_([WitnessStatus.RELEASED, WitnessStatus.CANCELLED]),
+        ).count()
+        if pending_holds:
+            abort(409, description="All subsystem Hold points must be released before RF certification")
         package.status, package.rf_issued_by_id = target, current_user.id
         package.rf_certificate_number = _required("certificate_number", 100)
         package.rf_certificate_date = _date("certificate_date") or date.today()
