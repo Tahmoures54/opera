@@ -18,7 +18,7 @@ The OPERA runtime exposes shared authentication, help, marketing, health and com
 
 ## Database safety
 
-The active ORM registry now contains only shared identity/recovery, public demo-inquiry and OPERA commissioning models. Historical Alembic revisions remain immutable. PR #15 adds revision `20261117_0019`, which checks all retired MaterialHub tables for rows and checks obsolete `user.project_id` / `user.store_name` values before dropping anything. It aborts on unexpected data. The migration has not been run against production; take and verify a PostgreSQL backup before deployment. See `docs/LEGACY_DATA_COMPATIBILITY.md`.
+The active ORM registry now contains shared identity/recovery, OPERA document numbering, public demo-inquiry and OPERA commissioning models. Historical Alembic revisions remain immutable. PR #15 adds revision `20261117_0019`, which checks all retired MaterialHub tables for rows and checks obsolete `user.project_id` / `user.store_name` values before dropping anything. It aborts on unexpected data. The migration has not been run against production; take and verify a PostgreSQL backup before deployment. See `docs/LEGACY_DATA_COMPATIBILITY.md`.
 
 ## Validation performed in this cleanup
 
