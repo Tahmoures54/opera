@@ -38,8 +38,15 @@ The existing A/B/C/D values are OPERA's current configuration. They must be alig
 ## 5. Witness / Hold / Review
 Witness points can be scheduled against check-sheet items, attended and released through the existing workflow. The complete project-specific hold-point blocking matrix and automatic escalation policy remain to be implemented/confirmed.
 
-## 6. MC / RF / RFSU handover
-The current handover package stores milestone references and acceptance information. Full certificate generation, dossier completeness rules and every contractual gate are not yet equivalent to a controlled client-approved completion procedure.
+## 6. MC / RFC / RFSU handover
+The user-facing milestone terminology is:
+
+1. **MC — Mechanical Completion:** mechanical completion and applicable pre-commissioning prerequisites.
+2. **RFC — Ready for Commissioning:** release to begin commissioning.
+3. **RFSU — Ready for Start-Up:** commissioning/start-up prerequisites accepted before start-up authorization.
+4. **Operations Acceptance:** formal Operations acceptance or rejection.
+
+**Current implementation mapping:** the certificate model currently permits `MC` and `RF` as internal certificate types. The internal `RF` value is the RFC (Ready for Commissioning) certificate; it is not a separate Ready-for-Start-Up certificate. The implemented handover sequence is DRAFT → MC_CERTIFIED → RF_CERTIFIED (user-facing RFC) → RFSU → ACCEPTED. A separate RF / Ready-for-Start-Up certificate type has not been implemented. Keep this distinction explicit in reports and training material. Contractual definitions, approved handover procedures and the project's authority matrix remain authoritative. The readiness gates in OPERA are a software baseline, not a substitute for client-approved completion dossiers or contractual acceptance.
 
 ## 7. Progress reporting
 Existing snapshots are based on stored check-sheet and Punch data. The new Task Register is not yet included in the official progress formula. Until the weighting method is approved and implemented, do not use task counts or task man-hours as a substitute for contractual progress.
