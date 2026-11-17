@@ -2211,7 +2211,7 @@ def test_numeric_checksheet_measurement_limits_and_audit(client, app, opera_setu
             entity_type="CheckSheetItem", entity_id=item_id,
             action="CHECKSHEET_ITEM_RESULT",
         ).order_by(CommissioningAuditLog.id.desc()).first()
-        assert audit.after_json["measured_value"] == "3.75"
+        assert audit.after_json["measured_value"] == "3.75000000"
         assert audit.after_json["measurement_type"] == "NUMERIC"
         assert audit.after_json["minimum_value"] == "2.50000000"
         assert audit.after_json["maximum_value"] == "5.00000000"
