@@ -18,8 +18,15 @@ Open project operations, create a Check Sheet and add inspection/test items with
 ## Raise and clear Punch items
 Record a concise defect description, correct subsystem/equipment, category, responsible person and target date. Add evidence and corrective action. A closure request is not the same as independent verification. Do not waive a Punch without an authorized decision and reason.
 
-## Handover
-Use handover packages to collect subsystem milestone and acceptance information. Do not declare a subsystem ready for Operations until all contractual certificates, documents, safety prerequisites and open-item rules have been checked by the authorized project team.
+## Readiness milestones and handover
+Use handover packages to collect subsystem milestone and acceptance information. The standard OPERA terminology shown in user-facing guidance is:
+
+1. **MC — Mechanical Completion:** completion of mechanical/construction scope and applicable pre-commissioning prerequisites.
+2. **RFC — Ready for Commissioning:** release of the subsystem to enter commissioning under the approved project procedure.
+3. **RFSU — Ready for Start-Up:** commissioning and start-up prerequisites have been accepted before the start-up authorization process.
+4. **Operations Acceptance:** formal acceptance or rejection of the handover package by the authorized Operations representative.
+
+**Current implementation note:** the existing certificate record uses the internal code `RF` for the Ready for Commissioning (RFC) certificate. It does not currently implement a separate RF / Ready-for-Start-Up certificate type. In the implemented transition flow, RFSU follows the RFC certificate. Do not infer an extra milestone from the legacy internal code. Contract definitions and approved project procedures take precedence.
 
 ## Data integrity
 Do not share accounts. Do not overwrite signed records. Report incorrect project mappings immediately. Do not upload personal or unrelated sensitive data as evidence.
