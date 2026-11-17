@@ -102,7 +102,9 @@ The readiness panel currently evaluates four configured indicators:
 
 Category C/D Punch items and incomplete commissioning tasks remain visible for review but are not currently hard blockers in this dossier score. A missing document register or empty Check Sheet register is shown as not ready, not treated as completed.
 
-The dossier is a readiness overview only. It is not a generated MC certificate, and this initial increment does not automatically change a Handover Package status. The project must approve its dossier index, required document types, Punch category rules, witness/hold rules and task completion criteria before these indicators can be treated as contractual acceptance gates.
+The readiness panel is an OPERA completeness assessment, not an MC certificate and does not automatically change a Handover Package status. A user with dossier-management permission can create a frozen revision. Submit it for independent review; a QC Inspector or Client Representative records approval or rejection. Approval requires all captured dossier readiness checks to pass and all referenced evidence files to remain checksum-valid. A separate Commissioning Manager issues the approved revision. Issued revisions are immutable and can be exported as a controlled PDF or evidence ZIP. A new revision is required for subsequent changes. The author cannot review their own revision, and neither the author nor approver can issue it.
+
+The project must approve its dossier index, required document types, Punch category rules, witness/hold rules and task completion criteria before these indicators can be treated as contractual acceptance gates. The controlled workflow is not a qualified electronic signature or automatic Operations acceptance.
 
 
 ## 11. Task dependencies and execution sequence

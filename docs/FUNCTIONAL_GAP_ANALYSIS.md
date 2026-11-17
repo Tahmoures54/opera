@@ -1,7 +1,7 @@
 # OPERA Functional Gap Analysis
 
-**Baseline:** main at merge commit c1945633f592db4823558921b0abd109a9abce58, 17 November 2026.  
-**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40 and #42. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. This is a code-level capability assessment, not production acceptance.
+**Baseline:** PR #43 head commit 3a200612f40844b91f63d8dfa136f9b8a99b2e1e, based on main commit d2734582146c5faed42043f426eeb94fede7dfea, 17 November 2026.  
+**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40 and #42. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. PR #43 CI run 44090572416 passed quality, PostgreSQL integration and Docker checks. This is a code-level capability assessment, not production acceptance.
 
 ## Status definitions
 - **Implemented baseline:** code, route/UI and automated workflow coverage exist for the stated bounded scope.
@@ -25,7 +25,7 @@
 | Operations Acceptance | Implemented baseline | Authorized accept/reject transition after RFSU with audit | Full custody-transfer package and project-specific acceptance checklist |
 | Document Register | Implemented bounded scope | Revision records, evidence upload metadata, review/approval/rejection and history | Transmittals, bulk exchange, external numbering and configurable review cycles |
 | Engineering Excel exchange | Implemented bounded scope | OPERA XLSX template/export, dry run, row validation, SHA-256 confirmation, create-only atomic import and audit | More registers, revision-delta workflows, controlled retire/modify actions |
-| Subsystem dossier | Partial | Evidence-based readiness view and project-configurable document index; point-in-time PDF export; ZIP with JSON manifest and linked current evidence; SHA-256 verification and fail-closed missing/mismatched evidence handling | Persisted dossier revision snapshots, controlled review/approval/rejection, formal issue/sign-off and contractual dossier status; current exports are explicitly uncontrolled working copies |
+| Subsystem dossier | Implemented bounded scope | Evidence-based readiness view and configurable document index; immutable numbered snapshots; DRAFT/IN_REVIEW/APPROVED/REJECTED/ISSUED workflow; separate author/reviewer/issuer controls; append-only review history; SHA-256 integrity checks; controlled issued PDF/ZIP exports; legacy working exports remain explicitly uncontrolled | Configurable dossier sections and authority matrix, Operations Acceptance linkage, qualified signatures and production evidence-retention/restore validation |
 | Progress reporting | Partial | Scoped snapshots, Check Sheet/Task count and weight metrics, Punch counts | Approved project/system roll-up, daily/weekly reports and contractual progress procedure |
 | Preservation | Partial | Project-scoped equipment plans, approved procedure/revision references, user-supplied interval/due date, append-only inspection history, compliant/non-compliant/not-applicable outcomes, corrective action, environmental conditions and evidence attachments | Plan revision editing, recurring calendar/reminders, preservation check-sheet templates, trend/compliance reports and durable production evidence storage |
 | Manpower / resource planning | Partial | Task estimated and spent man-hour fields | Timesheets/work logs, capacity, contractor allocation and approvals |
@@ -37,12 +37,12 @@
 1. **Evidence durability:** the S3-compatible storage adapter is merged, and serverless uploads fail closed when local storage is selected. Production evidence use still requires bucket configuration, migration/checksum verification of any existing files, provider access/retention controls and a successful backup/restore rehearsal.
 2. **Readiness policy:** current A/B Punch and Check Sheet defaults must be reviewed and approved against the project's completion procedure, ITPs, contract and authority matrix.
 3. **Electronic signatures:** authenticated acknowledgement is not a qualified cryptographic signature.
-4. **Dossier:** PDF/ZIP working exports and checksum-verified evidence packaging exist, but there is no persisted dossier revision, controlled review/approval, formal issue or contractual acceptance workflow. Downloads must not be treated as approved turnover dossiers.
+4. **Dossier:** controlled revision, review, approval and issue workflow is implemented in the pending branch. It is an OPERA record-control mechanism, not a qualified electronic signature or automatic contractual acceptance. Project-specific section/authority rules and staging acceptance remain required.
 5. **Preservation:** automated reminders, recurring schedules, plan revisions and advanced compliance reports are not implemented; evidence retention depends on completing production S3 configuration and backup controls.
 6. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
 ## Recommended implementation order
-1. Full dossier PDF/ZIP compilation, revision control and approval workflow.
+1. Validate the controlled dossier lifecycle in staging; extend project-configurable dossier sections and authority matrices.
 2. Durable evidence storage and security/retention/restore controls.
 3. Advanced Check Sheet measurement capture, configurable result vocabularies and generated blank/test form packs.
 4. Preservation reminders, plan revisions, templates and compliance reporting.

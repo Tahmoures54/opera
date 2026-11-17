@@ -130,6 +130,19 @@ class HandoverStatus(enum.Enum):
     REJECTED = "REJECTED"
 
 
+class DossierRevisionStatus(enum.Enum):
+    DRAFT = "DRAFT"
+    IN_REVIEW = "IN_REVIEW"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    ISSUED = "ISSUED"
+
+
+class DossierReviewDecision(enum.Enum):
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 class MembershipRole(enum.Enum):
     COMMISSIONING_MANAGER = "commissioning_manager"
     COMMISSIONING_ENGINEER = "commissioning_engineer"
@@ -696,6 +709,89 @@ class CommissioningDossierRequirement(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class CommissioningDossierRevision(db.Model):
+    """Immutable point-in-time subsystem dossier with controlled review and issue."""
+    __tablename__ = "commissioning_dossier_revision"
+    __table_args__ = (
+        UniqueConstraint("company_name", "project_id", "subsystem_id", "revision_number",
+                         name="uq_comm_dossier_revision_scope"),
+        UniqueConstraint("id", "company_name", name="uq_comm_dossier_revision_id_company"),
+        CheckConstraint("revision_number >= 1", name="ck_comm_dossier_revision_positive"),
+        CheckConstraint(
+            "status IN ('DRAFT','IN_REVIEW','APPROVED','REJECTED','ISSUED')",
+            name="ck_comm_dossier_revision_status",
+        ),
+        CheckConstraint("length(snapshot_sha256) = 64", name="ck_comm_dossier_snapshot_sha256"),
+        ForeignKeyConstraint(
+            ["project_id", "company_name"],
+            ["commissioning_project.id", "commissioning_project.company_name"],
+            name="fk_comm_dossier_revision_project_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["subsystem_id", "company_name"],
+            ["commissioning_subsystem.id", "commissioning_subsystem.company_name"],
+            name="fk_comm_dossier_revision_subsystem_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["supersedes_id", "company_name"],
+            ["commissioning_dossier_revision.id", "commissioning_dossier_revision.company_name"],
+            name="fk_comm_dossier_revision_supersedes_tenant",
+        ),
+        Index(
+            "ix_comm_dossier_revision_scope_status",
+            "company_name", "project_id", "subsystem_id", "status", "revision_number",
+        ),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, nullable=False)
+    subsystem_id = db.Column(db.Integer, nullable=False)
+    revision_number = db.Column(db.Integer, nullable=False)
+    supersedes_id = db.Column(db.Integer)
+    title = db.Column(db.String(200), nullable=False, default="Subsystem Completion Dossier")
+    status = db.Column(
+        _enum(DossierRevisionStatus, "commissioning_dossier_revision_status", length=20),
+        nullable=False, default=DossierRevisionStatus.DRAFT,
+    )
+    snapshot_json = db.Column(db.JSON, nullable=False)
+    snapshot_sha256 = db.Column(db.String(64), nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    submitted_at = db.Column(db.DateTime)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    approved_at = db.Column(db.DateTime)
+    issued_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    issued_at = db.Column(db.DateTime)
+    rejection_reason = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CommissioningDossierReview(db.Model):
+    """Append-only review decision for one immutable dossier revision."""
+    __tablename__ = "commissioning_dossier_review"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["dossier_revision_id", "company_name"],
+            ["commissioning_dossier_revision.id", "commissioning_dossier_revision.company_name"],
+            name="fk_comm_dossier_review_revision_tenant",
+        ),
+        CheckConstraint("decision IN ('APPROVED','REJECTED')",
+                        name="ck_comm_dossier_review_decision"),
+        Index("ix_comm_dossier_review_revision_date",
+              "company_name", "dossier_revision_id", "decided_at"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    dossier_revision_id = db.Column(db.Integer, nullable=False)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    decision = db.Column(
+        _enum(DossierReviewDecision, "commissioning_dossier_review_decision", length=20),
+        nullable=False,
+    )
+    comments = db.Column(db.Text)
+    decided_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
 class CommissioningPreservationPlan(db.Model):
     """Equipment preservation schedule based only on approved project/OEM instructions."""
     __tablename__ = "commissioning_preservation_plan"
@@ -1003,8 +1099,66 @@ def _protect_approved_checksheet_templates(session, flush_context, instances):
 
 
 @event.listens_for(Session, "before_flush")
+def _protect_issued_dossier_revisions(session, flush_context, instances):
+    """Freeze dossier snapshots and enforce the controlled revision state machine."""
+    pending = set(session.new).union(session.dirty).union(session.deleted)
+    revisions = [obj for obj in pending if isinstance(obj, CommissioningDossierRevision)]
+    existing_ids = [obj.id for obj in revisions if obj not in session.new and obj.id is not None]
+    persisted = {}
+    if existing_ids:
+        persisted = dict(
+            session.execute(
+                select(CommissioningDossierRevision.id, CommissioningDossierRevision.status)
+                .where(CommissioningDossierRevision.id.in_(existing_ids))
+            ).all()
+        )
+    transitions = {
+        DossierRevisionStatus.DRAFT: {
+            DossierRevisionStatus.IN_REVIEW: {"status", "submitted_at", "updated_at"},
+        },
+        DossierRevisionStatus.REJECTED: {
+            DossierRevisionStatus.IN_REVIEW: {"status", "submitted_at", "rejection_reason", "updated_at"},
+        },
+        DossierRevisionStatus.IN_REVIEW: {
+            DossierRevisionStatus.APPROVED: {"status", "approved_by_id", "approved_at", "updated_at"},
+            DossierRevisionStatus.REJECTED: {"status", "rejection_reason", "updated_at"},
+        },
+        DossierRevisionStatus.APPROVED: {
+            DossierRevisionStatus.ISSUED: {"status", "issued_by_id", "issued_at", "updated_at"},
+        },
+        DossierRevisionStatus.ISSUED: {},
+    }
+    immutable_fields = {
+        "company_name", "project_id", "subsystem_id", "revision_number",
+        "supersedes_id", "title", "snapshot_json", "snapshot_sha256",
+        "created_by_id", "created_at",
+    }
+    for revision in revisions:
+        if revision in session.new:
+            if revision.status != DossierRevisionStatus.DRAFT:
+                raise ValueError("New dossier revisions must start as DRAFT.")
+            continue
+        if revision in session.deleted:
+            raise ValueError("Dossier revisions are retained for audit and cannot be deleted.")
+        previous_status = persisted.get(revision.id)
+        changed = {
+            attribute.key for attribute in sa_inspect(revision).attrs
+            if attribute.history.has_changes()
+        }
+        if changed.intersection(immutable_fields):
+            raise ValueError("Dossier snapshot and revision identity are immutable.")
+        if not changed:
+            continue
+        if "status" not in changed:
+            raise ValueError("Dossier revisions may only change through a controlled state transition.")
+        allowed = transitions.get(previous_status, {}).get(revision.status)
+        if allowed is None or not changed.issubset(allowed):
+            raise ValueError("Invalid dossier revision state transition or metadata mutation.")
+
+
+@event.listens_for(Session, "before_flush")
 def _protect_commissioning_evidence(session, flush_context, instances):
     """Keep audit events, signatures, and Punch history append-only."""
-    protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision, CommissioningAttachment, CommissioningDocumentReview, CommissioningCertificate, CommissioningPreservationInspection)
+    protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision, CommissioningAttachment, CommissioningDocumentReview, CommissioningDossierReview, CommissioningCertificate, CommissioningPreservationInspection)
     if any(isinstance(obj, protected) for obj in set(session.dirty).union(session.deleted)):
         raise ValueError("Commissioning audit evidence is append-only.")

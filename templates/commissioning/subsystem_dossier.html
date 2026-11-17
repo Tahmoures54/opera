@@ -33,6 +33,72 @@
     </div>
   </section>
 
+  <section class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <strong>Controlled dossier revisions</strong>
+      {% if can_manage_dossiers %}
+      <form method="post" action="{{ url_for('commissioning.create_dossier_revision', project_id=project.id, subsystem_id=subsystem.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-primary">Create frozen revision</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <p class="small text-muted">A revision freezes the current register and evidence metadata. Review, approval and issue are separate audited steps. Only issued revisions can be exported as controlled dossiers.</p>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Revision</th><th>Status</th><th>Created</th><th>Snapshot SHA-256</th><th>Actions / review history</th></tr></thead>
+          <tbody>
+          {% for revision in dossier_revisions %}
+            <tr>
+              <td><strong>R{{ revision.revision_number }}</strong></td>
+              <td><span class="badge {% if revision.status.value == 'ISSUED' %}bg-success{% elif revision.status.value == 'REJECTED' %}bg-danger{% elif revision.status.value == 'APPROVED' %}bg-primary{% else %}bg-warning text-dark{% endif %}">{{ revision.status.value|replace('_',' ')|title }}</span></td>
+              <td>{{ revision.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td><code>{{ revision.snapshot_sha256[:16] }}…</code></td>
+              <td>
+                <div class="d-flex flex-wrap gap-2">
+                  {% if can_manage_dossiers and revision.status.value in ['DRAFT','REJECTED'] %}
+                  <form method="post" action="{{ url_for('commissioning.submit_dossier_revision', dossier_id=revision.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-primary">Submit for review</button>
+                  </form>
+                  {% endif %}
+                  {% if can_review_dossiers and revision.status.value == 'IN_REVIEW' %}
+                  <form method="post" action="{{ url_for('commissioning.decide_dossier_revision', dossier_id=revision.id) }}" class="d-flex flex-wrap gap-1">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select class="form-select form-select-sm" name="decision" required>
+                      <option value="APPROVE">Approve</option><option value="REJECT">Reject</option>
+                    </select>
+                    <input class="form-control form-control-sm" name="comments" maxlength="3000" placeholder="Review comments / rejection reason">
+                    <button class="btn btn-sm btn-outline-primary">Record decision</button>
+                  </form>
+                  {% endif %}
+                  {% if can_issue_dossiers and revision.status.value == 'APPROVED' %}
+                  <form method="post" action="{{ url_for('commissioning.issue_dossier_revision', dossier_id=revision.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-success">Issue approved revision</button>
+                  </form>
+                  {% endif %}
+                  {% if revision.status.value == 'ISSUED' %}
+                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.issued_dossier_pdf_export', dossier_id=revision.id) }}">Issued PDF</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('commissioning.issued_dossier_zip_export', dossier_id=revision.id) }}">Evidence ZIP</a>
+                  {% endif %}
+                </div>
+                {% for review in dossier_reviews_by_revision.get(revision.id, []) %}
+                  <div class="small text-muted mt-2">{{ review.decision.value }} · {{ review.decided_at.strftime('%Y-%m-%d %H:%M') }}{% if review.comments %} · {{ review.comments }}{% endif %}</div>
+                {% endfor %}
+                {% if revision.rejection_reason %}<div class="small text-danger mt-1">Latest rejection: {{ revision.rejection_reason }}</div>{% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted text-center">No controlled dossier revisions created.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   {% if document_requirement_results %}
   <section class="card shadow-sm mb-4">
     <div class="card-header fw-semibold">Mandatory document index</div>

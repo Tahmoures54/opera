@@ -10,6 +10,8 @@ OPERA reuses the existing organization/company account boundary. Do not change a
 - Client Representative: client-side review/sign-off.
 - Operations Lead: handover acceptance.
 - Viewer: read-only project access.
+- Dossier management and issue: Commissioning Manager.
+- Dossier review: QC Inspector and Client Representative; the dossier author cannot review their own revision.
 
 Review the server-side permission map in services/commissioning_access.py before changing role behavior. Only project managers with `project.manage` can update the project Readiness policy.
 
@@ -58,7 +60,7 @@ Before switching an existing installation to S3, copy existing evidence objects 
 
 The subsystem dossier page provides a printable PDF and a ZIP package containing a JSON manifest and linked evidence. The ZIP export verifies every evidence object's SHA-256 checksum and refuses to produce a package if an object is missing or mismatched. The default maximum declared evidence size is 100 MiB; configure OPERA_DOSSIER_EXPORT_MAX_BYTES to change the limit.
 
-These are point-in-time working exports only. Do not use them as issued or approved contractual dossiers. A controlled dossier revision register, reviewer/approver workflow and formal issue record are not yet implemented.
+Current-state PDF/ZIP downloads remain uncontrolled working exports. The separate controlled dossier register supports frozen revisions, independent review, approval, separate issue authorization, append-only review decisions and SHA-256-verified issued exports. Only ISSUED revisions can be downloaded through the controlled PDF/ZIP routes. Configure project authority and validate the workflow in staging before contractual use.
 
 
 ## Check Sheet template governance

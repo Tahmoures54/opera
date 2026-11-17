@@ -44,7 +44,18 @@ Open the subsystem's Completion Dossier page to review its current engineering d
 - Export ZIP + Evidence includes the PDF, a JSON manifest and the evidence files currently linked to the dossier records. Each included file is verified against its stored SHA-256 checksum.
 - The ZIP export is rejected if a registered evidence file is missing or its checksum does not match.
 
-Important: these downloads are labelled UNCONTROLLED_WORKING_EXPORT. They are not issued MC/RFC certificates, approved turnover dossiers or proof of contractual acceptance. Dossier revision numbering, review/approval and controlled issue remain separate work.
+Important: these current-state downloads are labelled UNCONTROLLED_WORKING_EXPORT. They are not issued MC/RFC certificates or approved turnover dossiers.
+
+### Controlled dossier revision workflow
+
+1. From the subsystem dossier page, a user with dossier-management permission creates a frozen revision. OPERA records its revision number, point-in-time register snapshot and SHA-256 digest.
+2. Submit the revision for review. The author cannot review their own dossier.
+3. A QC Inspector or Client Representative with dossier-review permission records an approval or a reasoned rejection. Approval is blocked unless the captured dossier completeness checks pass and every referenced evidence file is available and checksum-valid.
+4. A separate authorized Commissioning Manager issues the approved revision. The author and approver cannot issue that same revision.
+5. Issued revisions are immutable. Download the issued PDF or evidence ZIP from the revision register. The ZIP contains the frozen manifest and checksum-verified evidence files.
+6. After an issued or rejected revision, create a new revision for subsequent changes. Prior revisions and review decisions remain available.
+
+The controlled dossier workflow is an OPERA record-control mechanism. It is not a qualified electronic signature or automatic contractual acceptance; project procedures and Operations acceptance remain authoritative.
 
 
 ## Reusable Check Sheet and Test Sheet templates

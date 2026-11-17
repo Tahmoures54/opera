@@ -328,6 +328,21 @@ def render_subsystem_dossier_pdf(snapshot: dict) -> bytes:
         Paragraph(f"<b>Generated:</b> {_pdf_text(snapshot['generated_at'])}", styles["BodyText"]),
         Spacer(1, 4 * mm),
     ]
+    dossier_control = snapshot.get("dossier_control")
+    if dossier_control:
+        story.extend([
+            Paragraph(
+                f"<b>Controlled revision:</b> R{_pdf_text(dossier_control.get('revision_number'))}"
+                f" &nbsp;&nbsp; <b>Status:</b> {_pdf_text(dossier_control.get('status'))}",
+                styles["BodyText"],
+            ),
+            Paragraph(
+                f"<b>Issued at:</b> {_pdf_text(dossier_control.get('issued_at'))}"
+                f" &nbsp;&nbsp; <b>Snapshot SHA-256:</b> {_pdf_text(dossier_control.get('snapshot_sha256'))}",
+                styles["BodyText"],
+            ),
+            Spacer(1, 3 * mm),
+        ])
 
     def add_table(title, headers, rows):
         story.append(Paragraph(title, styles["Heading2"]))
