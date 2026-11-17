@@ -30,3 +30,7 @@ Use handover packages to collect subsystem milestone and acceptance information.
 
 ## Data integrity
 Do not share accounts. Do not overwrite signed records. Report incorrect project mappings immediately. Do not upload personal or unrelated sensitive data as evidence.
+
+
+## Equipment Preservation
+The Preservation page lists equipment-specific preservation plans, their approved procedure references, due dates and inspection history. Only project-approved procedures/OEM instructions may determine preservation activities and intervals. A non-compliant inspection requires corrective action and keeps the plan in ACTION_REQUIRED until a compliant follow-up inspection is recorded. See [PRESERVATION_GUIDE.md](PRESERVATION_GUIDE.md).
