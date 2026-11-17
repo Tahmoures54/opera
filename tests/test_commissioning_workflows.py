@@ -987,15 +987,38 @@ def test_mc_rf_certificates_capture_immutable_issue_time_evidence(client, app, o
             company_name="Contractor A", project_id=opera_setup["project"],
             system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
             sheet_number="CERT-CS-001", sheet_type=CheckSheetType.PRE_COMM_A,
-            title="Subsystem completion check", status=CheckSheetStatus.SIGNED_OFF,
-            signed_by_client_id=opera_setup["client"],
-            signed_by_contractor_id=opera_setup["manager"],
-            signed_at=datetime.utcnow(), created_by_id=opera_setup["manager"],
+            title="Subsystem completion check", created_by_id=opera_setup["manager"],
         )
         db.session.add_all([package, sheet])
+        db.session.flush()
+        item = CheckSheetItem(
+            company_name="Contractor A", check_sheet_id=sheet.id, sequence=1,
+            description="Verify subsystem completion", expected_result="Complete",
+        )
+        db.session.add(item)
         db.session.commit()
-        package_id = package.id
-        sheet_id = sheet.id
+        package_id, sheet_id, item_id = package.id, sheet.id, item.id
+
+    _login_id(client, opera_setup["manager"])
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/issue").status_code == 302
+    assert client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"actual_result": "Complete", "result_status": ItemResultStatus.OK.value},
+    ).status_code == 302
+    _login_id(client, opera_setup["qc"])
+    assert client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/verify",
+    ).status_code == 302
+    _login_id(client, opera_setup["manager"])
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/sign").status_code == 302
+    _login_id(client, opera_setup["client"])
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/sign").status_code == 302
+
+    with app.app_context():
+        signed_sheet = db.session.get(CheckSheet, sheet_id)
+        assert signed_sheet.status == CheckSheetStatus.SIGNED_OFF
+        assert signed_sheet.signed_by_client_id == opera_setup["client"]
+        assert signed_sheet.signed_by_contractor_id == opera_setup["manager"]
 
     _login_id(client, opera_setup["manager"])
     transition_url = f"/commissioning/handover/{package_id}/transition"
@@ -1062,4 +1085,3 @@ def test_mc_rf_certificates_capture_immutable_issue_time_evidence(client, app, o
         with pytest.raises(ValueError, match="append-only"):
             db.session.commit()
         db.session.rollback()
-
