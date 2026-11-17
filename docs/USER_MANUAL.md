@@ -34,3 +34,14 @@ Do not share accounts. Do not overwrite signed records. Report incorrect project
 
 ## Equipment Preservation
 The Preservation page lists equipment-specific preservation plans, their approved procedure references, due dates and inspection history. Only project-approved procedures/OEM instructions may determine preservation activities and intervals. A non-compliant inspection requires corrective action and keeps the plan in ACTION_REQUIRED until a compliant follow-up inspection is recorded. See [PRESERVATION_GUIDE.md](PRESERVATION_GUIDE.md).
+
+
+## Subsystem dossier exports
+
+Open the subsystem's Completion Dossier page to review its current engineering documents, Check Sheets, Punch List, commissioning tasks, Preservation records and readiness checks.
+
+- Export PDF produces a printable point-in-time register and readiness summary.
+- Export ZIP + Evidence includes the PDF, a JSON manifest and the evidence files currently linked to the dossier records. Each included file is verified against its stored SHA-256 checksum.
+- The ZIP export is rejected if a registered evidence file is missing or its checksum does not match.
+
+Important: these downloads are labelled UNCONTROLLED_WORKING_EXPORT. They are not issued MC/RFC certificates, approved turnover dossiers or proof of contractual acceptance. Dossier revision numbering, review/approval and controlled issue remain separate work.

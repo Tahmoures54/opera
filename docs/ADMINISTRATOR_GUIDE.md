@@ -52,3 +52,10 @@ OPERA supports a private S3-compatible object-storage backend for commissioning 
 Keep the bucket private, enable provider-side versioning/retention as required, and configure independent backups. Never expose bucket credentials to browser code. Local storage remains available for persistent development installations; uploads are rejected with HTTP 503 when local storage is selected in a serverless runtime.
 
 Before switching an existing installation to S3, copy existing evidence objects to the bucket, preserve each database row's \`storage_key\`, and verify the stored SHA-256 checksums after migration.
+
+
+## Subsystem dossier export controls
+
+The subsystem dossier page provides a printable PDF and a ZIP package containing a JSON manifest and linked evidence. The ZIP export verifies every evidence object's SHA-256 checksum and refuses to produce a package if an object is missing or mismatched. The default maximum declared evidence size is 100 MiB; configure OPERA_DOSSIER_EXPORT_MAX_BYTES to change the limit.
+
+These are point-in-time working exports only. Do not use them as issued or approved contractual dossiers. A controlled dossier revision register, reviewer/approver workflow and formal issue record are not yet implemented.

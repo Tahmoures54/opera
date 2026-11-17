@@ -20,6 +20,7 @@ from services.commissioning_access import (
     add_audit_event, get_project, has_permission,
 )
 from services.commissioning_storage import (store_commissioning_upload, read_commissioning_upload, delete_commissioning_upload)
+from services.commissioning_dossier_export import (build_subsystem_dossier_snapshot, render_subsystem_dossier_pdf, render_subsystem_dossier_zip)
 from services.commissioning_number_service import (
     next_checksheet_number, next_punch_number,
 )
@@ -2039,3 +2040,41 @@ def remove_task_dependency(project_id, task_id, dependency_id):
     flash("Task dependency removed.", "success")
     return redirect(url_for("commissioning.task_register", project_id=project.id))
 
+
+
+@commissioning_bp.get("/projects/<int:project_id>/subsystems/<int:subsystem_id>/dossier/export.pdf")
+@login_required
+def subsystem_dossier_pdf_export(project_id, subsystem_id):
+    """Download a point-in-time, explicitly uncontrolled subsystem dossier PDF."""
+    _need(project_id, "structure.view", "handover.view", "handover.manage",
+          "handover.accept", "reports.view", "project.manage")
+    snapshot, _attachments = build_subsystem_dossier_snapshot(
+        current_user.company_name, project_id, subsystem_id,
+    )
+    payload = render_subsystem_dossier_pdf(snapshot)
+    response = send_file(
+        BytesIO(payload), mimetype="application/pdf", as_attachment=True,
+        download_name="OPERA-subsystem-dossier.pdf", max_age=0,
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@commissioning_bp.get("/projects/<int:project_id>/subsystems/<int:subsystem_id>/dossier/export.zip")
+@login_required
+def subsystem_dossier_zip_export(project_id, subsystem_id):
+    """Download a PDF, JSON manifest and checksum-verified evidence bundle."""
+    _need(project_id, "structure.view", "handover.view", "handover.manage",
+          "handover.accept", "reports.view", "project.manage")
+    snapshot, attachments = build_subsystem_dossier_snapshot(
+        current_user.company_name, project_id, subsystem_id,
+    )
+    payload = render_subsystem_dossier_zip(snapshot, attachments)
+    response = send_file(
+        BytesIO(payload), mimetype="application/zip", as_attachment=True,
+        download_name="OPERA-subsystem-dossier-evidence.zip", max_age=0,
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
