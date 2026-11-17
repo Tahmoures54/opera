@@ -13,7 +13,10 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="OPERA{% block twitter_title %}{% endblock %}">
   <meta name="twitter:description" content="{% block twitter_description %}Commissioning and start-up control for industrial and EPC projects.{% endblock %}">
-  <title>OPERA{% block title %}{% endblock %}</title>
+  {% set _raw_page_title %}{% block title %}Commissioning & Start-up{% endblock %}{% endset %}
+  {% set _page_title = _raw_page_title|striptags|trim %}
+  {% set _page_title = _page_title|replace(' — OPERA ', ' — ')|replace('— OPERA ', '— ')|replace('| OPERA ', ' — ')|replace('OPERA - ', '')|replace('OPERA — ', '')|replace(' - OPERA', '')|replace(' — OPERA', '')|replace('| ', '')|replace(' - ', ' — ')|replace('— ', '')|trim(' —-|') %}
+  <title>OPERA — {{ _page_title or 'Commissioning & Start-up' }}</title>
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -281,6 +284,7 @@
     [data-theme="dark"] .mh-public-nav a { color: #94A3B8; }
     [data-theme="dark"] .mh-public-nav a:hover { background: #1E293B; color: #F1F5F9; }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/opera-ui.css') }}">
   <!-- Vercel Web Analytics -->
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
   <script>
@@ -298,7 +302,7 @@
 
   <header class="mh-topbar">
     {% if current_user.is_authenticated %}
-      <button class="mh-menu" type="button" onclick="document.body.classList.toggle('mh-sidebar-open')" aria-label="Toggle navigation">
+      <button class="mh-menu" type="button" onclick="const isOpen = document.body.classList.toggle('mh-sidebar-open'); this.setAttribute('aria-expanded', String(isOpen));" aria-label="Toggle navigation" aria-expanded="false">
         <i class="fas fa-bars"></i>
       </button>
     {% endif %}
@@ -313,7 +317,7 @@
     </a>
 
     {% if not current_user.is_authenticated %}
-      <nav class="mh-public-nav">
+      <nav class="mh-public-nav" aria-label="Main navigation">
         <a href="{{ url_for('product_overview') }}">Product</a>
         <a href="{{ url_for('help.getting_started') }}">Guide</a>
         
@@ -334,21 +338,15 @@
 
   <div class="mh-body">
     {% if current_user.is_authenticated %}
-      <div class="mh-sidebar-backdrop" onclick="document.body.classList.remove('mh-sidebar-open')"></div>
+      <button class="mh-sidebar-backdrop" type="button" aria-label="Close navigation" onclick="document.body.classList.remove('mh-sidebar-open'); const menu = document.querySelector('.mh-menu'); if (menu) menu.setAttribute('aria-expanded', 'false');"></button>
       <div class="mh-layout">
         <aside class="mh-sidebar">
           <div class="mh-nav-label">OPERA</div>
-          <nav class="mh-nav">
+          <nav class="mh-nav" aria-label="Workspace navigation">
             <a href="{{ url_for('commissioning.dashboard') }}"><i class="fas fa-industry"></i> Commissioning Projects</a>
           </nav>
           <div class="mh-nav-label">Account</div>
-          <nav class="mh-nav">
-            <a href="{{ url_for('help.help') }}"><i class="fas fa-question-circle"></i> Help Center</a>
-            <a href="{{ url_for('auth.change_password') }}"><i class="fas fa-key"></i> Change Password</a>
-            <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Sign out</a>
-          </nav>
-          <div class="mh-nav-label">Support</div>
-          <nav class="mh-nav">
+          <nav class="mh-nav" aria-label="Account navigation">
             <a href="{{ url_for('help.help') }}"><i class="fas fa-question-circle"></i> Help Center</a>
             <a href="{{ url_for('auth.change_password') }}"><i class="fas fa-key"></i> Change Password</a>
             <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Sign out</a>
@@ -444,6 +442,15 @@
   document.addEventListener('click', function (e) {
     if (e.target.closest('.mh-sidebar a') && window.innerWidth < 951) {
       document.body.classList.remove('mh-sidebar-open');
+      var menu = document.querySelector('.mh-menu');
+      if (menu) menu.setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+      document.body.classList.remove('mh-sidebar-open');
+      var menu = document.querySelector('.mh-menu');
+      if (menu) menu.setAttribute('aria-expanded', 'false');
     }
   });
 </script>

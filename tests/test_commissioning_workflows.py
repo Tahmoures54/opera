@@ -85,11 +85,11 @@ def test_operations_dashboard_is_available_to_project_member(client, opera_setup
     response = client.get(f"/commissioning/projects/{opera_setup['project']}/operations")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert "عملیات کمیسیونینگ" in html
+    assert "Commissioning operations" in html
     title = html.split("<title>", 1)[1].split("</title>", 1)[0]
-    assert "OPERA - عملیات پروژه" in title
-    assert "مدارک Punch" not in title
-    assert "مدارک Punch و بسته‌های تحویل" in html
+    assert "OPERA — Project operations" in title
+    assert "Evidence for Punch" not in title
+    assert "Evidence for Punch and handover packages" in html
 
 
 def test_membership_cannot_cross_company_boundary(client, opera_setup):

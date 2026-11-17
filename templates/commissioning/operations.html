@@ -1,115 +1,115 @@
 {% extends 'base.html' %}
-{% block title %} | OPERA - عملیات پروژه{% endblock %}
+{% block title %} | OPERA - Project operations{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4" dir="rtl">
+<div class="container-fluid py-4">
   <div class="d-flex justify-content-between flex-wrap gap-2 mb-4">
-    <div><a href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">بازگشت به ساختار پروژه</a><h1 class="h3 mt-2">{{ project.name }} — عملیات کمیسیونینگ</h1><div class="text-muted">{{ project.project_code }}</div></div>
-    <div class="d-flex gap-2 align-items-start"><span class="badge bg-primary">پیشرفت چک‌شیت: {{ progress }}%</span><span class="badge bg-secondary">Punch باز: {{ punch_open }}</span></div>
+    <div><a href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">Back to project structure</a><h1 class="h3 mt-2">{{ project.name }} — Commissioning operations</h1><div class="text-muted">{{ project.project_code }}</div></div>
+    <div class="d-flex gap-2 align-items-start"><span class="badge bg-primary">Check sheet progress: {{ progress }}%</span><span class="badge bg-secondary">Punch Open: {{ punch_open }}</span></div>
   </div>
   <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">چک‌شیت امضاشده</div><div class="display-6">{{ signed }}/{{ total }}</div></div></div></div>
-    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Punch باز</div><div class="display-6">{{ punch_open }}</div></div></div></div>
-    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">نقاط بازرسی</div><div class="display-6">{{ witnesses|length }}</div></div></div></div>
-    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">بسته‌های تحویل</div><div class="display-6">{{ packages|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Signed check sheets</div><div class="display-6">{{ signed }}/{{ total }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Punch Open</div><div class="display-6">{{ punch_open }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Inspection points</div><div class="display-6">{{ witnesses|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Handover packages</div><div class="display-6">{{ packages|length }}</div></div></div></div>
   </div>
   <div class="row g-4">
     <div class="col-xl-6">
-      <section class="card mb-4"><div class="card-header fw-bold">اعضای پروژه و نقش‌ها</div><div class="card-body">
+      <section class="card mb-4"><div class="card-header fw-bold">Project members & roles</div><div class="card-body">
         <form method="post" action="{{ url_for('commissioning.add_member', project_id=project.id) }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="col-md-6"><select class="form-select" name="user_id" required><option value="">انتخاب کاربر سازمان</option>{% for user in users %}<option value="{{ user.id }}">{{ user.full_name }} — {{ user.company_email }}</option>{% endfor %}</select></div>
-          <div class="col-md-4"><select class="form-select" name="role" required>{% for role in roles %}<option value="{{ role.value }}">{{ role.value }}</option>{% endfor %}</select></div>
-          <div class="col-md-2"><button class="btn btn-primary w-100">تخصیص</button></div>
+          <div class="col-md-6"><select class="form-select" name="user_id" required><option value="">Select an organization user</option>{% for user in users %}<option value="{{ user.id }}">{{ user.full_name }} — {{ user.company_email }}</option>{% endfor %}</select></div>
+          <div class="col-md-4"><select class="form-select" name="role" required>{% for role in roles %}<option value="{{ role.value|replace('_', ' ')|title }}">{{ role.value|replace('_', ' ')|title }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><button class="btn btn-primary w-100">Assign</button></div>
         </form>
-        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>کاربر</th><th>نقش</th><th></th></tr></thead><tbody>{% for member in members %}<tr><td>{{ member.user_id }}</td><td>{{ member.role.value }}</td><td><form method="post" action="{{ url_for('commissioning.deactivate_member', project_id=project.id, membership_id=member.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">حذف دسترسی</button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted">عضوی تخصیص نیافته است.</td></tr>{% endfor %}</tbody></table></div>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>User</th><th>Role</th><th></th></tr></thead><tbody>{% for member in members %}<tr><td>{{ member.user_id }}</td><td>{{ member.role.value|replace('_', ' ')|title }}</td><td><form method="post" action="{{ url_for('commissioning.deactivate_member', project_id=project.id, membership_id=member.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">Remove access</button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted">No members assigned yet.</td></tr>{% endfor %}</tbody></table></div>
       </div></section>
-      <section class="card mb-4"><div class="card-header fw-bold">ایجاد Check Sheet</div><div class="card-body">
+      <section class="card mb-4"><div class="card-header fw-bold">Create Check Sheet</div><div class="card-body">
         <form method="post" action="{{ url_for('commissioning.create_checksheet', project_id=project.id) }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="col-md-6"><input class="form-control" name="title" placeholder="عنوان چک‌شیت" required maxlength="200"></div>
+          <div class="col-md-6"><input class="form-control" name="title" placeholder="Check sheet title" required maxlength="200"></div>
           <div class="col-md-3"><select class="form-select" name="sheet_type">{% for item in sheet_types %}<option value="{{ item.value }}">{{ item.value }}</option>{% endfor %}</select></div>
-          <div class="col-md-3"><select class="form-select" name="subsystem_id" required><option value="">زیرسیستم</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
-          <div class="col-12"><button class="btn btn-primary">ایجاد چک‌شیت</button></div>
+          <div class="col-md-3"><select class="form-select" name="subsystem_id" required><option value="">Subsystem</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
+          <div class="col-12"><button class="btn btn-primary">Create check sheet</button></div>
         </form>
-        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>شماره</th><th>عنوان</th><th>Rev</th><th>وضعیت</th><th></th></tr></thead><tbody>{% for sheet in sheets %}<tr><td>{{ sheet.sheet_number }}</td><td>{{ sheet.title }}</td><td>{{ sheet.revision }}</td><td>{{ sheet.status.value }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.checksheet_detail', sheet_id=sheet.id) }}">جزئیات</a></td></tr>{% else %}<tr><td colspan="5" class="text-muted">چک‌شیتی ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Number</th><th>Title</th><th>Rev</th><th>Status</th><th></th></tr></thead><tbody>{% for sheet in sheets %}<tr><td>{{ sheet.sheet_number }}</td><td>{{ sheet.title }}</td><td>{{ sheet.revision }}</td><td>{{ sheet.status.value|replace('_', ' ')|title }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.checksheet_detail', sheet_id=sheet.id) }}">Details</a></td></tr>{% else %}<tr><td colspan="5" class="text-muted">No check sheets created yet.</td></tr>{% endfor %}</tbody></table></div>
       </div></section>
-      <section class="card mb-4"><div class="card-header fw-bold">ثبت Punch List</div><div class="card-body">
+      <section class="card mb-4"><div class="card-header fw-bold">Create Punch List</div><div class="card-body">
         <form method="post" action="{{ url_for('commissioning.create_punch', project_id=project.id) }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="col-md-4"><select class="form-select" name="subsystem_id" required><option value="">زیرسیستم</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }}</option>{% endfor %}</select></div>
+          <div class="col-md-4"><select class="form-select" name="subsystem_id" required><option value="">Subsystem</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }}</option>{% endfor %}</select></div>
           <div class="col-md-3"><select class="form-select" name="category">{% for item in punch_categories %}<option value="{{ item.value }}">Category {{ item.value }}</option>{% endfor %}</select></div>
           <div class="col-md-3"><select class="form-select" name="severity">{% for item in punch_severities %}<option value="{{ item.value }}">{{ item.value }}</option>{% endfor %}</select></div>
           <div class="col-md-2"><input class="form-control" type="date" name="target_closure_date"></div>
-          <div class="col-12"><textarea class="form-control" name="description" placeholder="شرح مغایرت یا نقص" required></textarea></div>
-          <div class="col-12"><button class="btn btn-outline-primary">ثبت Punch</button></div>
+          <div class="col-12"><textarea class="form-control" name="description" placeholder="Describe the deficiency or discrepancy" required></textarea></div>
+          <div class="col-12"><button class="btn btn-outline-primary">Create Punch</button></div>
         </form>
-        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>شماره</th><th>دسته</th><th>شرح</th><th>وضعیت</th><th>تغییر وضعیت</th></tr></thead><tbody>{% for punch in punches %}<tr><td>{{ punch.punch_number }}</td><td>{{ punch.category.value }}</td><td>{{ punch.description }}</td><td>{{ punch.status.value }}</td><td><form method="post" action="{{ url_for('commissioning.assign_punch', punch_id=punch.id) }}" class="d-flex gap-1 mb-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select class="form-select form-select-sm" name="assigned_to_id"><option value="">بدون مسئول</option>{% for user in project_users %}<option value="{{ user.id }}" {% if punch.assigned_to_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>{% endfor %}</select><input class="form-control form-control-sm" type="date" name="target_closure_date" value="{{ punch.target_closure_date.isoformat() if punch.target_closure_date else '' }}"><button class="btn btn-sm btn-outline-secondary">تخصیص</button></form><form method="post" action="{{ url_for('commissioning.transition_punch', punch_id=punch.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select class="form-select form-select-sm" name="status"><option value="IN_PROGRESS">در حال انجام</option><option value="CLOSED">بسته‌شده</option><option value="VERIFIED">تأیید</option><option value="WAIVED">معاف</option></select><input class="form-control form-control-sm" name="reason" placeholder="علت معافیت"><button class="btn btn-sm btn-primary">ثبت</button></form></td></tr>{% else %}<tr><td colspan="5" class="text-muted">Punch ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Number</th><th>Category</th><th>Description</th><th>Status</th><th>Update status</th></tr></thead><tbody>{% for punch in punches %}<tr><td>{{ punch.punch_number }}</td><td>{{ punch.category.value }}</td><td>{{ punch.description }}</td><td>{{ punch.status.value|replace('_', ' ')|title }}</td><td><form method="post" action="{{ url_for('commissioning.assign_punch', punch_id=punch.id) }}" class="d-flex gap-1 mb-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select class="form-select form-select-sm" name="assigned_to_id"><option value="">Unassigned</option>{% for user in project_users %}<option value="{{ user.id }}" {% if punch.assigned_to_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>{% endfor %}</select><input class="form-control form-control-sm" type="date" name="target_closure_date" value="{{ punch.target_closure_date.isoformat() if punch.target_closure_date else '' }}"><button class="btn btn-sm btn-outline-secondary">Assign</button></form><form method="post" action="{{ url_for('commissioning.transition_punch', punch_id=punch.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select class="form-select form-select-sm" name="status"><option value="IN_PROGRESS">In progress</option><option value="CLOSED">Closed</option><option value="VERIFIED">Verified</option><option value="WAIVED">Waived</option></select><input class="form-control form-control-sm" name="reason" placeholder="Waiver reason"><button class="btn btn-sm btn-primary">Save</button></form></td></tr>{% else %}<tr><td colspan="5" class="text-muted">Punch No records yet.</td></tr>{% endfor %}</tbody></table></div>
       </div></section>
     </div>
     <div class="col-xl-6">
       <section class="card mb-4"><div class="card-header fw-bold">Witness / Hold Point</div><div class="card-body">
         <form method="post" action="{{ url_for('commissioning.create_witness', project_id=project.id) }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="col-md-5"><select class="form-select" name="check_sheet_id" required><option value="">چک‌شیت</option>{% for sheet in sheets %}<option value="{{ sheet.id }}">{{ sheet.sheet_number }}</option>{% endfor %}</select></div>
-          <div class="col-md-3"><select class="form-select" name="check_sheet_item_id"><option value="">کل چک‌شیت</option>{% for item in witness_items %}<option value="{{ item.id }}">#{{ item.sequence }} — {{ item.description|truncate(50) }}</option>{% endfor %}</select></div>
+          <div class="col-md-5"><select class="form-select" name="check_sheet_id" required><option value="">Check sheet</option>{% for sheet in sheets %}<option value="{{ sheet.id }}">{{ sheet.sheet_number }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><select class="form-select" name="check_sheet_item_id"><option value="">Entire check sheet</option>{% for item in witness_items %}<option value="{{ item.id }}">#{{ item.sequence }} — {{ item.description|truncate(50) }}</option>{% endfor %}</select></div>
           <div class="col-md-3"><select class="form-select" name="type">{% for item in witness_types %}<option value="{{ item.value }}">{{ item.value }}</option>{% endfor %}</select></div>
-          <div class="col-md-4"><input class="form-control" name="notified_party" placeholder="طرف مطلع‌شونده"></div>
+          <div class="col-md-4"><input class="form-control" name="notified_party" placeholder="Notified party"></div>
           <div class="col-md-6"><input class="form-control" type="datetime-local" name="scheduled_at" required></div>
-          <div class="col-md-6"><button class="btn btn-outline-primary">برنامه‌ریزی نقطه بازرسی</button></div>
+          <div class="col-md-6"><button class="btn btn-outline-primary">Schedule inspection point</button></div>
         </form>
-        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>چک‌شیت</th><th>نوع</th><th>زمان</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody>{% for witness in witnesses %}<tr><td>{{ witness.check_sheet_id }}</td><td>{{ witness.type.value }}</td><td>{{ witness.scheduled_at }}</td><td>{{ witness.status.value }}</td><td><form method="post" action="{{ url_for('commissioning.transition_witness', witness_id=witness.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if witness.status.value == 'PLANNED' %}<input type="hidden" name="status" value="NOTIFIED"><button class="btn btn-sm btn-outline-primary">ثبت اطلاع‌رسانی</button>{% elif witness.status.value == 'NOTIFIED' %}<input type="hidden" name="status" value="ATTENDED"><input class="form-control form-control-sm" name="result" placeholder="نتیجه" required><button class="btn btn-sm btn-primary">ثبت حضور</button>{% elif witness.status.value == 'ATTENDED' %}<input type="hidden" name="status" value="RELEASED"><button class="btn btn-sm btn-success">آزادسازی</button>{% endif %}</form></td></tr>{% else %}<tr><td colspan="5" class="text-muted">نقطه بازرسی ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Check sheet</th><th>Type</th><th>Scheduled time</th><th>Status</th><th>Action</th></tr></thead><tbody>{% for witness in witnesses %}<tr><td>{{ witness.check_sheet_id }}</td><td>{{ witness.type.value|replace('_', ' ')|title }}</td><td>{{ witness.scheduled_at }}</td><td>{{ witness.status.value|replace('_', ' ')|title }}</td><td><form method="post" action="{{ url_for('commissioning.transition_witness', witness_id=witness.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if witness.status.value == 'PLANNED' %}<input type="hidden" name="status" value="NOTIFIED"><button class="btn btn-sm btn-outline-primary">Mark as notified</button>{% elif witness.status.value == 'NOTIFIED' %}<input type="hidden" name="status" value="ATTENDED"><input class="form-control form-control-sm" name="result" placeholder="Result" required><button class="btn btn-sm btn-primary">Record attendance</button>{% elif witness.status.value == 'ATTENDED' %}<input type="hidden" name="status" value="RELEASED"><button class="btn btn-sm btn-success">Release point</button>{% endif %}</form></td></tr>{% else %}<tr><td colspan="5" class="text-muted">No inspection points scheduled.</td></tr>{% endfor %}</tbody></table></div>
       </div></section>
       <section class="card mb-4"><div class="card-header fw-bold">Mechanical Completion / Handover</div><div class="card-body">
         <form method="post" action="{{ url_for('commissioning.create_handover', project_id=project.id) }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="col-md-5"><input class="form-control" name="package_number" placeholder="شماره بسته تحویل" required></div>
-          <div class="col-md-5"><select class="form-select" name="subsystem_id" required><option value="">زیرسیستم</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
-          <div class="col-md-2"><button class="btn btn-primary">ایجاد</button></div>
+          <div class="col-md-5"><input class="form-control" name="package_number" placeholder="Handover package number" required></div>
+          <div class="col-md-5"><select class="form-select" name="subsystem_id" required><option value="">Subsystem</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><button class="btn btn-primary">Create</button></div>
         </form>
-        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>بسته</th><th>وضعیت</th><th>گام بعدی</th></tr></thead><tbody>{% for package in packages %}<tr><td>{{ package.package_number }}</td><td>{{ package.status.value }}</td><td><form method="post" action="{{ url_for('commissioning.transition_handover', package_id=package.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if package.status.value == 'DRAFT' %}<input type="hidden" name="status" value="MC_CERTIFIED">{% elif package.status.value == 'MC_CERTIFIED' %}<input type="hidden" name="status" value="RF_CERTIFIED">{% elif package.status.value == 'RF_CERTIFIED' %}<input type="hidden" name="status" value="RFSU">{% elif package.status.value == 'RFSU' %}<input type="hidden" name="status" value="ACCEPTED">{% endif %}{% if package.status.value in ['DRAFT','MC_CERTIFIED'] %}<input class="form-control form-control-sm" name="certificate_number" placeholder="شماره گواهی" required>{% endif %}{% if package.status.value in ['DRAFT','MC_CERTIFIED','RF_CERTIFIED','RFSU'] %}<button class="btn btn-sm btn-outline-primary">اجرای مرحله</button>{% endif %}</form>{% if package.status.value in ['MC_CERTIFIED','RF_CERTIFIED','RFSU'] %}<form method="post" action="{{ url_for('commissioning.transition_handover', package_id=package.id) }}" class="d-flex gap-1 mt-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="REJECTED"><input class="form-control form-control-sm" name="reason" placeholder="دلیل رد بسته" required><button class="btn btn-sm btn-outline-danger">رد</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="3" class="text-muted">بسته تحویلی ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Package</th><th>Status</th><th>Next step</th></tr></thead><tbody>{% for package in packages %}<tr><td>{{ package.package_number }}</td><td>{{ package.status.value|replace('_', ' ')|title }}</td><td><form method="post" action="{{ url_for('commissioning.transition_handover', package_id=package.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if package.status.value == 'DRAFT' %}<input type="hidden" name="status" value="MC_CERTIFIED">{% elif package.status.value == 'MC_CERTIFIED' %}<input type="hidden" name="status" value="RF_CERTIFIED">{% elif package.status.value == 'RF_CERTIFIED' %}<input type="hidden" name="status" value="RFSU">{% elif package.status.value == 'RFSU' %}<input type="hidden" name="status" value="ACCEPTED">{% endif %}{% if package.status.value in ['DRAFT','MC_CERTIFIED'] %}<input class="form-control form-control-sm" name="certificate_number" placeholder="Certificate number" required>{% endif %}{% if package.status.value in ['DRAFT','MC_CERTIFIED','RF_CERTIFIED','RFSU'] %}<button class="btn btn-sm btn-outline-primary">Advance stage</button>{% endif %}</form>{% if package.status.value in ['MC_CERTIFIED','RF_CERTIFIED','RFSU'] %}<form method="post" action="{{ url_for('commissioning.transition_handover', package_id=package.id) }}" class="d-flex gap-1 mt-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="REJECTED"><input class="form-control form-control-sm" name="reason" placeholder="Reason for rejection" required><button class="btn btn-sm btn-outline-danger">Reject</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="3" class="text-muted">No handover packages created yet.</td></tr>{% endfor %}</tbody></table></div>
       </div></section>
-      <section class="card"><div class="card-header fw-bold">گزارش پیشرفت</div><div class="card-body"><p>پیشرفت وزنی فعلی بر اساس چک‌شیت‌های امضاشده: {{ progress }}%</p><form method="post" action="{{ url_for('commissioning.create_progress_snapshot', project_id=project.id) }}" class="d-flex gap-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input class="form-control" type="date" name="snapshot_date"><button class="btn btn-outline-primary">ثبت Snapshot</button></form>
-        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>تاریخ</th><th>پیشرفت</th><th>وزنی</th><th>چک‌شیت امضا</th><th>Punch باز/بسته</th></tr></thead><tbody>{% for snapshot in snapshots %}<tr><td>{{ snapshot.snapshot_date }}</td><td>{{ snapshot.percent_complete }}%</td><td>{{ snapshot.weighted_percent }}%</td><td>{{ snapshot.checksheet_signed_off }}/{{ snapshot.checksheet_total }}</td><td>{{ snapshot.punch_open_count }}/{{ snapshot.punch_closed_count }}</td></tr>{% else %}<tr><td colspan="5" class="text-muted">هنوز Snapshot ذخیره نشده است.</td></tr>{% endfor %}</tbody></table></div>
+      <section class="card"><div class="card-header fw-bold">Progress report</div><div class="card-body"><p>Current weighted progress based on signed check sheets: {{ progress }}%</p><form method="post" action="{{ url_for('commissioning.create_progress_snapshot', project_id=project.id) }}" class="d-flex gap-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input class="form-control" type="date" name="snapshot_date"><button class="btn btn-outline-primary">Create Snapshot</button></form>
+        <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Date</th><th>Progress</th><th>Weighted</th><th>Signed check sheets</th><th>Punch Open / Closed</th></tr></thead><tbody>{% for snapshot in snapshots %}<tr><td>{{ snapshot.snapshot_date }}</td><td>{{ snapshot.percent_complete }}%</td><td>{{ snapshot.weighted_percent }}%</td><td>{{ snapshot.checksheet_signed_off }}/{{ snapshot.checksheet_total }}</td><td>{{ snapshot.punch_open_count }}/{{ snapshot.punch_closed_count }}</td></tr>{% else %}<tr><td colspan="5" class="text-muted">No Snapshot saved yet.</td></tr>{% endfor %}</tbody></table></div>
       </div></section>
     </div>
   </div>
 </div>
 <section class="card card-body mt-4">
-  <h2 class="h6">مدارک Punch و بسته‌های تحویل</h2>
-  <p class="text-muted small">فرمت‌های مجاز: PDF، PNG، JPG، TXT و CSV؛ حداکثر اندازه مطابق تنظیمات سرور.</p>
+  <h2 class="h6">Evidence for Punch and handover packages</h2>
+  <p class="text-muted small">Allowed formats: PDF, PNG, JPG, TXT and CSV; maximum size is controlled by server settings.</p>
   <div class="row g-3">
     <div class="col-lg-6">
-      <h3 class="h6">پیوست Punch List</h3>
+      <h3 class="h6">Attachment for Punch List</h3>
       {% for punch in punches %}
       <div class="border rounded p-2 mb-2">
         <div class="fw-semibold">{{ punch.punch_number }} — {{ punch.description|truncate(80) }}</div>
         {% if can_upload_punch_evidence and punch.status.value not in ['VERIFIED','WAIVED'] %}<form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='PunchItem', entity_id=punch.id) }}" class="d-flex gap-2 mt-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input class="form-control form-control-sm" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv" required>
-          <button class="btn btn-sm btn-outline-primary">بارگذاری</button>
+          <button class="btn btn-sm btn-outline-primary">Upload</button>
         </form>{% endif %}
         {% for attachment in evidence_by_entity.get(('PunchItem', punch.id), []) %}
         <div class="small"><a href="{{ url_for('commissioning.download_evidence', attachment_id=attachment.id) }}">{{ attachment.filename }}</a></div>
         {% endfor %}
       </div>
-      {% else %}<p class="text-muted small">Punch ثبت نشده است.</p>{% endfor %}
+      {% else %}<p class="text-muted small">Punch No records yet.</p>{% endfor %}
     </div>
     <div class="col-lg-6">
-      <h3 class="h6">پیوست بسته تحویل</h3>
+      <h3 class="h6">Handover package attachment</h3>
       {% for package in packages %}
       <div class="border rounded p-2 mb-2">
         <div class="fw-semibold">{{ package.package_number }}</div>
         {% if can_upload_handover_evidence and package.status.value != 'ACCEPTED' %}<form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='HandoverPackage', entity_id=package.id) }}" class="d-flex gap-2 mt-2">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input class="form-control form-control-sm" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv" required>
-          <button class="btn btn-sm btn-outline-primary">بارگذاری</button>
+          <button class="btn btn-sm btn-outline-primary">Upload</button>
         </form>{% endif %}
         {% for attachment in evidence_by_entity.get(('HandoverPackage', package.id), []) %}
         <div class="small"><a href="{{ url_for('commissioning.download_evidence', attachment_id=attachment.id) }}">{{ attachment.filename }}</a></div>
         {% endfor %}
       </div>
-      {% else %}<p class="text-muted small">بسته تحویلی ثبت نشده است.</p>{% endfor %}
+      {% else %}<p class="text-muted small">No handover packages created yet.</p>{% endfor %}
     </div>
   </div>
 </section>
