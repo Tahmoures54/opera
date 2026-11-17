@@ -118,8 +118,9 @@ jobs:
             pg_dump -h 127.0.0.1 -U opera -d opera --format=custom -f /backup/opera-ci.dump
             createdb -h 127.0.0.1 -U opera opera_restore_test
             pg_restore -h 127.0.0.1 -U opera -d opera_restore_test --no-owner --no-privileges /backup/opera-ci.dump
+            source_revision="$(psql -h 127.0.0.1 -U opera -d opera -Atc "SELECT version_num FROM alembic_version")"
             restored_revision="$(psql -h 127.0.0.1 -U opera -d opera_restore_test -Atc "SELECT version_num FROM alembic_version")"
-            test "$restored_revision" = "20261117_0023"
+            test "$restored_revision" = "$source_revision"
             psql -h 127.0.0.1 -U opera -d opera_restore_test -Atc "SELECT count(*) FROM account_recovery_token" | grep -q "^0$"
             echo "PostgreSQL dump/restore round trip passed."
           '

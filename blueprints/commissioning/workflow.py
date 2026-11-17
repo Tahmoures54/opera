@@ -12,7 +12,7 @@ from models_commissioning import (
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
-    WitnessPoint, WitnessType, WitnessStatus, HandoverPackage, HandoverStatus,
+    WitnessPoint, WitnessType, WitnessStatus, HandoverPackage, HandoverStatus, CommissioningCertificate,
     ProgressSnapshot, CommissioningSignature, CommissioningAttachment,
 )
 from services.commissioning_access import (
@@ -104,6 +104,14 @@ def operations(project_id):
     members = CommissioningMembership.query.filter_by(company_name=project.company_name, project_id=project.id, is_active=True).all()
     punch_ids = [item.id for item in punches]
     package_ids = [item.id for item in packages]
+    certificates = CommissioningCertificate.query.filter(
+        CommissioningCertificate.company_name == project.company_name,
+        CommissioningCertificate.project_id == project.id,
+        CommissioningCertificate.package_id.in_(package_ids or [-1]),
+    ).order_by(CommissioningCertificate.issued_at).all()
+    certificates_by_package = {}
+    for certificate in certificates:
+        certificates_by_package.setdefault(certificate.package_id, {})[certificate.certificate_type] = certificate
     evidence = CommissioningAttachment.query.filter(
         CommissioningAttachment.company_name == project.company_name,
         CommissioningAttachment.entity_type.in_(["PunchItem", "HandoverPackage"]),
@@ -132,7 +140,8 @@ def operations(project_id):
     ) if total_sheet_weight else 0.0
     return render_template(
         "commissioning/operations.html", project=project, sheets=sheets,
-        punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots, members=members,
+        punches=punches, witnesses=witnesses, packages=packages, snapshots=snapshots,
+        certificates_by_package=certificates_by_package, members=members,
         users=users, project_users=[user for user in users if user.id in {member.user_id for member in members}],
         systems=systems, subsystems=subsystems, system_by_id=system_by_id,
         subsystem_by_id=subsystem_by_id, roles=list(MembershipRole),
@@ -674,6 +683,142 @@ def create_handover(project_id):
     return redirect(url_for("commissioning.operations", project_id=project.id))
 
 
+def _completion_certificate_snapshot(package, certificate_type, certificate_number, certificate_date):
+    """Capture issue-time evidence; later register changes never rewrite a certificate."""
+    project = CommissioningProject.query.filter_by(
+        id=package.project_id, company_name=package.company_name,
+    ).first_or_404()
+    subsystem = CommissioningSubsystem.query.join(
+        CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
+    ).filter(
+        CommissioningSubsystem.id == package.subsystem_id,
+        CommissioningSubsystem.company_name == package.company_name,
+        CommissioningSystem.project_id == package.project_id,
+    ).first_or_404()
+
+    all_sheets = CheckSheet.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(CheckSheet.sheet_number, CheckSheet.revision.desc()).all()
+    superseded_sheet_ids = {
+        item.supersedes_id for item in all_sheets if item.supersedes_id is not None
+    }
+    sheets = [item for item in all_sheets if item.id not in superseded_sheet_ids]
+
+    all_documents = CommissioningDocument.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(CommissioningDocument.document_number,
+               CommissioningDocument.revision_sequence.desc()).all()
+    latest_documents = {}
+    for item in all_documents:
+        latest_documents.setdefault(item.document_number, item)
+    documents = list(latest_documents.values())
+
+    punches = PunchItem.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(PunchItem.punch_number).all()
+    witnesses = WitnessPoint.query.join(
+        CheckSheet, CheckSheet.id == WitnessPoint.check_sheet_id,
+    ).filter(
+        WitnessPoint.company_name == package.company_name,
+        WitnessPoint.project_id == package.project_id,
+        CheckSheet.subsystem_id == package.subsystem_id,
+    ).order_by(WitnessPoint.scheduled_at).all()
+    tasks = CommissioningTask.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(CommissioningTask.task_number).all()
+    equipment = CommissioningEquipment.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        subsystem_id=package.subsystem_id,
+    ).order_by(CommissioningEquipment.tag_number).all()
+    issuer = User.query.filter_by(
+        id=current_user.id, company_name=package.company_name,
+    ).first_or_404()
+
+    open_critical = [
+        item for item in punches
+        if item.category in (PunchCategory.A, PunchCategory.B)
+        and item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED)
+    ]
+    pending_holds = [
+        item for item in witnesses
+        if item.type == WitnessType.HOLD
+        and item.status not in (WitnessStatus.RELEASED, WitnessStatus.CANCELLED)
+    ]
+    return {
+        "certificate": {
+            "type": certificate_type,
+            "number": certificate_number,
+            "date": certificate_date.isoformat(),
+            "issued_by": issuer.full_name,
+            "issued_by_id": issuer.id,
+            "issued_at": datetime.utcnow().isoformat(),
+        },
+        "project": {
+            "code": project.project_code, "name": project.name,
+            "client": project.client, "contractor": project.contractor,
+        },
+        "subsystem": {
+            "code": subsystem.subsystem_code, "name": subsystem.name,
+        },
+        "package": {"number": package.package_number},
+        "readiness": {
+            "current_check_sheets_total": len(sheets),
+            "current_check_sheets_signed": sum(
+                1 for item in sheets if item.status == CheckSheetStatus.SIGNED_OFF
+            ),
+            "open_category_a_b_punch": len(open_critical),
+            "current_documents_total": len(documents),
+            "current_documents_approved": sum(
+                1 for item in documents if item.status == DocumentStatus.APPROVED
+            ),
+            "pending_hold_points": len(pending_holds),
+            "tasks_total": len(tasks),
+            "tasks_completed": sum(
+                1 for item in tasks if item.status == CommissioningTaskStatus.COMPLETED
+            ),
+        },
+        "check_sheets": [{
+            "number": item.sheet_number, "revision": item.revision,
+            "title": item.title, "type": item.sheet_type.value,
+            "status": item.status.value,
+            "client_signatory_id": item.signed_by_client_id,
+            "contractor_signatory_id": item.signed_by_contractor_id,
+            "signed_at": item.signed_at.isoformat() if item.signed_at else None,
+        } for item in sheets],
+        "documents": [{
+            "number": item.document_number, "revision": item.revision,
+            "title": item.title, "type": item.document_type,
+            "discipline": item.discipline, "status": item.status.value,
+        } for item in documents],
+        "punch_items": [{
+            "number": item.punch_number, "category": item.category.value,
+            "severity": item.severity.value, "status": item.status.value,
+            "description": item.description,
+            "target_closure_date": item.target_closure_date.isoformat() if item.target_closure_date else None,
+        } for item in punches],
+        "witness_points": [{
+            "type": item.type.value, "status": item.status.value,
+            "scheduled_at": item.scheduled_at.isoformat(),
+            "notified_party": item.notified_party,
+        } for item in witnesses],
+        "tasks": [{
+            "number": item.task_number, "activity": item.activity_type.value,
+            "title": item.title, "discipline": item.discipline,
+            "status": item.status.value,
+            "planned_finish": item.planned_finish_date.isoformat() if item.planned_finish_date else None,
+            "actual_finish": item.actual_finish_date.isoformat() if item.actual_finish_date else None,
+        } for item in tasks],
+        "equipment": [{
+            "tag": item.tag_number, "type": item.equipment_type,
+            "description": item.description,
+        } for item in equipment],
+    }
+
+
 @commissioning_bp.post("/handover/<int:package_id>/transition")
 @login_required
 def transition_handover(package_id):
@@ -685,8 +830,14 @@ def transition_handover(package_id):
     if target == HandoverStatus.MC_CERTIFIED:
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.DRAFT:
             abort(403)
-        sheets = CheckSheet.query.filter_by(company_name=package.company_name,
-            project_id=package.project_id, subsystem_id=subsystem_id).all()
+        all_sheets = CheckSheet.query.filter_by(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=subsystem_id,
+        ).order_by(CheckSheet.sheet_number, CheckSheet.revision.desc()).all()
+        superseded_sheet_ids = {
+            item.supersedes_id for item in all_sheets if item.supersedes_id is not None
+        }
+        sheets = [item for item in all_sheets if item.id not in superseded_sheet_ids]
         if not sheets or any(s.status != CheckSheetStatus.SIGNED_OFF for s in sheets):
             abort(409, description="All subsystem check sheets must be signed off before MC certification")
         open_critical = PunchItem.query.filter_by(company_name=package.company_name,
@@ -698,12 +849,96 @@ def transition_handover(package_id):
         package.status, package.mc_issued_by_id = target, current_user.id
         package.mc_certificate_number = _required("certificate_number", 100)
         package.mc_certificate_date = _date("certificate_date") or date.today()
+        if CommissioningCertificate.query.filter_by(
+            company_name=package.company_name,
+            certificate_number=package.mc_certificate_number,
+        ).first():
+            abort(409, description="Certificate number is already in use in this company.")
+        certificate = CommissioningCertificate(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=package.subsystem_id, package_id=package.id,
+            certificate_type="MC", certificate_number=package.mc_certificate_number,
+            certificate_date=package.mc_certificate_date, issued_by_id=current_user.id,
+            snapshot_json=_completion_certificate_snapshot(
+                package, "MC", package.mc_certificate_number, package.mc_certificate_date,
+            ),
+        )
+        db.session.add(certificate)
+        db.session.flush()
+        add_audit_event(package.company_name, "CommissioningCertificate", certificate.id,
+                        "COMPLETION_CERTIFICATE_ISSUED",
+                        after={"type": "MC", "number": certificate.certificate_number,
+                               "package_id": package.id})
     elif target == HandoverStatus.RF_CERTIFIED:
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.MC_CERTIFIED:
             abort(403)
+        # RF certification requires all current Check Sheets, controlled documents
+        # and Hold points to be released for the target subsystem.
+        all_sheets = CheckSheet.query.filter_by(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=subsystem_id,
+        ).order_by(CheckSheet.sheet_number, CheckSheet.revision.desc()).all()
+        superseded_sheet_ids = {
+            item.supersedes_id for item in all_sheets if item.supersedes_id is not None
+        }
+        current_sheets = [item for item in all_sheets if item.id not in superseded_sheet_ids]
+        if not current_sheets or any(
+            item.status != CheckSheetStatus.SIGNED_OFF for item in current_sheets
+        ):
+            abort(409, description="All current subsystem Check Sheets must be signed off before RF certification")
+        open_critical = PunchItem.query.filter_by(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=subsystem_id,
+        ).filter(
+            PunchItem.category.in_([PunchCategory.A, PunchCategory.B]),
+            PunchItem.status.notin_([PunchStatus.VERIFIED, PunchStatus.WAIVED]),
+        ).count()
+        if open_critical:
+            abort(409, description="Category A/B punch items must be cleared before RF certification")
+        all_documents = CommissioningDocument.query.filter_by(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=subsystem_id,
+        ).order_by(CommissioningDocument.document_number,
+                   CommissioningDocument.revision_sequence.desc()).all()
+        latest_documents = {}
+        for document in all_documents:
+            latest_documents.setdefault(document.document_number, document)
+        if any(document.status != DocumentStatus.APPROVED for document in latest_documents.values()):
+            abort(409, description="All current subsystem engineering documents must be approved before RF certification")
+        pending_holds = WitnessPoint.query.join(
+            CheckSheet, CheckSheet.id == WitnessPoint.check_sheet_id,
+        ).filter(
+            WitnessPoint.company_name == package.company_name,
+            WitnessPoint.project_id == package.project_id,
+            CheckSheet.subsystem_id == subsystem_id,
+            WitnessPoint.type == WitnessType.HOLD,
+            WitnessPoint.status.notin_([WitnessStatus.RELEASED, WitnessStatus.CANCELLED]),
+        ).count()
+        if pending_holds:
+            abort(409, description="All subsystem Hold points must be released before RF certification")
         package.status, package.rf_issued_by_id = target, current_user.id
         package.rf_certificate_number = _required("certificate_number", 100)
         package.rf_certificate_date = _date("certificate_date") or date.today()
+        if CommissioningCertificate.query.filter_by(
+            company_name=package.company_name,
+            certificate_number=package.rf_certificate_number,
+        ).first():
+            abort(409, description="Certificate number is already in use in this company.")
+        certificate = CommissioningCertificate(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=package.subsystem_id, package_id=package.id,
+            certificate_type="RF", certificate_number=package.rf_certificate_number,
+            certificate_date=package.rf_certificate_date, issued_by_id=current_user.id,
+            snapshot_json=_completion_certificate_snapshot(
+                package, "RF", package.rf_certificate_number, package.rf_certificate_date,
+            ),
+        )
+        db.session.add(certificate)
+        db.session.flush()
+        add_audit_event(package.company_name, "CommissioningCertificate", certificate.id,
+                        "COMPLETION_CERTIFICATE_ISSUED",
+                        after={"type": "RF", "number": certificate.certificate_number,
+                               "package_id": package.id})
     elif target == HandoverStatus.RFSU:
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.RF_CERTIFIED:
             abort(403)
@@ -724,6 +959,31 @@ def transition_handover(package_id):
                     before={"status": old.value}, after={"status": target.value})
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=package.project_id))
+
+
+@commissioning_bp.get("/handover/<int:package_id>/certificates/<string:certificate_type>")
+@login_required
+def completion_certificate(package_id, certificate_type):
+    """Render the immutable issue-time MC/RF certificate for print or PDF export."""
+    package = HandoverPackage.query.filter_by(
+        id=package_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(package.project_id, "handover.view", "handover.manage",
+          "handover.accept", "project.manage")
+    certificate_type = certificate_type.upper()
+    if certificate_type not in ("MC", "RF"):
+        abort(404)
+    certificate = CommissioningCertificate.query.filter_by(
+        company_name=package.company_name, project_id=package.project_id,
+        package_id=package.id, certificate_type=certificate_type,
+    ).first_or_404()
+    return render_template(
+        "commissioning/completion_certificate.html",
+        project=get_project(package.project_id), package=package,
+        certificate=certificate, snapshot=certificate.snapshot_json,
+    )
+
+
 
 
 
