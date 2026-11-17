@@ -135,3 +135,15 @@ This is a dossier completeness/readiness view, not a generated PDF/ZIP turnover 
 
 ## 14. Equipment preservation
 Open **Commissioning Operations → Preservation** to register equipment-specific plans from approved procedures/OEM instructions. Record the procedure reference/revision, positive interval and initial next-due date. Inspectors record findings and outcomes; non-compliant results require corrective action and place the plan in ACTION_REQUIRED until a compliant follow-up is recorded. Inspection history is append-only and can carry evidence attachments. See [PRESERVATION_GUIDE.md](PRESERVATION_GUIDE.md).
+
+
+## Check Sheet template workflow
+
+1. Create a project-scoped draft template and define its sheet type, discipline, optional equipment type and inspection items.
+2. Derive all acceptance criteria from approved project procedures, ITPs, OEM documents or contract requirements.
+3. Approve the draft to make it available for Check Sheet execution.
+4. Instantiate a Check Sheet from the approved template. OPERA snapshots the template revision and item definitions.
+5. To change an approved template, create the next revision, edit the draft and approve it. The previous revision is then retired.
+6. Issue and sign the Check Sheet only after mandatory items, independent QC verification and required witness points satisfy the workflow gates.
+
+A template approval is not a substitute for technical approval of the source procedure or ITP.
