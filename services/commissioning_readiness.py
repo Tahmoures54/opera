@@ -237,12 +237,17 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
     result.is_ready_for_rfc = gate_ready["RFC"]
     result.is_ready_for_rfsu = gate_ready["RFSU"]
     result.metrics = {
-        "open_punch_ab_count": gate_metrics["MC"]["blocking_punch_count"],
-        "open_hold_count": gate_metrics["MC"]["blocking_hold_count"],
-        "unsigned_precomm_count": gate_metrics["MC"]["unsigned_check_sheet_count"],
+        "open_punch_ab_count": sum(1 for punch in punches if punch.category.value in {"A", "B"}),
+        "open_hold_count": len(holds),
+        "unsigned_precomm_count": sum(
+            1 for sheet in sheets
+            if sheet.sheet_type.value in {"PRE_COMM_A", "PRE_COMM_B"}
+            and sheet.status != CheckSheetStatus.SIGNED_OFF
+        ),
         "unsigned_comm_count": sum(
-            1 for issue in result.issues
-            if issue.gate == "RFC" and issue.code == "UNSIGNED_REQUIRED_CHECK_SHEET"
+            1 for sheet in sheets
+            if sheet.sheet_type.value in {"COMM_C", "FUNCTIONAL_TEST"}
+            and sheet.status != CheckSheetStatus.SIGNED_OFF
         ),
         "incomplete_task_count": gate_metrics["RFSU"]["incomplete_task_count"],
         "progress_percent": result.progress_percent,
