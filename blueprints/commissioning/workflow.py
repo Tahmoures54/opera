@@ -914,7 +914,7 @@ def transition_handover(package_id):
         certificate = CommissioningCertificate(
             company_name=package.company_name, project_id=package.project_id,
             subsystem_id=package.subsystem_id, package_id=package.id,
-            certificate_type="RF", certificate_number=package.rf_certificate_number,
+            certificate_type="RFC", certificate_number=package.rfc_certificate_number,
             certificate_date=package.rfc_certificate_date, issued_by_id=current_user.id,
             snapshot_json=_completion_certificate_snapshot(
                 package, "RFC", package.rfc_certificate_number, package.rfc_certificate_date,
