@@ -314,6 +314,47 @@ class CommissioningTaskDependency(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
+class CommissioningCheckSheetTemplate(db.Model):
+    """Project-scoped, revision-controlled reusable check/test sheet template."""
+    __tablename__ = "commissioning_check_sheet_template"
+    __table_args__ = (
+        UniqueConstraint("company_name", "project_id", "template_code", "revision",
+                         name="uq_comm_check_template_revision"),
+        UniqueConstraint("id", "company_name", name="uq_comm_check_template_id_company"),
+        CheckConstraint("revision >= 1", name="ck_comm_check_template_revision_positive"),
+        CheckConstraint("status IN ('DRAFT','APPROVED','RETIRED')",
+                        name="ck_comm_check_template_status"),
+        CheckConstraint("length(trim(template_code)) > 0",
+                        name="ck_comm_check_template_code"),
+        ForeignKeyConstraint(["project_id", "company_name"],
+                             ["commissioning_project.id", "commissioning_project.company_name"],
+                             name="fk_comm_check_template_project_tenant"),
+        ForeignKeyConstraint(["supersedes_id", "company_name"],
+                             ["commissioning_check_sheet_template.id", "commissioning_check_sheet_template.company_name"],
+                             name="fk_comm_check_template_supersedes_tenant"),
+        Index("ix_comm_check_template_project_status",
+              "company_name", "project_id", "status", "sheet_type"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, nullable=False)
+    template_code = db.Column(db.String(80), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    sheet_type = db.Column(_enum(CheckSheetType, "commissioning_check_template_type"), nullable=False)
+    discipline = db.Column(db.String(80), nullable=False, default="ANY")
+    equipment_type = db.Column(db.String(100))
+    revision = db.Column(db.Integer, nullable=False, default=1)
+    supersedes_id = db.Column(db.Integer)
+    acceptance_criteria = db.Column(db.Text)
+    items_json = db.Column(db.JSON, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="DRAFT")
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    approved_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class CheckSheet(db.Model):
     __tablename__ = "commissioning_check_sheet"
     __table_args__ = (
@@ -326,8 +367,10 @@ class CheckSheet(db.Model):
         ForeignKeyConstraint(["subsystem_id", "company_name"], ["commissioning_subsystem.id", "commissioning_subsystem.company_name"], name="fk_comm_check_subsystem_tenant"),
         ForeignKeyConstraint(["equipment_id", "company_name"], ["commissioning_equipment.id", "commissioning_equipment.company_name"], name="fk_comm_check_equipment_tenant"),
         ForeignKeyConstraint(["supersedes_id", "company_name"], ["commissioning_check_sheet.id", "commissioning_check_sheet.company_name"], name="fk_comm_check_supersedes_tenant"),
+        ForeignKeyConstraint(["template_id", "company_name"], ["commissioning_check_sheet_template.id", "commissioning_check_sheet_template.company_name"], name="fk_comm_check_template_tenant"),
         Index("ix_comm_check_company_project_status", "company_name", "project_id", "status"),
         Index("ix_comm_check_company_subsystem_type", "company_name", "subsystem_id", "sheet_type"),
+        Index("ix_comm_check_sheet_template", "company_name", "template_id"),
     )
     id = db.Column(db.Integer, primary_key=True)
     company_name = db.Column(db.String(100), nullable=False, index=True)
@@ -339,6 +382,10 @@ class CheckSheet(db.Model):
     sheet_type = db.Column(_enum(CheckSheetType, "commissioning_check_sheet_type"), nullable=False)
     revision = db.Column(db.Integer, nullable=False, default=0)
     supersedes_id = db.Column(db.Integer, db.ForeignKey("commissioning_check_sheet.id", ondelete="RESTRICT"))
+    template_id = db.Column(db.Integer)
+    template_revision_snapshot = db.Column(db.Integer)
+    template_title_snapshot = db.Column(db.String(200))
+    template_snapshot_json = db.Column(db.JSON)
     sheet_weight = db.Column(db.Float, nullable=False, default=1.0)
     title = db.Column(db.String(200), nullable=False)
     status = db.Column(_enum(CheckSheetStatus, "commissioning_check_sheet_status"), nullable=False, default=CheckSheetStatus.DRAFT)
@@ -368,6 +415,9 @@ class CheckSheetItem(db.Model):
     sequence = db.Column(db.Integer, nullable=False)
     description = db.Column(db.Text, nullable=False)
     expected_result = db.Column(db.Text)
+    acceptance_criteria = db.Column(db.Text)
+    unit = db.Column(db.String(40))
+    mandatory = db.Column(db.Boolean, nullable=False, default=True)
     actual_result = db.Column(db.Text)
     result_status = db.Column(_enum(ItemResultStatus, "commissioning_item_result_status"), nullable=False, default=ItemResultStatus.PENDING)
     witness_required = db.Column(db.Boolean, nullable=False, default=False)
@@ -913,6 +963,43 @@ def _protect_signed_check_sheets(session, flush_context, instances):
         )
         if item_parent_ids.intersection(signed_sheet_ids):
             raise ValueError("Items on a signed-off check sheet are immutable; create a new revision.")
+
+@event.listens_for(Session, "before_flush")
+def _protect_approved_checksheet_templates(session, flush_context, instances):
+    """Approved template content is immutable; only APPROVED -> RETIRED is permitted."""
+    pending = set(session.new).union(session.dirty).union(session.deleted)
+    templates = [obj for obj in pending if isinstance(obj, CommissioningCheckSheetTemplate)]
+    existing_ids = [obj.id for obj in templates if obj not in session.new and obj.id is not None]
+    persisted_statuses = {}
+    if existing_ids:
+        persisted_statuses = dict(
+            session.execute(
+                select(
+                    CommissioningCheckSheetTemplate.id,
+                    CommissioningCheckSheetTemplate.status,
+                ).where(CommissioningCheckSheetTemplate.id.in_(existing_ids))
+            ).all()
+        )
+    for template in templates:
+        if template in session.new:
+            if template.status != "DRAFT":
+                raise ValueError("New Check Sheet templates must start as DRAFT.")
+            continue
+        persisted_status = persisted_statuses.get(template.id)
+        if template in session.deleted:
+            raise ValueError("Check Sheet templates are retained for audit; retire instead of deleting.")
+        if persisted_status in ("APPROVED", "RETIRED"):
+            changed = {
+                attribute.key for attribute in sa_inspect(template).attrs
+                if attribute.history.has_changes()
+            }
+            if persisted_status == "APPROVED" and template.status == "RETIRED":
+                allowed = {"status", "updated_at"}
+                if not changed.issubset(allowed):
+                    raise ValueError("Approved Check Sheet template content is immutable.")
+            elif changed:
+                raise ValueError("Approved or retired Check Sheet templates are immutable.")
+
 
 @event.listens_for(Session, "before_flush")
 def _protect_commissioning_evidence(session, flush_context, instances):
