@@ -1,16 +1,27 @@
 {% extends "base.html" %}
-{% block title %} — OPERA User Guide{% endblock %}
+{% block title %} — راهنمای کاربر OPERA{% endblock %}
 {% block content %}
-<div class="container py-5">
-  <h1 class="h2 mb-2">OPERA User Guide</h1><p class="text-muted mb-4">Commissioning and start-up workflow reference</p>
-  <div class="card"><div class="card-body">
-    <h2 class="h5">1. Project setup</h2><p>Create a project, define systems and subsystems, and assign project members using OPERA roles. Membership is tenant-scoped and does not alter the inherited account role.</p>
-    <h2 class="h5 mt-4">2. Check sheets</h2><p>Create a pre-commissioning, commissioning or functional-test sheet. Add inspection items and acceptance criteria, issue the sheet, then record actual results. OK/N/A items require independent QC verification. Contractor and client sign-off must be performed by different authenticated users.</p>
-    <h2 class="h5 mt-4">3. Punch List</h2><p>Raise A/B/C/D punch items, assign them to active project members, set target dates and move them through controlled status transitions. Verification and waiver require the appropriate project permission and leave an immutable history.</p>
-    <h2 class="h5 mt-4">4. Witness and Hold Points</h2><p>Schedule a point against a check sheet and optional item, record notification, attendance, result and release. Required witness items cannot be signed off until released.</p>
-    <h2 class="h5 mt-4">5. MC, RF, RFSU and handover</h2><p>MC certification is blocked until all subsystem check sheets are signed and category A/B punch items are cleared. Continue through RF certification and RFSU, then record operations acceptance or rejection.</p>
-    <h2 class="h5 mt-4">6. Progress evidence</h2><p>Progress snapshots capture signed-off check-sheet ratios, weighted completion and open/closed punch counts. Audit events, signatures and revisions provide traceability.</p>
-    <p class="text-muted small mt-4 mb-0">Electronic sign-off in this release is an authenticated acknowledgement, not a qualified cryptographic signature.</p>
+<div class="container py-5" dir="rtl" lang="fa">
+  <div class="mb-4">
+    <span class="badge bg-primary-subtle text-primary mb-2">مستندات کاربری OPERA</span>
+    <h1 class="h2 mb-2">راهنمای کاربر OPERA</h1>
+    <p class="text-muted mb-0">راهنمای عملی مدیریت پیش‌راه‌اندازی، راه‌اندازی، آمادگی سیستم و تحویل به بهره‌برداری</p>
+  </div>
+  <div class="card border-0 shadow-sm"><div class="card-body p-4 p-lg-5">
+    <h2 class="h5">۱. ایجاد پروژه و ساختار آن</h2><p>پروژه را ایجاد کنید، سیستم‌ها و زیرسیستم‌ها را تعریف نمایید، تجهیزات را به زیرسیستم مربوط متصل کنید و اعضای پروژه را با نقش‌های OPERA تخصیص دهید. دسترسی اعضا در محدوده شرکت و عضویت پروژه کنترل می‌شود.</p>
+    <h2 class="h5 mt-4">۲. چک‌شیت‌ها (Check Sheets)</h2><p>چک‌شیت متناسب با فعالیت را در گروه پیش‌راه‌اندازی، راه‌اندازی یا تست عملکردی ایجاد کنید. آیتم‌های بازرسی و معیار پذیرش را تعریف و پس از صدور نسخه کنترل‌شده، نتایج واقعی را ثبت کنید. تأیید QC و امضای پیمانکار و کارفرما باید مطابق گردش‌کار و توسط کاربران مجاز انجام شود. چک‌شیت تأییدشده نباید در همان نسخه ویرایش شود؛ اصلاحات باید در نسخه جدید ثبت شوند.</p>
+    <h2 class="h5 mt-4">۳. فهرست پانچ (Punch List)</h2><p>نقص را با دسته‌بندی A/B/C/D به زیرسیستم یا تجهیز صحیح متصل کنید، مسئول و تاریخ هدف تعیین نمایید و شواهد اقدام اصلاحی را ثبت کنید. درخواست بستن پانچ با تأیید مستقل آن یکسان نیست. رفع، راستی‌آزمایی و هرگونه صرف‌نظر مجاز باید دارای سابقه ممیزی باشد.</p>
+    <h2 class="h5 mt-4">۴. نقاط شاهد، توقف و بازبینی</h2><p>نقاط Witness، Hold یا Review را طبق ITP پروژه برنامه‌ریزی کنید، ابلاغ و حضور را ثبت نمایید و نتیجه و آزادسازی را فقط از طریق نقش مجاز انجام دهید. الزامات قرارداد و روش اجرایی مصوب پروژه ملاک نهایی است.</p>
+    <h2 class="h5 mt-4">۵. مراحل آمادگی و تحویل</h2>
+    <div class="list-group list-group-numbered mb-3">
+      <div class="list-group-item"><strong>MC — Mechanical Completion (تکمیل مکانیکی)</strong><div class="small text-muted">تأیید تکمیل مکانیکی/ساخت و پذیرش شواهد و پیش‌نیازهای مربوط به پیش‌راه‌اندازی.</div></div>
+      <div class="list-group-item"><strong>RFC — Ready for Commissioning (آمادگی برای راه‌اندازی/کمیسیونینگ)</strong><div class="small text-muted">تأیید آمادگی زیرسیستم برای ورود به مرحله Commissioning طبق روش اجرایی مصوب پروژه.</div></div>
+      <div class="list-group-item"><strong>RFSU — Ready for Start-Up (آمادگی برای شروع بهره‌برداری/راه‌اندازی)</strong><div class="small text-muted">تأیید تکمیل پیش‌نیازهای کمیسیونینگ و آمادگی سیستم برای طی فرآیند مجوز شروع به کار.</div></div>
+      <div class="list-group-item"><strong>Operations Acceptance — پذیرش بهره‌برداری</strong><div class="small text-muted">ثبت پذیرش یا رد رسمی بسته تحویل توسط نماینده مجاز بهره‌برداری.</div></div>
+    </div>
+    <div class="alert alert-info"><strong>وضعیت پیاده‌سازی در نسخه فعلی OPERA:</strong> گواهی‌ای که در پایگاه داده با کد داخلی <code>RF</code> ذخیره می‌شود، در واقع گواهی <strong>RFC — Ready for Commissioning</strong> است. در حال حاضر نوع گواهی مستقلی با عنوان RF به معنی Ready for Start-Up وجود ندارد؛ مرحله بعدی در گردش‌کار فعلی، RFSU است. بنابراین RF را نباید به‌عنوان یک مرحله اضافه و مستقل بین RFC و RFSU در نظر گرفت. اگر قرارداد یا روش اجرایی پروژه تعاریف متفاوتی دارد، همان سند مصوب ملاک است.</div>
+    <h2 class="h5 mt-4">۶. گزارش پیشرفت و شواهد</h2><p>گزارش‌های پیشرفت و تصویر وضعیت گواهی در زمان صدور، اطلاعات موجود در همان زمان را ثبت می‌کنند. شاخص آمادگی یا گزارش پیشرفت به‌تنهایی جایگزین گواهی مجاز، پرونده تکمیل امضاشده یا پذیرش قراردادی نیست.</p>
+    <p class="text-muted small mt-4 mb-0">امضای الکترونیکی در نسخه فعلی، تأیید هویت‌شده کاربر است و امضای دیجیتال واجد شرایط یا گواهی رمزنگاری‌شده محسوب نمی‌شود. حدود اختیارات و معیارهای پذیرش تابع قرارداد و روش‌های اجرایی مصوب پروژه است.</p>
   </div></div>
 </div>
 {% endblock %}
