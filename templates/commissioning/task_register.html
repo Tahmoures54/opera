@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - Task register{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <a href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">Back to project</a>
+      <h1 class="h3 mt-2 mb-1">Commissioning Task Register</h1>
+      <div class="text-muted">{{ project.project_code }} · {{ project.name }}</div>
+    </div>
+    <span class="badge bg-primary">{{ tasks|length }} tasks in current view</span>
+  </div>
+
+  {% if can_create %}
+  <section class="card mb-4">
+    <div class="card-header fw-semibold">Create task</div>
+    <div class="card-body">
+      <form method="post" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-lg-3 col-md-6"><label class="form-label">Task number *</label><input class="form-control" name="task_number" required maxlength="100" placeholder="e.g. PRJ-CCK-00001"></div>
+        <div class="col-lg-3 col-md-6"><label class="form-label">Task title *</label><input class="form-control" name="title" required maxlength="200"></div>
+        <div class="col-lg-2 col-md-4"><label class="form-label">Activity *</label><select class="form-select" name="activity_type" required>{% for activity in activity_types %}<option value="{{ activity.value }}">{{ activity.value }}</option>{% endfor %}</select></div>
+        <div class="col-lg-2 col-md-4"><label class="form-label">Discipline *</label><input class="form-control" name="discipline" required maxlength="80" placeholder="Mechanical / E&I"></div>
+        <div class="col-lg-2 col-md-4"><label class="form-label">Assigned group</label><input class="form-control" name="assigned_group" maxlength="120"></div>
+        <div class="col-lg-4 col-md-6"><label class="form-label">System *</label><select class="form-select" name="system_id" required><option value="">Select system</option>{% for system in systems %}<option value="{{ system.id }}">{{ system.system_code }} — {{ system.name }}</option>{% endfor %}</select></div>
+        <div class="col-lg-4 col-md-6"><label class="form-label">Subsystem *</label><select class="form-select" name="subsystem_id" required><option value="">Select subsystem</option>{% for sub in subsystems %}<option value="{{ sub.id }}">{{ sub.subsystem_code }} — {{ sub.name }}</option>{% endfor %}</select></div>
+        <div class="col-lg-4"><label class="form-label">Equipment / Tag</label><select class="form-select" name="equipment_id"><option value="">Not equipment-specific</option>{% for item in equipment %}<option value="{{ item.id }}">{{ item.tag_number }} — {{ item.description or item.equipment_type }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label">Progress stage</label><input class="form-control" name="progress_stage" maxlength="80" placeholder="Pre-commissioning / Commissioning"></div>
+        <div class="col-md-3"><label class="form-label">Progress substage</label><input class="form-control" name="progress_substage" maxlength="80" placeholder="Static / Functional / Operational"></div>
+        <div class="col-md-2"><label class="form-label">Estimated man-hours</label><input class="form-control" type="number" min="0" step="0.25" name="estimated_man_hours" value="0"></div>
+        <div class="col-md-2"><label class="form-label">Spent man-hours</label><input class="form-control" type="number" min="0" step="0.25" name="spent_man_hours" value="0"></div>
+        <div class="col-md-2"><label class="form-label">Planned start</label><input class="form-control" type="date" name="planned_start_date"></div>
+        <div class="col-md-3"><label class="form-label">Planned finish</label><input class="form-control" type="date" name="planned_finish_date"></div>
+        <div class="col-md-3"><label class="form-label">Actual start</label><input class="form-control" type="date" name="actual_start_date"></div>
+        <div class="col-md-3"><label class="form-label">Actual finish</label><input class="form-control" type="date" name="actual_finish_date"></div>
+        <div class="col-12"><label class="form-label">Description / execution scope</label><textarea class="form-control" name="description" rows="2" maxlength="5000"></textarea></div>
+        <div class="col-12"><button class="btn btn-primary">Add task to register</button></div>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="card-header fw-semibold">Task register</div>
+    <div class="card-body border-bottom">
+      <form method="get" class="row g-2">
+        <div class="col-md-5"><input class="form-control" name="q" value="{{ search_term }}" placeholder="Search number, title, discipline or group"></div>
+        <div class="col-md-3"><select class="form-select" name="activity_type"><option value="">All activities</option>{% for activity in activity_types %}<option value="{{ activity.value }}" {% if selected_activity == activity.value %}selected{% endif %}>{{ activity.value }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><select class="form-select" name="status"><option value="">All statuses</option>{% for status in task_statuses %}<option value="{{ status.value }}" {% if selected_status == status.value %}selected{% endif %}>{{ status.value|replace('_',' ')|title }}</option>{% endfor %}</select></div>
+        <div class="col-md-1"><button class="btn btn-outline-primary w-100">Filter</button></div>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Task number</th><th>Activity</th><th>Task</th><th>Discipline</th><th>System / Subsystem</th><th>Equipment</th><th>Man-hours</th><th>Planned dates</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for task in tasks %}
+          <tr>
+            <td class="fw-semibold">{{ task.task_number }}</td>
+            <td><span class="badge bg-light text-dark border">{{ task.activity_type.value }}</span></td>
+            <td>{{ task.title }}{% if task.description %}<div class="small text-muted">{{ task.description }}</div>{% endif %}</td>
+            <td>{{ task.discipline }}</td>
+            <td>{{ task.system_id }} / {{ task.subsystem_id }}</td>
+            <td>{{ task.equipment_id or '—' }}</td>
+            <td>{{ task.spent_man_hours }} / {{ task.estimated_man_hours }}</td>
+            <td><small>{{ task.planned_start_date or '—' }} → {{ task.planned_finish_date or '—' }}</small></td>
+            <td>{{ task.status.value|replace('_',' ')|title }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="text-center text-muted py-4">No tasks match this project and filter. No progress is inferred from an empty register.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <p class="small text-muted mt-3">Activity codes follow the publicly available project ICAPS manual terminology. Task numbers and project-specific disciplines remain controlled by the project data owner.</p>
+</div>
+{% endblock %}
