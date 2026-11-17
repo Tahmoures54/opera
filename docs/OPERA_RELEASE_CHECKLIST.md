@@ -5,9 +5,8 @@
 
 ## Repository and CI
 - [x] Main contains Task, Check Sheet, Punch, document-control, engineering exchange, dossier index, MC/RFC, readiness, Preservation and S3-compatible evidence-storage increments.
-- [x] `quality` check passed on the baseline commit.
-- [x] `integration` check passed on the baseline commit.
-- [x] `docker` check passed on the previous baseline commit; PR #39 quality job passed on its head commit.
+- [x] `quality`, `integration` and `docker` checks passed on the earlier baseline `ca37db49224160628e9fb28d3b7d51930acc099f`.
+- [x] PR #39 `quality` job passed on head commit `417654cf6a2db1ac8ff94c3a45426307ab8fdcd9` (Ruff, Mypy, migration/script checks, core Pytest, commissioning Pytest, Bandit and pip-audit).
 - [ ] Reconcile and remove obsolete remote feature branches after confirming merged ancestry; retain any branch with unmerged work.
 - [ ] Confirm no stale or duplicate pull requests remain open.
 
