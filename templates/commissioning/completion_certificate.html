@@ -67,8 +67,8 @@
 
   <section class="certificate-section">
     <h2>Punch List</h2>
-    <div class="table-responsive"><table class="table table-sm table-bordered certificate-table"><thead><tr><th>Punch number</th><th>Category</th><th>Severity</th><th>Description</th><th>Status</th><th>Target closure</th></tr></thead><tbody>
-    {% for item in snapshot.punch_items %}<tr><td>{{ item.number }}</td><td>{{ item.category }}</td><td>{{ item.severity }}</td><td>{{ item.description }}</td><td>{{ item.status }}</td><td>{{ item.target_closure_date or '—' }}</td></tr>{% else %}<tr><td colspan="6" class="text-center text-muted">No Punch items in the issue-time register</td></tr>{% endfor %}
+    <div class="table-responsive"><table class="table table-sm table-bordered certificate-table"><thead><tr><th>Punch number</th><th>Category</th><th>Severity</th><th>Description</th><th>Corrective action</th><th>Status</th><th>Target closure</th></tr></thead><tbody>
+    {% for item in snapshot.punch_items %}<tr><td>{{ item.number }}</td><td>{{ item.category }}</td><td>{{ item.severity }}</td><td>{{ item.description }}</td><td>{{ item.corrective_action or '—' }}</td><td>{{ item.status }}</td><td>{{ item.target_closure_date or '—' }}</td></tr>{% else %}<tr><td colspan="7" class="text-center text-muted">No Punch items in the issue-time register</td></tr>{% endfor %}
     </tbody></table></div>
   </section>
 
