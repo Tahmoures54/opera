@@ -70,6 +70,14 @@ class ItemResultStatus(enum.Enum):
     NA = "NA"
 
 
+class DocumentStatus(enum.Enum):
+    DRAFT = "DRAFT"
+    IN_REVIEW = "IN_REVIEW"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    SUPERSEDED = "SUPERSEDED"
+
+
 class PunchCategory(enum.Enum):
     A = "A"
     B = "B"
@@ -454,6 +462,76 @@ class HandoverPackage(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class CommissioningDocument(db.Model):
+    """One controlled revision of a project engineering document."""
+    __tablename__ = "commissioning_document"
+    __table_args__ = (
+        UniqueConstraint("company_name", "project_id", "document_number", "revision_sequence",
+                         name="uq_comm_document_revision_sequence"),
+        UniqueConstraint("company_name", "project_id", "document_number", "revision",
+                         name="uq_comm_document_revision"),
+        UniqueConstraint("id", "company_name", name="uq_comm_document_id_company"),
+        ForeignKeyConstraint(["project_id", "company_name"],
+                             ["commissioning_project.id", "commissioning_project.company_name"],
+                             name="fk_comm_document_project_tenant"),
+        ForeignKeyConstraint(["system_id", "company_name"],
+                             ["commissioning_system.id", "commissioning_system.company_name"],
+                             name="fk_comm_document_system_tenant"),
+        ForeignKeyConstraint(["subsystem_id", "company_name"],
+                             ["commissioning_subsystem.id", "commissioning_subsystem.company_name"],
+                             name="fk_comm_document_subsystem_tenant"),
+        ForeignKeyConstraint(["equipment_id", "company_name"],
+                             ["commissioning_equipment.id", "commissioning_equipment.company_name"],
+                             name="fk_comm_document_equipment_tenant"),
+        ForeignKeyConstraint(["supersedes_id", "company_name"],
+                             ["commissioning_document.id", "commissioning_document.company_name"],
+                             name="fk_comm_document_supersedes_tenant"),
+        CheckConstraint("revision_sequence >= 1", name="ck_comm_document_revision_sequence"),
+        Index("ix_comm_document_company_project_status", "company_name", "project_id", "status"),
+        Index("ix_comm_document_company_number", "company_name", "document_number"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
+    system_id = db.Column(db.Integer, db.ForeignKey("commissioning_system.id", ondelete="RESTRICT"))
+    subsystem_id = db.Column(db.Integer, db.ForeignKey("commissioning_subsystem.id", ondelete="RESTRICT"))
+    equipment_id = db.Column(db.Integer, db.ForeignKey("commissioning_equipment.id", ondelete="RESTRICT"))
+    document_number = db.Column(db.String(120), nullable=False)
+    revision = db.Column(db.String(20), nullable=False, default="A")
+    revision_sequence = db.Column(db.Integer, nullable=False, default=1)
+    supersedes_id = db.Column(db.Integer, db.ForeignKey("commissioning_document.id", ondelete="RESTRICT"))
+    title = db.Column(db.String(250), nullable=False)
+    document_type = db.Column(db.String(80), nullable=False)
+    discipline = db.Column(db.String(80), nullable=False)
+    purpose = db.Column(db.String(80))
+    status = db.Column(_enum(DocumentStatus, "commissioning_document_status"),
+                       nullable=False, default=DocumentStatus.DRAFT)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    submitted_at = db.Column(db.DateTime)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    approved_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CommissioningDocumentReview(db.Model):
+    """Append-only review decision for a specific document revision."""
+    __tablename__ = "commissioning_document_review"
+    __table_args__ = (
+        ForeignKeyConstraint(["document_id", "company_name"],
+                             ["commissioning_document.id", "commissioning_document.company_name"],
+                             name="fk_comm_document_review_document_tenant"),
+        Index("ix_comm_document_review_company_document", "company_name", "document_id"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    document_id = db.Column(db.Integer, db.ForeignKey("commissioning_document.id", ondelete="RESTRICT"), nullable=False)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    decision = db.Column(db.String(20), nullable=False)
+    comments = db.Column(db.Text)
+    decided_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
 class ProgressSnapshot(db.Model):
     __tablename__ = "commissioning_progress_snapshot"
     __table_args__ = (
@@ -582,6 +660,6 @@ def _protect_signed_check_sheets(session, flush_context, instances):
 @event.listens_for(Session, "before_flush")
 def _protect_commissioning_evidence(session, flush_context, instances):
     """Keep audit events, signatures, and Punch history append-only."""
-    protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision, CommissioningAttachment)
+    protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision, CommissioningAttachment, CommissioningDocumentReview)
     if any(isinstance(obj, protected) for obj in set(session.dirty).union(session.deleted)):
         raise ValueError("Commissioning audit evidence is append-only.")

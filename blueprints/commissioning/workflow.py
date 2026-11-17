@@ -8,6 +8,7 @@ from extensions import db
 from models import User
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus,
+    CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
@@ -664,6 +665,10 @@ _ATTACHMENT_PERMISSIONS = {
         "upload": ("handover.manage", "handover.accept"),
         "view": ("handover.view", "handover.manage", "handover.accept", "project.manage"),
     },
+    "CommissioningDocument": {
+        "upload": ("documents.create", "documents.manage"),
+        "view": ("documents.view", "documents.create", "documents.manage", "documents.review", "documents.approve"),
+    },
 }
 
 
@@ -680,6 +685,11 @@ def _attachment_entity(entity_type, entity_id):
         return entity, entity.project_id
     if entity_type == "HandoverPackage":
         entity = HandoverPackage.query.filter_by(
+            id=entity_id, company_name=current_user.company_name
+        ).first_or_404()
+        return entity, entity.project_id
+    if entity_type == "CommissioningDocument":
+        entity = CommissioningDocument.query.filter_by(
             id=entity_id, company_name=current_user.company_name
         ).first_or_404()
         return entity, entity.project_id
@@ -701,6 +711,8 @@ def upload_evidence(entity_type, entity_id):
         abort(409, description="Verified or waived Punch items are immutable")
     if entity_type == "HandoverPackage" and entity.status == HandoverStatus.ACCEPTED:
         abort(409, description="Accepted handover packages are immutable")
+    if entity_type == "CommissioningDocument" and entity.status not in (DocumentStatus.DRAFT, DocumentStatus.REJECTED):
+        abort(409, description="Evidence can only be added to draft or rejected document revisions")
     metadata = store_commissioning_upload(
         request.files.get("file"), company_name=current_user.company_name,
         entity_type=entity_type, entity_id=entity_id, uploaded_by_id=current_user.id,
@@ -725,6 +737,8 @@ def upload_evidence(entity_type, entity_id):
     flash("Evidence uploaded successfully.", "success")
     if entity_type == "CheckSheet":
         return redirect(url_for("commissioning.checksheet_detail", sheet_id=entity_id))
+    if entity_type == "CommissioningDocument":
+        return redirect(url_for("commissioning.document_register", project_id=project_id))
     return redirect(url_for("commissioning.operations", project_id=project_id))
 
 
@@ -940,4 +954,223 @@ def task_register(project_id):
         can_manage_tasks=any(has_permission(project.id, p) for p in ("tasks.manage", "project.manage")),
         selected_activity=activity_filter, selected_status=status_filter, search_term=search_term,
     )
+
+
+
+@commissioning_bp.route("/projects/<int:project_id>/documents", methods=["GET", "POST"])
+@login_required
+def document_register(project_id):
+    """Project document register with controlled revisions and approval history."""
+    _need(project_id, "documents.view", "documents.create", "documents.manage",
+          "documents.review", "documents.approve", "project.manage")
+    project = get_project(project_id)
+    if request.method == "POST":
+        if not (has_permission(project.id, "documents.create")
+                or has_permission(project.id, "documents.manage")
+                or has_permission(project.id, "project.manage")):
+            abort(403)
+        number = _required("document_number", 120)
+        if CommissioningDocument.query.filter_by(
+            company_name=project.company_name, project_id=project.id,
+            document_number=number,
+        ).first():
+            abort(409, description="Document number already exists. Use the controlled revision action.")
+        system_id = request.form.get("system_id", type=int)
+        subsystem_id = request.form.get("subsystem_id", type=int)
+        equipment_id = request.form.get("equipment_id", type=int)
+        system = None
+        if system_id:
+            system = CommissioningSystem.query.filter_by(
+                id=system_id, company_name=project.company_name, project_id=project.id,
+            ).first_or_404()
+        subsystem = None
+        if subsystem_id:
+            if not system:
+                abort(400, description="Select a system when linking a subsystem.")
+            subsystem = CommissioningSubsystem.query.filter_by(
+                id=subsystem_id, company_name=project.company_name, system_id=system.id,
+            ).first_or_404()
+        if equipment_id:
+            if not subsystem:
+                abort(400, description="Select a subsystem when linking equipment.")
+            CommissioningEquipment.query.filter_by(
+                id=equipment_id, company_name=project.company_name,
+                project_id=project.id, subsystem_id=subsystem.id,
+            ).first_or_404()
+        document = CommissioningDocument(
+            company_name=project.company_name, project_id=project.id,
+            system_id=system.id if system else None,
+            subsystem_id=subsystem.id if subsystem else None,
+            equipment_id=equipment_id, document_number=number,
+            revision="A", revision_sequence=1,
+            title=_required("title", 250),
+            document_type=_required("document_type", 80),
+            discipline=_required("discipline", 80),
+            purpose=(request.form.get("purpose") or "").strip()[:80] or None,
+            status=DocumentStatus.DRAFT, created_by_id=current_user.id,
+        )
+        db.session.add(document)
+        db.session.flush()
+        add_audit_event(project.company_name, "CommissioningDocument", document.id,
+                        "DOCUMENT_CREATED", after={
+                            "document_number": number, "revision": "A",
+                            "title": document.title, "document_type": document.document_type,
+                        })
+        db.session.commit()
+        flash("Document revision A added to the register.", "success")
+        return redirect(url_for("commissioning.document_register", project_id=project.id))
+
+    documents = CommissioningDocument.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).order_by(CommissioningDocument.document_number,
+               CommissioningDocument.revision_sequence.desc()).all()
+    document_ids = [item.id for item in documents]
+    reviews = CommissioningDocumentReview.query.filter(
+        CommissioningDocumentReview.company_name == project.company_name,
+        CommissioningDocumentReview.document_id.in_(document_ids or [-1]),
+    ).order_by(CommissioningDocumentReview.decided_at.desc()).all()
+    review_by_document = {}
+    for review in reviews:
+        review_by_document.setdefault(review.document_id, []).append(review)
+    attachments = CommissioningAttachment.query.filter(
+        CommissioningAttachment.company_name == project.company_name,
+        CommissioningAttachment.entity_type == "CommissioningDocument",
+        CommissioningAttachment.entity_id.in_(document_ids or [-1]),
+    ).order_by(CommissioningAttachment.uploaded_at.desc()).all()
+    attachment_by_document = {}
+    for attachment in attachments:
+        attachment_by_document.setdefault(attachment.entity_id, []).append(attachment)
+    systems = CommissioningSystem.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).filter(CommissioningSystem.status != "ARCHIVED").order_by(CommissioningSystem.system_code).all()
+    subsystems = CommissioningSubsystem.query.join(
+        CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id,
+    ).filter(CommissioningSubsystem.company_name == project.company_name,
+             CommissioningSystem.project_id == project.id,
+             CommissioningSubsystem.status != "ARCHIVED").order_by(CommissioningSubsystem.subsystem_code).all()
+    equipment = CommissioningEquipment.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).order_by(CommissioningEquipment.tag_number).all()
+    return render_template(
+        "commissioning/document_register.html", project=project, documents=documents,
+        review_by_document=review_by_document, attachment_by_document=attachment_by_document,
+        systems=systems, subsystems=subsystems, equipment=equipment,
+        system_by_id={item.id: item for item in systems},
+        subsystem_by_id={item.id: item for item in subsystems},
+        equipment_by_id={item.id: item for item in equipment},
+        statuses=list(DocumentStatus),
+        can_create=any(has_permission(project.id, p) for p in ("documents.create", "documents.manage", "project.manage")),
+        can_review=any(has_permission(project.id, p) for p in ("documents.review", "documents.manage", "project.manage")),
+        can_approve=any(has_permission(project.id, p) for p in ("documents.approve", "documents.manage", "project.manage")),
+    )
+
+
+@commissioning_bp.post("/documents/<int:document_id>/submit")
+@login_required
+def submit_document(document_id):
+    document = CommissioningDocument.query.filter_by(
+        id=document_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(document.project_id, "documents.create", "documents.manage", "project.manage")
+    if document.status not in (DocumentStatus.DRAFT, DocumentStatus.REJECTED):
+        abort(409, description="Only draft or rejected revisions can be submitted.")
+    evidence = CommissioningAttachment.query.filter_by(
+        company_name=document.company_name, entity_type="CommissioningDocument",
+        entity_id=document.id,
+    ).first()
+    if evidence is None:
+        abort(409, description="Upload the controlled document file before submitting it for review.")
+    before = {"status": document.status.value}
+    document.status = DocumentStatus.IN_REVIEW
+    document.submitted_at = datetime.utcnow()
+    add_audit_event(document.company_name, "CommissioningDocument", document.id,
+                    "DOCUMENT_SUBMITTED", before=before,
+                    after={"status": document.status.value})
+    db.session.commit()
+    flash("Document submitted for review.", "success")
+    return redirect(url_for("commissioning.document_register", project_id=document.project_id))
+
+
+@commissioning_bp.post("/documents/<int:document_id>/decision")
+@login_required
+def decide_document(document_id):
+    document = CommissioningDocument.query.filter_by(
+        id=document_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(document.project_id, "documents.review", "documents.approve", "documents.manage", "project.manage")
+    decision = _required("decision", 20).upper()
+    comments = (request.form.get("comments") or "").strip()[:3000]
+    if document.status != DocumentStatus.IN_REVIEW:
+        abort(409, description="Only documents in review can receive a decision.")
+    if document.created_by_id == current_user.id:
+        abort(403, description="The document author cannot approve or reject their own revision.")
+    if decision == "APPROVE":
+        if not (has_permission(document.project_id, "documents.approve")
+                or has_permission(document.project_id, "documents.manage")
+                or has_permission(document.project_id, "project.manage")):
+            abort(403)
+        target = DocumentStatus.APPROVED
+    elif decision == "REJECT":
+        if not (has_permission(document.project_id, "documents.review")
+                or has_permission(document.project_id, "documents.manage")
+                or has_permission(document.project_id, "project.manage")):
+            abort(403)
+        if not comments:
+            abort(400, description="A reason is required when rejecting a document.")
+        target = DocumentStatus.REJECTED
+    else:
+        abort(400, description="Decision must be APPROVE or REJECT.")
+    before = {"status": document.status.value}
+    document.status = target
+    if target == DocumentStatus.APPROVED:
+        document.approved_by_id = current_user.id
+        document.approved_at = datetime.utcnow()
+    review = CommissioningDocumentReview(
+        company_name=document.company_name, document_id=document.id,
+        reviewer_id=current_user.id, decision=decision, comments=comments or None,
+    )
+    db.session.add(review)
+    add_audit_event(document.company_name, "CommissioningDocument", document.id,
+                    "DOCUMENT_" + decision + "D" if decision == "APPROVE" else "DOCUMENT_REJECTED",
+                    before=before, after={"status": target.value, "comments": comments or None})
+    db.session.commit()
+    flash("Document decision recorded.", "success")
+    return redirect(url_for("commissioning.document_register", project_id=document.project_id))
+
+
+@commissioning_bp.post("/documents/<int:document_id>/revision")
+@login_required
+def create_document_revision(document_id):
+    source = CommissioningDocument.query.filter_by(
+        id=document_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(source.project_id, "documents.create", "documents.manage", "project.manage")
+    if source.status not in (DocumentStatus.APPROVED, DocumentStatus.REJECTED):
+        abort(409, description="A new revision can only be created from an approved or rejected revision.")
+    latest_sequence = db.session.query(db.func.max(CommissioningDocument.revision_sequence)).filter_by(
+        company_name=source.company_name, project_id=source.project_id,
+        document_number=source.document_number,
+    ).scalar() or source.revision_sequence
+    next_sequence = latest_sequence + 1
+    next_revision = chr(64 + next_sequence) if next_sequence <= 26 else f"R{next_sequence}"
+    revision = CommissioningDocument(
+        company_name=source.company_name, project_id=source.project_id,
+        system_id=source.system_id, subsystem_id=source.subsystem_id,
+        equipment_id=source.equipment_id, document_number=source.document_number,
+        revision=next_revision, revision_sequence=next_sequence, supersedes_id=source.id,
+        title=source.title, document_type=source.document_type,
+        discipline=source.discipline, purpose=source.purpose,
+        status=DocumentStatus.DRAFT, created_by_id=current_user.id,
+    )
+    db.session.add(revision)
+    if source.status == DocumentStatus.APPROVED:
+        source.status = DocumentStatus.SUPERSEDED
+    db.session.flush()
+    add_audit_event(source.company_name, "CommissioningDocument", revision.id,
+                    "DOCUMENT_REVISION_CREATED",
+                    before={"supersedes_id": source.id, "revision": source.revision},
+                    after={"revision": next_revision, "supersedes_id": source.id})
+    db.session.commit()
+    flash(f"Revision {next_revision} created as a new controlled draft.", "success")
+    return redirect(url_for("commissioning.document_register", project_id=source.project_id))
 

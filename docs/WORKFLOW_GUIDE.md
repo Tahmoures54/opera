@@ -64,3 +64,20 @@ The Task Register supports controlled execution-state changes for project manage
 The application rejects transitions outside the matrix. A reason is mandatory when blocking or cancelling a task and when reopening a completed task. First entry into `IN_PROGRESS` records the actual start date; completion records the actual finish date. Reopening clears the prior actual finish date but preserves the first actual start date. Every accepted transition writes a tenant-scoped audit event with before/after state and reason in the same database transaction.
 
 This is an OPERA workflow design informed by commissioning execution needs; it is not a claim that every ICAPS release uses these exact status labels or transition rules. Project-specific procedures and the licensed ICAPS version remain authoritative.
+
+
+## 9. Engineering Document Register and revision control
+
+The project **Document Register** stores engineering documents by document number and controlled revision. Each revision is a separate record and can be linked to a project System, Subsystem and Equipment tag.
+
+1. Register a document number, title, document type, discipline and optional system hierarchy links. The initial revision is A.
+2. Upload the controlled document file. OPERA stores its checksum and evidence metadata through the commissioning evidence service.
+3. Submit the revision for review. A file is required before submission.
+4. An authorized reviewer may reject the revision with mandatory comments. An authorized approver may approve it.
+5. The document author cannot approve or reject their own revision.
+6. A new revision can be created from an approved or rejected revision. The previous approved revision becomes superseded; the prior record and its review evidence remain available.
+7. Review decisions and state changes are recorded in the append-only commissioning audit history.
+
+The current role mapping grants document creation to commissioning managers and engineers, review to QC inspectors and client representatives, and approval to commissioning managers and client representatives. These are OPERA defaults and must be confirmed against the project's Document Control Procedure, authority matrix and client requirements.
+
+The current implementation is a controlled register and review baseline. It does not yet provide a full transmittal workflow, external document numbering integration, bulk register import/export, configurable review cycles, electronic signature compliance, or a durable object-storage adapter for serverless Production. Do not treat a stored approval as a legally binding electronic signature unless the project's approved signature process has been configured and validated.
