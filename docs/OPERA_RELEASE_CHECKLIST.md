@@ -21,7 +21,8 @@
 - [ ] Verify deployment health, HTTPS, logging, monitoring and rollback procedure.
 
 ## Project acceptance
-- [ ] Approve systemization, activity taxonomy, Check Sheet templates, Punch category/blocking policy, Hold/Witness rules and certificate signatory matrix.
+- [ ] Approve systemization, activity taxonomy, Check Sheet templates and the configured MC/RFC/RFSU readiness policy.
+- [ ] Approve Punch category meanings, Hold/Witness procedures, waiver rules and certificate signatory matrix.
 - [ ] Run a realistic end-to-end scenario using separate contractor, executor, QC, client and Operations accounts.
 - [ ] Verify direct HTTP requests cannot bypass role checks or readiness gates.
 - [ ] Verify certificate and dossier evidence against the approved project completion procedure.
