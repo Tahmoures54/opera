@@ -22,6 +22,8 @@ from services.commissioning_storage import store_commissioning_upload, resolve_c
 from services.commissioning_number_service import (
     next_checksheet_number, next_punch_number,
 )
+from services.commissioning_readiness import evaluate_subsystem_readiness
+from services.commissioning_readiness_policy import normalize_readiness_policy
 from services.commissioning_handover_gates import (
     require_ready_for_mc,
     require_ready_for_rfc,
@@ -779,10 +781,30 @@ def _completion_certificate_snapshot(package, certificate_type, certificate_numb
         id=current_user.id, company_name=package.company_name,
     ).first_or_404()
 
+    readiness_policy, policy_errors = normalize_readiness_policy(project.readiness_policy_json)
+    readiness_result = evaluate_subsystem_readiness(package.company_name, package.subsystem_id)
+    readiness_gate = "MC" if certificate_type == "MC" else "RFC"
+    blocking_categories = set(readiness_policy["punch_blocking_categories"][readiness_gate])
     open_critical = [
         item for item in punches
+        if item.category.value in blocking_categories
+        and item.status in (PunchStatus.OPEN, PunchStatus.IN_PROGRESS)
+    ]
+    legacy_open_ab = [
+        item for item in punches
         if item.category in (PunchCategory.A, PunchCategory.B)
-        and item.status not in (PunchStatus.VERIFIED, PunchStatus.WAIVED)
+        and item.status in (PunchStatus.OPEN, PunchStatus.IN_PROGRESS)
+    ]
+    gate_issues = [
+        {
+            "code": issue.code,
+            "severity": issue.severity,
+            "message": issue.message,
+            "entity_type": issue.entity_type,
+            "entity_id": issue.entity_id,
+            "gate": issue.gate,
+        }
+        for issue in readiness_result.issues if issue.gate == readiness_gate
     ]
     pending_holds = [
         item for item in witnesses
@@ -811,7 +833,13 @@ def _completion_certificate_snapshot(package, certificate_type, certificate_numb
             "current_check_sheets_signed": sum(
                 1 for item in sheets if item.status == CheckSheetStatus.SIGNED_OFF
             ),
-            "open_category_a_b_punch": len(open_critical),
+            "open_category_a_b_punch": len(legacy_open_ab),
+            "blocking_punch_count": len(open_critical),
+            "gate": readiness_gate,
+            "gate_ready": readiness_result.is_ready_for_mc if readiness_gate == "MC" else readiness_result.is_ready_for_rfc,
+            "gate_issues": gate_issues,
+            "readiness_policy": readiness_policy,
+            "readiness_policy_errors": policy_errors,
             "current_documents_total": len(documents),
             "current_documents_approved": sum(
                 1 for item in documents if item.status == DocumentStatus.APPROVED
