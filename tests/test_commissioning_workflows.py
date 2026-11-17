@@ -1681,16 +1681,37 @@ def test_preservation_permissions_tenant_scope_and_plan_closure(client, app, ope
 
 
 
-def test_subsystem_dossier_pdf_and_zip_exports_are_scoped_and_labelled(client, app, opera_setup):
+def test_subsystem_dossier_pdf_and_zip_exports_are_scoped_and_labelled(
+    client, app, opera_setup, tmp_path,
+):
     import json
     from io import BytesIO
     from zipfile import ZipFile
     from models import User
+    from models_commissioning import CheckSheet, CheckSheetType
+    from services.commissioning_storage import resolve_commissioning_upload
 
+    app.config["OPERA_UPLOAD_DIR"] = str(tmp_path)
     with app.app_context():
         manager = db.session.get(User, opera_setup["manager"])
         manager_id = manager.id
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="DOSSIER-CS-001", sheet_type=CheckSheetType.COMM_C,
+            title="Dossier export evidence", created_by_id=manager_id,
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        sheet_id = sheet.id
     _login_id(client, manager_id)
+
+    uploaded = client.post(
+        f"/commissioning/evidence/CheckSheet/{sheet_id}",
+        data={"file": (BytesIO(b"%PDF-1.7\nDossier evidence"), "test-evidence.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert uploaded.status_code == 302
 
     base = f"/commissioning/projects/{opera_setup['project']}/subsystems/{opera_setup['subsystem']}/dossier"
     pdf = client.get(base + "/export.pdf")
@@ -1704,11 +1725,22 @@ def test_subsystem_dossier_pdf_and_zip_exports_are_scoped_and_labelled(client, a
     with ZipFile(BytesIO(bundle.data)) as archive:
         assert "dossier.pdf" in archive.namelist()
         assert "manifest.json" in archive.namelist()
+        evidence_names = [name for name in archive.namelist() if name.startswith("evidence/")]
+        assert len(evidence_names) == 1
+        assert archive.read(evidence_names[0]) == b"%PDF-1.7\nDossier evidence"
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["export_classification"] == "UNCONTROLLED_WORKING_EXPORT"
         assert manifest["project"]["code"] == "FLOW-01"
         assert manifest["subsystem"]["code"] == "SUB-01"
-        assert manifest["counts"]["evidence_files"] == 0
+        assert manifest["counts"]["evidence_files"] == 1
+
+    with app.app_context():
+        attachment = CommissioningAttachment.query.filter_by(
+            company_name="Contractor A", entity_type="CheckSheet", entity_id=sheet_id,
+        ).one()
+        resolve_commissioning_upload(attachment.storage_key).unlink()
+    missing_evidence = client.get(base + "/export.zip")
+    assert missing_evidence.status_code == 409
 
     _login_id(client, opera_setup["outsider"])
     denied = client.get(base + "/export.pdf")
