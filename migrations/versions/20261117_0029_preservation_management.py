@@ -97,6 +97,7 @@ def upgrade():
         sa.Column("performed_at", sa.Date(), nullable=False),
         sa.Column("result", sa.String(length=30), nullable=False),
         sa.Column("findings", sa.Text(), nullable=True),
+        sa.Column("environmental_conditions", sa.Text(), nullable=True),
         sa.Column("corrective_action", sa.Text(), nullable=True),
         sa.Column("procedure_reference_snapshot", sa.String(length=150), nullable=False),
         sa.Column("procedure_revision_snapshot", sa.String(length=50), nullable=False),
