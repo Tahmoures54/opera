@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - Subsystem Completion Dossier{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="mb-4">
+    <a href="{{ url_for('commissioning.operations', project_id=project.id) }}">Back to commissioning operations</a>
+    <h1 class="h3 mt-2 mb-1">Subsystem Completion Dossier</h1>
+    <div class="text-muted">{{ project.project_code }} · {{ project.name }} · {{ subsystem.subsystem_code }} — {{ subsystem.name }}</div>
+  </div>
+
+  <section class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div><div class="text-muted small">Readiness assessment</div><div class="h4 mb-1">MC dossier checks</div><div class="small text-muted">Calculated from current OPERA records; no completion is inferred from missing data.</div></div>
+        {% if readiness_passed %}<span class="badge bg-success fs-6">All configured checks passed</span>{% else %}<span class="badge bg-warning text-dark fs-6">Action required</span>{% endif %}
+      </div>
+      <div class="row g-3 mt-2">
+        {% for gate in gates %}
+        <div class="col-md-6 col-xl-3">
+          <div class="border rounded p-3 h-100">
+            <div class="d-flex justify-content-between gap-2"><strong>{{ gate.name }}</strong>{% if gate.passed %}<span class="text-success">PASS</span>{% else %}<span class="text-danger">OPEN</span>{% endif %}</div>
+            <div class="small text-muted mt-2">{{ gate.detail }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Equipment tags</div><div class="display-6">{{ equipment|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Current documents</div><div class="display-6">{{ documents|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Check Sheets</div><div class="display-6">{{ sheets|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Commissioning tasks</div><div class="display-6">{{ tasks|length }}</div></div></div></div>
+  </div>
+
+  <section class="card mb-4"><div class="card-header fw-semibold">Current engineering document revisions</div><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>Document</th><th>Revision</th><th>Discipline</th><th>Status</th><th>Evidence</th></tr></thead>
+    <tbody>{% for doc in documents %}<tr><td><strong>{{ doc.document_number }}</strong><div class="small text-muted">{{ doc.title }}</div></td><td>{{ doc.revision }}</td><td>{{ doc.discipline }}</td><td><span class="badge {% if doc.status.value == 'APPROVED' %}bg-success{% elif doc.status.value == 'REJECTED' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ doc.status.value|replace('_',' ')|title }}</span></td><td>{% for file in evidence_by_document.get(doc.id, []) %}<a class="small d-block" href="{{ url_for('commissioning.download_evidence', attachment_id=file.id) }}">{{ file.filename }}</a>{% else %}<span class="small text-danger">No file</span>{% endfor %}</td></tr>{% else %}<tr><td colspan="5" class="text-muted text-center py-3">No documents linked to this subsystem.</td></tr>{% endfor %}</tbody>
+  </table></div></section>
+
+  <section class="card mb-4"><div class="card-header fw-semibold">Check Sheet completion</div><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>Sheet No.</th><th>Title</th><th>Type</th><th>Revision</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for sheet in sheets %}<tr><td>{{ sheet.sheet_number }}</td><td>{{ sheet.title }}</td><td>{{ sheet.sheet_type.value }}</td><td>{{ sheet.revision }}</td><td>{{ sheet.status.value|replace('_',' ')|title }}</td><td><a href="{{ url_for('commissioning.checksheet_detail', sheet_id=sheet.id) }}">Open</a></td></tr>{% else %}<tr><td colspan="6" class="text-muted text-center py-3">No Check Sheets registered.</td></tr>{% endfor %}</tbody>
+  </table></div></section>
+
+  <div class="row g-4">
+    <div class="col-xl-6"><section class="card h-100"><div class="card-header fw-semibold">Punch List</div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Punch No.</th><th>Category</th><th>Description</th><th>Status</th></tr></thead><tbody>{% for punch in punches %}<tr><td>{{ punch.punch_number }}</td><td>{{ punch.category.value }}</td><td>{{ punch.description }}</td><td>{{ punch.status.value|replace('_',' ')|title }}</td></tr>{% else %}<tr><td colspan="4" class="text-muted text-center">No Punch items.</td></tr>{% endfor %}</tbody></table></div></section></div>
+    <div class="col-xl-6"><section class="card h-100"><div class="card-header fw-semibold">Witness / Hold points</div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Type</th><th>Scheduled</th><th>Notified party</th><th>Status</th></tr></thead><tbody>{% for point in witnesses %}<tr><td>{{ point.type.value }}</td><td>{{ point.scheduled_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ point.notified_party or '—' }}</td><td>{{ point.status.value|title }}</td></tr>{% else %}<tr><td colspan="4" class="text-muted text-center">No inspection points registered.</td></tr>{% endfor %}</tbody></table></div></section></div>
+  </div>
+
+  <section class="card mt-4"><div class="card-header fw-semibold">Commissioning task completion</div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Task No.</th><th>Activity</th><th>Title</th><th>Discipline</th><th>Status</th></tr></thead><tbody>{% for task in tasks %}<tr><td>{{ task.task_number }}</td><td>{{ task.activity_type.value }}</td><td>{{ task.title }}</td><td>{{ task.discipline }}</td><td>{{ task.status.value|replace('_',' ')|title }}</td></tr>{% else %}<tr><td colspan="5" class="text-muted text-center">No tasks registered.</td></tr>{% endfor %}</tbody></table></div></section>
+
+  <p class="small text-muted mt-3">This dossier is a readiness overview, not a generated contractual MC certificate. It reports the latest registered revision for each document number. Project-specific mandatory dossier content, punch categorization and acceptance rules must be configured and approved before certification.</p>
+</div>
+{% endblock %}
