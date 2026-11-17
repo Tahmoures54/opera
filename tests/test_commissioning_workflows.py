@@ -2188,6 +2188,15 @@ def test_numeric_checksheet_measurement_limits_and_audit(client, app, opera_setu
         data={"measured_value": "5.6", "result_status": "OK"},
     )
     assert out_of_range_ok.status_code == 400
+    recorded_nok = client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"measured_value": "5.6", "result_status": "NOK"},
+    )
+    assert recorded_nok.status_code == 302
+    with app.app_context():
+        item = db.session.get(CheckSheetItem, item_id)
+        assert float(item.measured_value) == 5.6
+        assert item.result_status == ItemResultStatus.NOK
     valid_measurement = client.post(
         f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
         data={"measured_value": "3.75", "result_status": "OK"},
