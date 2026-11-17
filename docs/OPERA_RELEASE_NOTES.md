@@ -14,11 +14,12 @@
 - OPERA-owned XLSX engineering data exchange for Systems, Subsystems, Equipment and Tasks, including dry-run validation, SHA-256 workbook confirmation, atomic create-only import and audit.
 - Subsystem completion dossier/readiness view consolidating documents, Check Sheets, Punch items, witness/hold points, equipment and tasks.
 - Immutable MC and RFC certificates with issue-time evidence snapshots; separate RFSU gate and Operations Acceptance transition.
+- Project-configurable readiness policy for Punch blockers, required Check Sheet types, Hold-point gates, Check Sheet presence and RFSU task completion; invalid policy fails closed and certificate snapshots retain the effective policy.
 - Scoped progress snapshots with Check Sheet and Task count/weight metrics and Punch counts.
 - Project-scoped role authorization, tenant filters and append-only evidence/audit protections.
 
 ## Known limitations / production blockers
-- Readiness rules and signatory authorities require project-specific approval/configuration; current Punch and Check Sheet defaults are OPERA baseline behavior.
+- Readiness rules are project-configurable for Punch categories, Check Sheet types, Hold-point gates and RFSU task completion. Project approval and a complete signatory/waiver authority matrix are still required.
 - Dossier is a readiness view, not yet a complete indexed PDF/ZIP turnover package.
 - Reusable revision-controlled Check Sheet/Test Sheet template catalogue is incomplete.
 - Evidence upload currently uses local filesystem storage. Do not use it for Vercel/serverless production evidence retention until a durable private object-storage backend and backup/restore controls are configured and tested.
