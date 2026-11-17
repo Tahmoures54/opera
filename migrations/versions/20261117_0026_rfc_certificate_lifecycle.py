@@ -13,27 +13,26 @@ depends_on = None
 
 
 def upgrade():
-    # Preserve all previously issued certificate references while making the
-    # domain code unambiguous. Package columns are renamed, not discarded.
-    with op.batch_alter_table("commissioning_handover_package") as batch:
-        batch.alter_column(
-            "rf_certificate_number",
-            new_column_name="rfc_certificate_number",
-            existing_type=sa.String(length=100),
-            existing_nullable=True,
-        )
-        batch.alter_column(
-            "rf_certificate_date",
-            new_column_name="rfc_certificate_date",
-            existing_type=sa.Date(),
-            existing_nullable=True,
-        )
-        batch.alter_column(
-            "rf_issued_by_id",
-            new_column_name="rfc_issued_by_id",
-            existing_type=sa.Integer(),
-            existing_nullable=True,
-        )
+    # Add explicit RFC fields and copy legacy RF values without discarding
+    # the original columns. Keeping the old columns makes rollback/data audits safe.
+    op.add_column(
+        "commissioning_handover_package",
+        sa.Column("rfc_certificate_number", sa.String(length=100), nullable=True),
+    )
+    op.add_column(
+        "commissioning_handover_package",
+        sa.Column("rfc_certificate_date", sa.Date(), nullable=True),
+    )
+    op.add_column(
+        "commissioning_handover_package",
+        sa.Column("rfc_issued_by_id", sa.Integer(), nullable=True),
+    )
+    op.execute(
+        "UPDATE commissioning_handover_package "
+        "SET rfc_certificate_number = rf_certificate_number, "
+        "rfc_certificate_date = rf_certificate_date, "
+        "rfc_issued_by_id = rf_issued_by_id"
+    )
 
     # Drop the old two-character check before updating RF -> RFC.
     with op.batch_alter_table("commissioning_certificate", recreate="always") as batch:
@@ -94,22 +93,12 @@ def downgrade():
             "certificate_type IN ('MC', 'RF')",
         )
 
-    with op.batch_alter_table("commissioning_handover_package") as batch:
-        batch.alter_column(
-            "rfc_certificate_number",
-            new_column_name="rf_certificate_number",
-            existing_type=sa.String(length=100),
-            existing_nullable=True,
-        )
-        batch.alter_column(
-            "rfc_certificate_date",
-            new_column_name="rf_certificate_date",
-            existing_type=sa.Date(),
-            existing_nullable=True,
-        )
-        batch.alter_column(
-            "rfc_issued_by_id",
-            new_column_name="rf_issued_by_id",
-            existing_type=sa.Integer(),
-            existing_nullable=True,
-        )
+    op.execute(
+        "UPDATE commissioning_handover_package "
+        "SET rf_certificate_number = rfc_certificate_number, "
+        "rf_certificate_date = rfc_certificate_date, "
+        "rf_issued_by_id = rfc_issued_by_id"
+    )
+    op.drop_column("commissioning_handover_package", "rfc_issued_by_id")
+    op.drop_column("commissioning_handover_package", "rfc_certificate_date")
+    op.drop_column("commissioning_handover_package", "rfc_certificate_number")
