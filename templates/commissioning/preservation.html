@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - Preservation{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+      <a href="{{ url_for('commissioning.operations', project_id=project.id) }}">Back to commissioning operations</a>
+      <h1 class="h3 mt-2 mb-1">Equipment Preservation</h1>
+      <div class="text-muted">{{ project.project_code }} · {{ project.name }}</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <span class="badge text-bg-secondary">Plans {{ counts.total }}</span>
+      <span class="badge text-bg-danger">Overdue {{ counts.overdue }}</span>
+      <span class="badge text-bg-warning">Due in 7 days {{ counts.due_soon }}</span>
+      <span class="badge text-bg-danger">Action required {{ counts.action_required }}</span>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    Preservation intervals and activities must come from approved project procedures or OEM instructions. OPERA does not invent technical preservation limits. The procedure reference, revision and interval are captured with every inspection.
+  </div>
+
+  {% if can_manage %}
+  <section class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">Create preservation plan</div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('commissioning.save_preservation_plan', project_id=project.id) }}" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-lg-2"><label class="form-label">Plan number</label><input class="form-control" name="plan_number" maxlength="80" required></div>
+        <div class="col-lg-3"><label class="form-label">Equipment / Tag</label><select class="form-select" name="equipment_id" required><option value="">Select equipment</option>{% for item in equipment %}<option value="{{ item.id }}">{{ item.tag_number }} — {{ item.description or item.equipment_type }}</option>{% endfor %}</select></div>
+        <div class="col-lg-3"><label class="form-label">Preservation activity</label><input class="form-control" name="activity" maxlength="200" placeholder="As stated in approved procedure" required></div>
+        <div class="col-lg-2"><label class="form-label">Procedure reference</label><input class="form-control" name="procedure_reference" maxlength="150" required></div>
+        <div class="col-lg-1"><label class="form-label">Revision</label><input class="form-control" name="procedure_revision" maxlength="50" required></div>
+        <div class="col-lg-1"><label class="form-label">Interval (days)</label><input class="form-control" type="number" name="interval_days" min="1" max="3650" required></div>
+        <div class="col-lg-2"><label class="form-label">Initial next due date</label><input class="form-control" type="date" name="next_due_date" required></div>
+        <div class="col-lg-3"><label class="form-label">Responsible company</label><input class="form-control" name="responsible_company" maxlength="150"></div>
+        <div class="col-lg-3"><label class="form-label">Assigned person</label><select class="form-select" name="assigned_to_id"><option value="">Unassigned</option>{% for user in users %}<option value="{{ user.id }}">{{ user.full_name }}</option>{% endfor %}</select></div>
+        <div class="col-lg-4"><label class="form-label">Notes</label><input class="form-control" name="notes" maxlength="1000"></div>
+        <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary">Create plan</button></div>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card shadow-sm">
+    <div class="card-header fw-semibold">Preservation plans and inspection history</div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Plan / Equipment</th><th>Activity / Procedure</th><th>Interval</th><th>Last performed</th><th>Next due</th><th>Status</th><th>Assigned</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for row in plan_rows %}
+          {% set plan = row.plan %}
+          <tr>
+            <td><strong>{{ plan.plan_number }}</strong><div class="small text-muted">{{ equipment_by_id[plan.equipment_id].tag_number if plan.equipment_id in equipment_by_id else 'Equipment unavailable' }}</div></td>
+            <td>{{ plan.activity }}<div class="small text-muted">{{ plan.procedure_reference }} · Rev {{ plan.procedure_revision }}</div></td>
+            <td>{{ plan.interval_days }} days</td>
+            <td>{{ plan.last_performed_at.strftime('%Y-%m-%d') if plan.last_performed_at else 'Not yet performed' }}</td>
+            <td>{{ plan.next_due_date.strftime('%Y-%m-%d') }}</td>
+            <td>
+              {% if row.due_status == 'OVERDUE' or row.due_status == 'ACTION_REQUIRED' %}<span class="badge text-bg-danger">{{ row.due_status|replace('_',' ') }}</span>
+              {% elif row.due_status == 'DUE_SOON' %}<span class="badge text-bg-warning">DUE SOON</span>
+              {% elif row.due_status == 'SUSPENDED' %}<span class="badge text-bg-secondary">SUSPENDED</span>
+              {% elif row.due_status == 'CLOSED' %}<span class="badge text-bg-dark">CLOSED</span>
+              {% else %}<span class="badge text-bg-success">ON SCHEDULE</span>{% endif %}
+            </td>
+            <td>{{ user_by_id[plan.assigned_to_id].full_name if plan.assigned_to_id in user_by_id else plan.responsible_company or 'Unassigned' }}</td>
+            <td>
+              {% if can_execute and plan.status not in ('SUSPENDED','CLOSED') %}
+              <details><summary class="btn btn-sm btn-outline-primary">Record inspection</summary>
+                <form method="post" action="{{ url_for('commissioning.record_preservation_inspection', project_id=project.id, plan_id=plan.id) }}" class="mt-2 p-2 border rounded">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <label class="form-label small">Inspection date</label><input class="form-control form-control-sm mb-2" type="date" name="performed_at" value="{{ today.isoformat() }}" required>
+                  <label class="form-label small">Result</label><select class="form-select form-select-sm mb-2" name="result" required><option value="COMPLIANT">Compliant</option><option value="NON_COMPLIANT">Non-compliant</option><option value="NOT_APPLICABLE">Not applicable</option></select>
+                  <label class="form-label small">Findings</label><textarea class="form-control form-control-sm mb-2" name="findings" rows="2"></textarea>
+                  <label class="form-label small">Corrective action (required for non-compliant)</label><textarea class="form-control form-control-sm mb-2" name="corrective_action" rows="2"></textarea>
+                  <button class="btn btn-sm btn-primary w-100">Save inspection</button>
+                </form>
+              </details>
+              {% endif %}
+              {% if can_manage and plan.status not in ('CLOSED',) %}
+              <form method="post" action="{{ url_for('commissioning.update_preservation_plan_status', project_id=project.id, plan_id=plan.id) }}" class="mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select class="form-select form-select-sm mb-1" name="status"><option value="SUSPENDED" {% if plan.status == 'SUSPENDED' %}selected{% endif %}>Suspend</option><option value="CLOSED">Close</option>{% if plan.status == 'SUSPENDED' %}<option value="ACTIVE">Reactivate</option>{% endif %}</select>
+                <button class="btn btn-sm btn-outline-secondary w-100">Update status</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% if plan.inspections %}
+          <tr><td colspan="8" class="bg-body-tertiary">
+            <div class="small fw-semibold mb-2">Inspection history</div>
+            <div class="table-responsive"><table class="table table-sm mb-0">
+              <thead><tr><th>Date</th><th>Result</th><th>Findings</th><th>Corrective action</th><th>Procedure snapshot</th><th>Evidence</th></tr></thead>
+              <tbody>{% for inspection in plan.inspections %}
+                <tr>
+                  <td>{{ inspection.performed_at.strftime('%Y-%m-%d') }}</td>
+                  <td>{{ inspection.result|replace('_',' ') }}</td>
+                  <td>{{ inspection.findings or '—' }}</td>
+                  <td>{{ inspection.corrective_action or '—' }}</td>
+                  <td>{{ inspection.procedure_reference_snapshot }} Rev {{ inspection.procedure_revision_snapshot }} · {{ inspection.interval_days_snapshot }} days</td>
+                  <td>
+                    {% for attachment in inspection.attachments if inspection.attachments is defined %}
+                    <a href="{{ url_for('commissioning.download_evidence', attachment_id=attachment.id) }}">{{ attachment.filename }}</a>
+                    {% endfor %}
+                    {% if can_execute %}
+                    <form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='CommissioningPreservationInspection', entity_id=inspection.id) }}" class="mt-1">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input class="form-control form-control-sm" type="file" name="file" required>
+                      <button class="btn btn-sm btn-outline-secondary mt-1">Upload evidence</button>
+                    </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}</tbody>
+            </table></div>
+          </td></tr>
+          {% endif %}
+        {% else %}
+          <tr><td colspan="8" class="text-center text-muted py-4">No preservation plans have been registered for this project.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
