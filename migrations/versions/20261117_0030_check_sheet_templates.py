@@ -73,40 +73,42 @@ def upgrade():
         "commissioning_check_sheet_template", ["company_name"], unique=False,
     )
 
-    op.add_column("commissioning_check_sheet", sa.Column("template_id", sa.Integer(), nullable=True))
-    op.add_column("commissioning_check_sheet", sa.Column("template_revision_snapshot", sa.Integer(), nullable=True))
-    op.add_column("commissioning_check_sheet", sa.Column("template_title_snapshot", sa.String(length=200), nullable=True))
-    op.add_column("commissioning_check_sheet", sa.Column("template_snapshot_json", sa.JSON(), nullable=True))
-    op.create_foreign_key(
-        "fk_comm_check_template_tenant",
-        "commissioning_check_sheet", "commissioning_check_sheet_template",
-        ["template_id", "company_name"], ["id", "company_name"],
-    )
-    op.create_index(
-        "ix_comm_check_sheet_template",
-        "commissioning_check_sheet", ["company_name", "template_id"],
-        unique=False,
-    )
+    with op.batch_alter_table("commissioning_check_sheet") as batch_op:
+        batch_op.add_column(sa.Column("template_id", sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column("template_revision_snapshot", sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column("template_title_snapshot", sa.String(length=200), nullable=True))
+        batch_op.add_column(sa.Column("template_snapshot_json", sa.JSON(), nullable=True))
+        batch_op.create_foreign_key(
+            "fk_comm_check_template_tenant",
+            "commissioning_check_sheet_template",
+            ["template_id", "company_name"], ["id", "company_name"],
+        )
+        batch_op.create_index(
+            "ix_comm_check_sheet_template", ["company_name", "template_id"], unique=False,
+        )
 
-    op.add_column("commissioning_check_sheet_item", sa.Column("acceptance_criteria", sa.Text(), nullable=True))
-    op.add_column("commissioning_check_sheet_item", sa.Column("unit", sa.String(length=40), nullable=True))
-    op.add_column(
-        "commissioning_check_sheet_item",
-        sa.Column("mandatory", sa.Boolean(), nullable=False, server_default=sa.true()),
-    )
-    op.alter_column("commissioning_check_sheet_item", "mandatory", server_default=None)
+    with op.batch_alter_table("commissioning_check_sheet_item") as batch_op:
+        batch_op.add_column(sa.Column("acceptance_criteria", sa.Text(), nullable=True))
+        batch_op.add_column(sa.Column("unit", sa.String(length=40), nullable=True))
+        batch_op.add_column(
+            sa.Column("mandatory", sa.Boolean(), nullable=False, server_default=sa.true()),
+        )
 
 
 def downgrade():
-    op.drop_column("commissioning_check_sheet_item", "mandatory")
-    op.drop_column("commissioning_check_sheet_item", "unit")
-    op.drop_column("commissioning_check_sheet_item", "acceptance_criteria")
-    op.drop_index("ix_comm_check_sheet_template", table_name="commissioning_check_sheet")
-    op.drop_constraint("fk_comm_check_template_tenant", "commissioning_check_sheet", type_="foreignkey")
-    op.drop_column("commissioning_check_sheet", "template_snapshot_json")
-    op.drop_column("commissioning_check_sheet", "template_title_snapshot")
-    op.drop_column("commissioning_check_sheet", "template_revision_snapshot")
-    op.drop_column("commissioning_check_sheet", "template_id")
+    with op.batch_alter_table("commissioning_check_sheet_item") as batch_op:
+        batch_op.drop_column("mandatory")
+        batch_op.drop_column("unit")
+        batch_op.drop_column("acceptance_criteria")
+
+    with op.batch_alter_table("commissioning_check_sheet") as batch_op:
+        batch_op.drop_index("ix_comm_check_sheet_template")
+        batch_op.drop_constraint("fk_comm_check_template_tenant", type_="foreignkey")
+        batch_op.drop_column("template_snapshot_json")
+        batch_op.drop_column("template_title_snapshot")
+        batch_op.drop_column("template_revision_snapshot")
+        batch_op.drop_column("template_id")
+
     op.drop_index(
         op.f("ix_commissioning_check_sheet_template_company_name"),
         table_name="commissioning_check_sheet_template",
