@@ -924,6 +924,8 @@ def revise_checksheet(sheet_id):
             sequence=old.sequence, description=old.description,
             expected_result=old.expected_result,
             acceptance_criteria=old.acceptance_criteria, unit=old.unit,
+            measurement_type=old.measurement_type,
+            minimum_value=old.minimum_value, maximum_value=old.maximum_value,
             mandatory=old.mandatory, witness_required=old.witness_required,
         ))
     db.session.add(CheckSheetRevision(
