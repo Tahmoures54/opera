@@ -250,6 +250,26 @@ def test_witness_hold_lifecycle_requires_notification_release_and_cancellation_r
         assert events[2].after_json["remarks"].startswith("Hold point inspected")
 
     response = client.post(base, data={
+        "check_sheet_id": sheet_id, "type": WitnessType.HOLD.value,
+        "notified_party": "Client QC", "scheduled_at": "2026-11-19T09:00",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        hold_point = WitnessPoint.query.filter_by(
+            check_sheet_id=sheet_id, type=WitnessType.HOLD,
+            status=WitnessStatus.PLANNED,
+        ).one()
+        hold_id = hold_point.id
+    response = client.post(
+        f"/commissioning/witness/{hold_id}/transition",
+        data={"status": "CANCELLED", "remarks": "Attempted cancellation"},
+    )
+    assert response.status_code == 409
+    with app.app_context():
+        hold_point = db.session.get(WitnessPoint, hold_id)
+        assert hold_point.status == WitnessStatus.PLANNED
+
+    response = client.post(base, data={
         "check_sheet_id": sheet_id, "type": WitnessType.REVIEW.value,
         "notified_party": "Engineering", "scheduled_at": "2026-11-19T10:00",
     })
