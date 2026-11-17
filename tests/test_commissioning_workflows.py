@@ -373,6 +373,16 @@ def test_rejection_reissue_requires_fresh_signatures_and_qc(client, app, opera_s
     assert "Reissue check sheet" in rejected_detail.get_data(as_text=True)
 
     _login_id(client, manager_id)
+    assert client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"actual_result": "Reworked within limits", "result_status": "OK"},
+    ).status_code == 302
+    with app.app_context():
+        sheet = db.session.get(CheckSheet, sheet_id)
+        item = CheckSheetItem.query.filter_by(id=item_id, check_sheet_id=sheet_id).one()
+        assert sheet.status is CheckSheetStatus.REJECTED
+        assert item.verified_by_id is None
+
     assert client.post(f"/commissioning/checksheets/{sheet_id}/issue").status_code == 302
     with app.app_context():
         sheet = db.session.get(CheckSheet, sheet_id)
@@ -380,6 +390,9 @@ def test_rejection_reissue_requires_fresh_signatures_and_qc(client, app, opera_s
         assert sheet.rejection_reason is None
         assert sheet.signed_by_client_id is None
 
+    _login_id(client, opera_setup["qc"])
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/items/{item_id}/verify").status_code == 302
+    _login_id(client, manager_id)
     assert client.post(f"/commissioning/checksheets/{sheet_id}/sign").status_code == 302
     _login_id(client, opera_setup["client"])
     assert client.post(f"/commissioning/checksheets/{sheet_id}/sign").status_code == 302
