@@ -2,6 +2,7 @@
 import hashlib
 import json
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
@@ -59,6 +60,22 @@ def _required(name, limit=5000):
 
 
 
+def _measurement_decimal(raw_value, label):
+    try:
+        value = Decimal(str(raw_value))
+    except (InvalidOperation, TypeError, ValueError):
+        abort(400, description=f"{label} must be a valid decimal number.")
+    if not value.is_finite():
+        abort(400, description=f"{label} must be finite.")
+    try:
+        normalized = value.quantize(Decimal("0.00000001"))
+    except InvalidOperation:
+        abort(400, description=f"{label} exceeds the supported numeric precision.")
+    if normalized != value or abs(value) >= Decimal("10000000000000000"):
+        abort(400, description=f"{label} must fit 16 integer digits and 8 decimal places.")
+    return normalized
+
+
 def _validate_template_items(raw):
     try:
         items = json.loads(raw)
@@ -81,12 +98,39 @@ def _validate_template_items(raw):
         mandatory = item.get("mandatory", True)
         if not isinstance(witness_required, bool) or not isinstance(mandatory, bool):
             abort(400, description=f"Template item {index} boolean flags must be true or false.")
+        measurement_type = str(item.get("measurement_type") or "QUALITATIVE").strip().upper()
+        if measurement_type not in ("QUALITATIVE", "NUMERIC"):
+            abort(400, description=f"Template item {index} has an invalid measurement_type.")
+
+        def parse_limit(key):
+            raw_value = item.get(key)
+            if raw_value in (None, ""):
+                return None
+            if len(str(raw_value)) > 40:
+                abort(400, description=f"Template item {index} has an invalid {key}.")
+            value = _measurement_decimal(raw_value, f"Template item {index} {key}")
+            return format(value, "f")
+
+        minimum_value = parse_limit("minimum_value")
+        maximum_value = parse_limit("maximum_value")
+        if measurement_type == "NUMERIC":
+            if not (item.get("unit") or "").strip():
+                abort(400, description=f"Template item {index} numeric measurement requires a unit.")
+            if minimum_value is not None and maximum_value is not None:
+                if Decimal(minimum_value) > Decimal(maximum_value):
+                    abort(400, description=f"Template item {index} minimum_value cannot exceed maximum_value.")
+        elif minimum_value is not None or maximum_value is not None:
+            abort(400, description=f"Template item {index} limits require NUMERIC measurement_type.")
+
         normalized.append({
             "sequence": index,
             "description": description,
             "expected_result": (item.get("expected_result") or "").strip() or None,
             "acceptance_criteria": (item.get("acceptance_criteria") or "").strip() or None,
             "unit": (item.get("unit") or "").strip() or None,
+            "measurement_type": measurement_type,
+            "minimum_value": minimum_value,
+            "maximum_value": maximum_value,
             "witness_required": witness_required,
             "mandatory": mandatory,
         })
@@ -568,8 +612,9 @@ def create_checksheet(project_id):
                 sequence=item["sequence"], description=item["description"],
                 expected_result=item.get("expected_result"),
                 acceptance_criteria=item.get("acceptance_criteria"),
-                unit=item.get("unit"), mandatory=item.get("mandatory", True),
-                witness_required=item.get("witness_required", False),
+                unit=item.get("unit"), measurement_type=item.get("measurement_type", "QUALITATIVE"),
+                minimum_value=item.get("minimum_value"), maximum_value=item.get("maximum_value"),
+                mandatory=item.get("mandatory", True), witness_required=item.get("witness_required", False),
             ))
     add_audit_event(
         project.company_name, "CheckSheet", sheet.id, "CHECKSHEET_CREATED",
@@ -651,12 +696,33 @@ def update_checksheet_item(sheet_id, item_id):
     old = {
         "result": item.result_status.value,
         "actual_result": item.actual_result,
+        "measured_value": str(item.measured_value) if item.measured_value is not None else None,
         "remarks": item.remarks,
     }
-    item.actual_result = (request.form.get("actual_result") or "").strip() or None
     item.result_status = _enum(ItemResultStatus, _required("result_status", 20), "result")
-    if item.result_status in (ItemResultStatus.OK, ItemResultStatus.NOK) and not item.actual_result:
-        abort(400, description="Actual result is required for OK/NOK items")
+    if item.measurement_type == "NUMERIC":
+        raw_measurement = (request.form.get("measured_value") or "").strip()
+        if item.result_status in (ItemResultStatus.OK, ItemResultStatus.NOK) and not raw_measurement:
+            abort(400, description="A numeric measurement is required for OK/NOK items.")
+        if raw_measurement:
+            if len(raw_measurement) > 40:
+                abort(400, description="Measured value is too long.")
+            measured_value = _measurement_decimal(raw_measurement, "Measured value")
+            item.measured_value = measured_value
+            item.actual_result = format(measured_value.normalize(), "f")
+            if item.result_status == ItemResultStatus.OK:
+                if item.minimum_value is not None and measured_value < item.minimum_value:
+                    abort(400, description="Measured value is below the approved minimum; record NOK or correct the reading.")
+                if item.maximum_value is not None and measured_value > item.maximum_value:
+                    abort(400, description="Measured value exceeds the approved maximum; record NOK or correct the reading.")
+        else:
+            item.measured_value = None
+            item.actual_result = None
+    else:
+        item.measured_value = None
+        item.actual_result = (request.form.get("actual_result") or "").strip() or None
+        if item.result_status in (ItemResultStatus.OK, ItemResultStatus.NOK) and not item.actual_result:
+            abort(400, description="Actual result is required for OK/NOK items")
     # Any rework invalidates a previous QC verification.
     item.verified_by_id, item.verified_at = None, None
     item.remarks = (request.form.get("remarks") or "").strip() or None
@@ -671,6 +737,11 @@ def update_checksheet_item(sheet_id, item_id):
         after={
             "result": item.result_status.value,
             "actual_result": item.actual_result,
+            "measured_value": str(item.measured_value) if item.measured_value is not None else None,
+            "measurement_type": item.measurement_type,
+            "unit": item.unit,
+            "minimum_value": str(item.minimum_value) if item.minimum_value is not None else None,
+            "maximum_value": str(item.maximum_value) if item.maximum_value is not None else None,
             "remarks": item.remarks,
         },
     )
@@ -853,6 +924,8 @@ def revise_checksheet(sheet_id):
             sequence=old.sequence, description=old.description,
             expected_result=old.expected_result,
             acceptance_criteria=old.acceptance_criteria, unit=old.unit,
+            measurement_type=old.measurement_type,
+            minimum_value=old.minimum_value, maximum_value=old.maximum_value,
             mandatory=old.mandatory, witness_required=old.witness_required,
         ))
     db.session.add(CheckSheetRevision(

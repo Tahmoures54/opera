@@ -1825,6 +1825,7 @@ def test_checksheet_template_approval_revision_and_execution_snapshot(client, ap
         assert sheet_items[1].mandatory is False
         assert sheet_items[1].unit == "mm/s"
         assert sheet_items[1].witness_required is True
+        assert sheet_items[1].measurement_type == "QUALITATIVE"
 
     revised = client.post(
         f"/commissioning/projects/{project_id}/checksheet-templates/{template_id}/revise",
@@ -2146,3 +2147,154 @@ def test_preservation_compliance_report_filters_and_safe_csv(client, app, opera_
     assert viewer_csv.status_code == 200
     _login_id(client, opera_setup["outsider"])
     assert client.get(report_url).status_code == 404
+
+
+def test_numeric_checksheet_measurement_limits_and_audit(client, app, opera_setup):
+    _login_id(client, opera_setup["manager"])
+    project_id = opera_setup["project"]
+    template_url = f"/commissioning/projects/{project_id}/checksheet-templates"
+    items = [{
+        "description": "Measure pump vibration",
+        "expected_result": "Within approved OEM vibration range",
+        "acceptance_criteria": "Approved project/OEM limit",
+        "unit": "mm/s",
+        "measurement_type": "NUMERIC",
+        "minimum_value": "2.5",
+        "maximum_value": "5.0",
+        "mandatory": True,
+        "witness_required": False,
+    }]
+    created = client.post(template_url, data={
+        "template_code": "PUMP-MEAS-01",
+        "title": "Pump vibration measurement",
+        "sheet_type": "PRE_COMM_A",
+        "discipline": "MECHANICAL",
+        "items_json": json.dumps(items),
+    })
+    assert created.status_code == 302
+    with app.app_context():
+        template = CommissioningCheckSheetTemplate.query.filter_by(
+            company_name="Contractor A", project_id=project_id,
+            template_code="PUMP-MEAS-01",
+        ).one()
+        template_id = template.id
+    assert client.post(
+        f"/commissioning/projects/{project_id}/checksheet-templates/{template_id}/approve",
+    ).status_code == 302
+    created_sheet = client.post(f"/commissioning/projects/{project_id}/checksheets/new", data={
+        "title": "Pump vibration reading",
+        "sheet_type": "PRE_COMM_A",
+        "subsystem_id": str(opera_setup["subsystem"]),
+        "template_id": str(template_id),
+    })
+    assert created_sheet.status_code == 302
+    sheet_id = int(created_sheet.headers["Location"].rsplit("/", 1)[-1])
+    with app.app_context():
+        item = CheckSheetItem.query.filter_by(check_sheet_id=sheet_id).one()
+        item_id = item.id
+        assert item.measurement_type == "NUMERIC"
+        assert float(item.minimum_value) == 2.5
+        assert float(item.maximum_value) == 5.0
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/issue").status_code == 302
+
+    out_of_range_ok = client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"measured_value": "5.6", "result_status": "OK"},
+    )
+    assert out_of_range_ok.status_code == 400
+    recorded_nok = client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"measured_value": "5.6", "result_status": "NOK"},
+    )
+    assert recorded_nok.status_code == 302
+    with app.app_context():
+        item = db.session.get(CheckSheetItem, item_id)
+        assert float(item.measured_value) == 5.6
+        assert item.result_status == ItemResultStatus.NOK
+    valid_measurement = client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"measured_value": "3.75", "result_status": "OK"},
+    )
+    assert valid_measurement.status_code == 302
+    with app.app_context():
+        item = db.session.get(CheckSheetItem, item_id)
+        assert float(item.measured_value) == 3.75
+        assert item.actual_result == "3.75"
+        assert item.unit == "mm/s"
+        audit = CommissioningAuditLog.query.filter_by(
+            entity_type="CheckSheetItem", entity_id=item_id,
+            action="CHECKSHEET_ITEM_RESULT",
+        ).order_by(CommissioningAuditLog.id.desc()).first()
+        assert audit.after_json["measured_value"] == "3.75000000"
+        assert audit.after_json["measurement_type"] == "NUMERIC"
+        assert audit.after_json["minimum_value"] == "2.50000000"
+        assert audit.after_json["maximum_value"] == "5.00000000"
+
+    not_applicable = client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"result_status": "NA"},
+    )
+    assert not_applicable.status_code == 302
+    with app.app_context():
+        item = db.session.get(CheckSheetItem, item_id)
+        assert item.result_status == ItemResultStatus.NA
+        assert item.measured_value is None
+        sheet = db.session.get(CheckSheet, sheet_id)
+        sheet.status = CheckSheetStatus.SIGNED_OFF
+        sheet.signed_by_client_id = opera_setup["client"]
+        sheet.signed_by_contractor_id = opera_setup["manager"]
+        sheet.signed_at = datetime.utcnow()
+        db.session.commit()
+
+    revised_sheet = client.post(
+        f"/commissioning/checksheets/{sheet_id}/revise",
+        data={"reason": "Preserve numeric acceptance limits in the next revision"},
+    )
+    assert revised_sheet.status_code == 302
+    revised_sheet_id = int(revised_sheet.headers["Location"].rsplit("/", 1)[-1])
+    with app.app_context():
+        revised_item = CheckSheetItem.query.filter_by(check_sheet_id=revised_sheet_id).one()
+        assert revised_item.measurement_type == "NUMERIC"
+        assert float(revised_item.minimum_value) == 2.5
+        assert float(revised_item.maximum_value) == 5.0
+        assert revised_item.measured_value is None
+        assert revised_item.result_status == ItemResultStatus.PENDING
+
+    invalid_limits = client.post(template_url, data={
+        "template_code": "PUMP-MEAS-BAD",
+        "title": "Invalid vibration template",
+        "sheet_type": "PRE_COMM_A",
+        "discipline": "MECHANICAL",
+        "items_json": json.dumps([{
+            "description": "Invalid range", "unit": "mm/s",
+            "measurement_type": "NUMERIC",
+            "minimum_value": "9", "maximum_value": "2",
+            "mandatory": True,
+        }]),
+    })
+    assert invalid_limits.status_code == 400
+
+    unsupported_precision = client.post(template_url, data={
+        "template_code": "PUMP-MEAS-PRECISION",
+        "title": "Unsupported measurement precision",
+        "sheet_type": "PRE_COMM_A",
+        "discipline": "MECHANICAL",
+        "items_json": json.dumps([{
+            "description": "Excess precision", "unit": "mm/s",
+            "measurement_type": "NUMERIC",
+            "minimum_value": "0.123456789", "mandatory": True,
+        }]),
+    })
+    assert unsupported_precision.status_code == 400
+
+    missing_unit = client.post(template_url, data={
+        "template_code": "PUMP-MEAS-NOUNIT",
+        "title": "Missing unit template",
+        "sheet_type": "PRE_COMM_A",
+        "discipline": "MECHANICAL",
+        "items_json": json.dumps([{
+            "description": "Missing unit", "measurement_type": "NUMERIC",
+            "minimum_value": "0", "maximum_value": "10", "mandatory": True,
+        }]),
+    })
+    assert missing_unit.status_code == 400
