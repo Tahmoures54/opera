@@ -7,8 +7,13 @@ def test_production_config_rejects_sqlite_and_weak_secrets():
     config = (ROOT / "config" / "config.py").read_text(encoding="utf-8")
     assert "Production database must be PostgreSQL." in config
     assert "SECRET_KEY must contain at least 32 bytes." in config
-    assert "RATELIMIT_STORAGE_URI" in config
-    assert "memory://" in config
+
+
+def test_rate_limiting_keeps_route_protections_without_requiring_redis():
+    config = (ROOT / "config" / "config.py").read_text(encoding="utf-8")
+    assert "RATELIMIT_ENABLED = _get_bool_env('RATELIMIT_ENABLED', True)" in config
+    assert "RATELIMIT_STORAGE_URI = os.getenv('RATELIMIT_STORAGE_URI', 'memory://')" in config
+    assert "Production rate limiting requires shared storage" not in config
 
 
 def test_auth_routes_are_rate_limited():

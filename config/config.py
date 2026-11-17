@@ -160,15 +160,14 @@ class Config:
     REMEMBER_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE
 
     # Rate limiting
-    RATELIMIT_ENABLED = True
-    RATELIMIT_STORAGE_URI = os.getenv(
-        'RATELIMIT_STORAGE_URI',
-        'memory://'
-    )
+    # Keep route-specific protections enabled. Without an external store, counters
+    # are local to each serverless instance and are not shared across Vercel instances.
+    # This is a deliberate low-traffic fallback; set RATELIMIT_STORAGE_URI to Redis
+    # later when globally shared limits are required.
+    RATELIMIT_ENABLED = _get_bool_env('RATELIMIT_ENABLED', True)
+    RATELIMIT_STORAGE_URI = os.getenv('RATELIMIT_STORAGE_URI', 'memory://')
     RATELIMIT_DEFAULT = os.getenv('RATELIMIT_DEFAULT', '300 per minute')
     RATELIMIT_HEADERS_ENABLED = True
-    if IS_PRODUCTION and RATELIMIT_STORAGE_URI.startswith('memory://'):
-        raise ValueError("Production rate limiting requires shared storage; configure RATELIMIT_STORAGE_URI.")
 
     # Security
     WTF_CSRF_SSL_STRICT = IS_PRODUCTION
@@ -194,7 +193,7 @@ class ProductionConfig(Config):
 
     @classmethod
     def validate(cls):
-        """Fail closed when the production configuration is explicitly selected."""
+        """Validate mandatory production secrets and database settings."""
         secret_key = os.getenv('SECRET_KEY')
         if not secret_key:
             raise ValueError("SECRET_KEY must be provided by the environment.")
@@ -205,10 +204,6 @@ class ProductionConfig(Config):
         if not database_url.startswith(("postgresql://", "postgresql+psycopg2://")):
             raise ValueError("Production database must be PostgreSQL.")
 
-        if cls.RATELIMIT_STORAGE_URI.startswith('memory://'):
-            raise ValueError(
-                "Production rate limiting requires shared storage; configure RATELIMIT_STORAGE_URI."
-            )
 
 
 class TestingConfig(Config):
