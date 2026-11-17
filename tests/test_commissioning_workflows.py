@@ -14,6 +14,7 @@ from models_commissioning import (
     CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, ProgressSnapshot, CommissioningAuditLog,
     CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningAttachment, DocumentStatus,
     CommissioningPreservationPlan, CommissioningPreservationInspection, CommissioningCheckSheetTemplate,
+    CommissioningDossierRevision, CommissioningDossierReview, DossierRevisionStatus, DossierReviewDecision,
     HandoverPackage, HandoverStatus, CommissioningCertificate,
     WitnessPoint, WitnessType, WitnessStatus, PunchHistory,
 )
@@ -1909,3 +1910,159 @@ def test_checksheet_template_validation_and_template_type_mismatch(client, app, 
         "subsystem_id": str(opera_setup["subsystem"]), "template_id": str(template_id),
     })
     assert discipline_mismatch.status_code == 400
+
+
+def test_controlled_dossier_revision_review_issue_and_exports(client, app, opera_setup):
+    from io import BytesIO
+    from zipfile import ZipFile
+
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        client_rep = db.session.get(User, opera_setup["client"])
+        issuer = _user("Contractor A", "opera-flow-dossier-issuer@example.com", "Dossier Issuer")
+        db.session.add(issuer)
+        db.session.flush()
+        db.session.add(CommissioningMembership(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            user_id=issuer.id, role=MembershipRole.COMMISSIONING_MANAGER, is_active=True,
+        ))
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="DOSSIER-CTRL-CS-001", sheet_type=CheckSheetType.PRE_COMM_A,
+            title="Approved dossier check sheet", created_by_id=manager.id,
+        )
+        document = CommissioningDocument(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], document_number="DOSSIER-CTRL-DOC-001",
+            revision="A", revision_sequence=1, title="Approved P&ID",
+            document_type="P&ID", discipline="PROCESS", status=DocumentStatus.APPROVED,
+            created_by_id=manager.id,
+        )
+        db.session.add_all([sheet, document])
+        db.session.commit()
+        sheet.status = CheckSheetStatus.SIGNED_OFF
+        sheet.signed_by_client_id = client_rep.id
+        sheet.signed_by_contractor_id = manager.id
+        sheet.signed_at = datetime.utcnow()
+        db.session.commit()
+        issuer_id = issuer.id
+        manager_id = manager.id
+        client_id = client_rep.id
+        project_id = opera_setup["project"]
+        subsystem_id = opera_setup["subsystem"]
+
+    _login_id(client, manager_id)
+    base = f"/commissioning/projects/{project_id}/subsystems/{subsystem_id}/dossier"
+    page = client.get(base)
+    assert page.status_code == 200
+    created = client.post(base.replace("/dossier", "/dossiers"))
+    assert created.status_code == 302
+    with app.app_context():
+        revision = CommissioningDossierRevision.query.filter_by(
+            company_name="Contractor A", project_id=project_id, subsystem_id=subsystem_id,
+        ).one()
+        assert revision.status == DossierRevisionStatus.DRAFT
+        assert len(revision.snapshot_sha256) == 64
+        assert revision.snapshot_json["export_classification"] == "CONTROLLED_DOSSIER_REVISION"
+        revision_id = revision.id
+
+    submitted = client.post(f"/commissioning/dossiers/{revision_id}/submit")
+    assert submitted.status_code == 302
+
+    _login_id(client, client_id)
+    approved = client.post(
+        f"/commissioning/dossiers/{revision_id}/decision",
+        data={"decision": "APPROVE", "comments": "Reviewed against the configured dossier index."},
+    )
+    assert approved.status_code == 302
+    with app.app_context():
+        revision = db.session.get(CommissioningDossierRevision, revision_id)
+        assert revision.status == DossierRevisionStatus.APPROVED
+        assert revision.approved_by_id == client_id
+        assert CommissioningDossierReview.query.filter_by(
+            dossier_revision_id=revision_id, decision=DossierReviewDecision.APPROVED,
+        ).count() == 1
+
+    _login_id(client, issuer_id)
+    issued = client.post(f"/commissioning/dossiers/{revision_id}/issue")
+    assert issued.status_code == 302
+    with app.app_context():
+        revision = db.session.get(CommissioningDossierRevision, revision_id)
+        assert revision.status == DossierRevisionStatus.ISSUED
+        assert revision.issued_by_id == issuer_id
+        assert revision.snapshot_json["export_classification"] == "CONTROLLED_DOSSIER_REVISION"
+        revision.snapshot_sha256 = "0" * 64
+        with pytest.raises(ValueError, match="immutable"):
+            db.session.commit()
+        db.session.rollback()
+
+    pdf = client.get(f"/commissioning/dossiers/{revision_id}/export.pdf")
+    assert pdf.status_code == 200
+    assert pdf.data.startswith(b"%PDF-")
+    bundle = client.get(f"/commissioning/dossiers/{revision_id}/export.zip")
+    assert bundle.status_code == 200
+    with ZipFile(BytesIO(bundle.data)) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["dossier_control"]["status"] == "ISSUED"
+        assert manifest["dossier_control"]["revision_number"] == 1
+        assert manifest["export_classification"] == "CONTROLLED_DOSSIER_REVISION"
+
+
+def test_controlled_dossier_requires_readiness_and_rejection_reason(client, app, opera_setup):
+    _login_id(client, opera_setup["manager"])
+    project_id = opera_setup["project"]
+    subsystem_id = opera_setup["subsystem"]
+    base = f"/commissioning/projects/{project_id}/subsystems/{subsystem_id}/dossier"
+    created = client.post(base.replace("/dossier", "/dossiers"))
+    assert created.status_code == 302
+    with app.app_context():
+        revision = CommissioningDossierRevision.query.filter_by(
+            company_name="Contractor A", project_id=project_id, subsystem_id=subsystem_id,
+        ).one()
+        revision_id = revision.id
+    assert client.post(f"/commissioning/dossiers/{revision_id}/submit").status_code == 302
+
+    _login_id(client, opera_setup["client"])
+    blocked_approval = client.post(
+        f"/commissioning/dossiers/{revision_id}/decision",
+        data={"decision": "APPROVE", "comments": "Attempted approval"},
+    )
+    assert blocked_approval.status_code == 409
+    missing_reason = client.post(
+        f"/commissioning/dossiers/{revision_id}/decision",
+        data={"decision": "REJECT", "comments": ""},
+    )
+    assert missing_reason.status_code == 400
+    rejected = client.post(
+        f"/commissioning/dossiers/{revision_id}/decision",
+        data={"decision": "REJECT", "comments": "Mandatory check sheets and documents are missing."},
+    )
+    assert rejected.status_code == 302
+    with app.app_context():
+        revision = db.session.get(CommissioningDossierRevision, revision_id)
+        assert revision.status == DossierRevisionStatus.REJECTED
+        assert "missing" in revision.rejection_reason.lower()
+
+    _login_id(client, opera_setup["manager"])
+    next_revision = client.post(base.replace("/dossier", "/dossiers"))
+    assert next_revision.status_code == 302
+    with app.app_context():
+        revisions = CommissioningDossierRevision.query.filter_by(
+            company_name="Contractor A", project_id=project_id, subsystem_id=subsystem_id,
+        ).order_by(CommissioningDossierRevision.revision_number).all()
+        assert [item.revision_number for item in revisions] == [1, 2]
+        assert revisions[1].supersedes_id == revisions[0].id
+
+
+def test_controlled_dossier_permissions_and_tenant_isolation(client, app, opera_setup):
+    project_id = opera_setup["project"]
+    subsystem_id = opera_setup["subsystem"]
+    base = f"/commissioning/projects/{project_id}/subsystems/{subsystem_id}/dossier"
+    _login_id(client, opera_setup["viewer"])
+    denied_create = client.post(base.replace("/dossier", "/dossiers"))
+    assert denied_create.status_code == 403
+
+    _login_id(client, opera_setup["outsider"])
+    hidden_page = client.get(base)
+    assert hidden_page.status_code == 404
