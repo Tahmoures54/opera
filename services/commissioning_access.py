@@ -14,7 +14,7 @@ ROLE_PERMISSIONS = {
     MembershipRole.QC_INSPECTOR: frozenset({"structure.view", "tasks.view", "checksheets.view", "checksheets.verify", "punch.verify", "witness.attend", "reports.view"}),
     MembershipRole.CLIENT_REPRESENTATIVE: frozenset({"structure.view", "tasks.view", "checksheets.view", "checksheets.sign", "punch.view", "witness.view", "reports.view"}),
     MembershipRole.OPERATIONS_LEAD: frozenset({"structure.view", "tasks.view", "checksheets.view", "punch.view", "handover.accept", "reports.view"}),
-    MembershipRole.VIEWER: frozenset({"structure.view", "checksheets.view", "punch.view", "witness.view", "handover.view", "reports.view"}),
+    MembershipRole.VIEWER: frozenset({"structure.view", "tasks.view", "checksheets.view", "punch.view", "witness.view", "handover.view", "reports.view"}),
 }
 
 
