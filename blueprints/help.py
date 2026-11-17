@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for
+from flask import Blueprint, render_template
 
 help_bp = Blueprint('help', __name__, template_folder='templates')
 
