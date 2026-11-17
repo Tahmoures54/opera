@@ -81,3 +81,18 @@ The project **Document Register** stores engineering documents by document numbe
 The current role mapping grants document creation to commissioning managers and engineers, review to QC inspectors and client representatives, and approval to commissioning managers and client representatives. These are OPERA defaults and must be confirmed against the project's Document Control Procedure, authority matrix and client requirements.
 
 The current implementation is a controlled register and review baseline. It does not yet provide a full transmittal workflow, external document numbering integration, bulk register import/export, configurable review cycles, electronic signature compliance, or a durable object-storage adapter for serverless Production. Do not treat a stored approval as a legally binding electronic signature unless the project's approved signature process has been configured and validated.
+
+
+## 10. Subsystem Completion Dossier
+
+Open **Subsystem Completion Dossier** from the commissioning operations dashboard. The dossier consolidates the latest registered revision for each document number, Check Sheets, Punch items, Witness/Hold points, equipment tags and commissioning tasks for one subsystem.
+
+The readiness panel currently evaluates four configured indicators:
+- At least one Check Sheet exists and every registered Check Sheet is signed off.
+- At least one current engineering document exists and every current revision is approved.
+- No open Category A or B Punch items remain.
+- No Hold point remains pending release.
+
+Category C/D Punch items and incomplete commissioning tasks remain visible for review but are not currently hard blockers in this dossier score. A missing document register or empty Check Sheet register is shown as not ready, not treated as completed.
+
+The dossier is a readiness overview only. It is not a generated MC certificate, and this initial increment does not automatically change a Handover Package status. The project must approve its dossier index, required document types, Punch category rules, witness/hold rules and task completion criteria before these indicators can be treated as contractual acceptance gates.
