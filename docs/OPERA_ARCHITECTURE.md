@@ -45,7 +45,7 @@ The implemented certificate types are MC and RFC. RFSU is a separate readiness/a
 ## Known gaps / next increments
 - Project-configurable readiness policy: required Check Sheet templates/types, Punch category blocking per milestone, Hold/Witness rules, waivers and authorized signatories.
 - Reusable, revision-controlled Check Sheet/Test Sheet template catalogue and controlled project instantiation.
-- Full indexed dossier compilation, missing-evidence rules, revisioned PDF package and ZIP evidence export.
+- Full revision-controlled dossier compilation, generated PDF package, ZIP evidence export and verification of durable evidence bytes.
 - Durable private object storage adapter, access controls, retention, malware scanning and paired database/object backup-restore.
 - Preservation plans, periodic inspection records and overdue reporting.
 - Daily work logs, approved manpower capacity planning and vendor mobilization.
