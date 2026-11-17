@@ -565,6 +565,7 @@ def transition_punch(punch_id):
     punch = _punch(punch_id)
     target = _enum(PunchStatus, _required("status", 30), "status")
     old = punch.status
+    old_corrective_action = punch.corrective_action
     allowed = {
         PunchStatus.OPEN: {PunchStatus.IN_PROGRESS, PunchStatus.WAIVED},
         PunchStatus.IN_PROGRESS: {PunchStatus.CLOSED, PunchStatus.WAIVED},
@@ -605,7 +606,7 @@ def transition_punch(punch_id):
         old_status=old, new_status=target, changed_by_id=current_user.id,
         remarks=history_remarks))
     add_audit_event(punch.company_name, "PunchItem", punch.id, "PUNCH_STATUS_CHANGED",
-                    before={"status": old.value, "corrective_action": punch.corrective_action if old == PunchStatus.CLOSED else None},
+                    before={"status": old.value, "corrective_action": old_corrective_action},
                     after=audit_after)
     db.session.commit()
     return redirect(url_for("commissioning.operations", project_id=punch.project_id))
