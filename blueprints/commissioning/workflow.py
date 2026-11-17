@@ -283,12 +283,16 @@ def create_checksheet_template(project_id):
         template_code=template_code, revision=1,
     ).first():
         abort(409, description="Template code already exists. Create a new revision instead.")
+    discipline = (request.form.get("discipline") or "ANY").strip().upper() or "ANY"
+    equipment_type = (request.form.get("equipment_type") or "").strip().upper() or None
+    if len(discipline) > 80 or (equipment_type is not None and len(equipment_type) > 100):
+        abort(400, description="Template discipline or equipment type is too long.")
     template = CommissioningCheckSheetTemplate(
         company_name=project.company_name, project_id=project.id,
         template_code=template_code, title=_required("title", 200),
         sheet_type=_enum(CheckSheetType, _required("sheet_type", 30), "sheet type"),
-        discipline=(request.form.get("discipline") or "ANY").strip().upper() or "ANY",
-        equipment_type=(request.form.get("equipment_type") or "").strip().upper() or None,
+        discipline=discipline,
+        equipment_type=equipment_type,
         acceptance_criteria=(request.form.get("acceptance_criteria") or "").strip() or None,
         revision=1, items_json=_validate_template_items(_required("items_json", 20000)),
         status="DRAFT", created_by_id=current_user.id,
@@ -321,8 +325,12 @@ def update_checksheet_template(project_id, template_id):
         "acceptance_criteria": template.acceptance_criteria,
     }
     template.title = _required("title", 200)
-    template.discipline = (request.form.get("discipline") or "ANY").strip().upper() or "ANY"
-    template.equipment_type = (request.form.get("equipment_type") or "").strip().upper() or None
+    discipline = (request.form.get("discipline") or "ANY").strip().upper() or "ANY"
+    equipment_type = (request.form.get("equipment_type") or "").strip().upper() or None
+    if len(discipline) > 80 or (equipment_type is not None and len(equipment_type) > 100):
+        abort(400, description="Template discipline or equipment type is too long.")
+    template.discipline = discipline
+    template.equipment_type = equipment_type
     template.acceptance_criteria = (request.form.get("acceptance_criteria") or "").strip() or None
     template.items_json = _validate_template_items(_required("items_json", 20000))
     after = {
