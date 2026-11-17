@@ -31,3 +31,8 @@
 
 ## Release rule
 Green CI validates the tested commit in CI. It does not replace staging migration rehearsal, production backup/restore, durable evidence storage, end-to-end multi-role acceptance or operational sign-off.
+
+
+### Check Sheet template engine
+
+Added project-scoped revision-controlled Check Sheet/Test Sheet templates, approved-template immutability, revision snapshots on instantiated sheets, mandatory/optional inspection items, item-level acceptance criteria and units, and sign-off gates for independent QC verification and witness release.
