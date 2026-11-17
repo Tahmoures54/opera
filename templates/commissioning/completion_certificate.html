@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - {{ certificate.certificate_type }} Completion Certificate{% endblock %}
+{% block content %}
+<style>
+.certificate-sheet{max-width:1100px;margin:24px auto;background:#fff;color:#17212b;border:1px solid #d8dee5;padding:42px}
+.certificate-brand{letter-spacing:.18em;font-weight:800;color:#233f57}
+.certificate-rule{height:4px;background:#233f57;margin:18px 0 28px}
+.certificate-meta{background:#f4f7fa;border:1px solid #dce4eb;padding:18px}
+.certificate-section{margin-top:28px;break-inside:avoid}
+.certificate-section h2{font-size:1rem;font-weight:700;border-bottom:1px solid #dce4eb;padding-bottom:8px}
+.certificate-table{font-size:.84rem}
+.certificate-table th{background:#f4f7fa}
+@media print{
+  body{background:#fff!important}
+  nav,.navbar,footer,.no-print{display:none!important}
+  .certificate-sheet{max-width:none;margin:0;border:0;padding:8mm;box-shadow:none}
+  .certificate-section{break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+<div class="certificate-sheet">
+  <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+    <div><div class="certificate-brand">OPERA · PROJECT COMPLETION CONTROL</div><div class="small text-muted mt-1">{{ snapshot.project.code }} · {{ snapshot.project.name }}</div></div>
+    <div class="text-end no-print d-flex gap-2"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('commissioning.operations', project_id=project.id) }}">Back to operations</a><button class="btn btn-primary btn-sm" type="button" onclick="window.print()">Print / Save as PDF</button></div>
+  </div>
+  <div class="certificate-rule"></div>
+  <div class="text-center mb-4">
+    <div class="text-uppercase small fw-bold text-muted">{{ certificate.certificate_type }} Certificate</div>
+    <h1 class="h2 mt-2">{% if certificate.certificate_type == 'MC' %}Mechanical Completion Certificate{% else %}Ready for Commissioning Certificate{% endif %}</h1>
+    <p class="text-muted mb-0">System / Subsystem Completion Record</p>
+  </div>
+  <div class="certificate-meta row g-3">
+    <div class="col-md-3"><div class="small text-muted">Certificate number</div><div class="fw-bold">{{ certificate.certificate_number }}</div></div>
+    <div class="col-md-3"><div class="small text-muted">Issue date</div><div class="fw-bold">{{ certificate.certificate_date }}</div></div>
+    <div class="col-md-3"><div class="small text-muted">Handover package</div><div class="fw-bold">{{ snapshot.package.number }}</div></div>
+    <div class="col-md-3"><div class="small text-muted">Issued by</div><div class="fw-bold">{{ snapshot.certificate.issued_by }}</div></div>
+    <div class="col-md-6"><div class="small text-muted">Client</div><div class="fw-semibold">{{ snapshot.project.client or 'Not specified' }}</div></div>
+    <div class="col-md-6"><div class="small text-muted">Contractor</div><div class="fw-semibold">{{ snapshot.project.contractor or 'Not specified' }}</div></div>
+    <div class="col-md-6"><div class="small text-muted">Subsystem</div><div class="fw-semibold">{{ snapshot.subsystem.code }} — {{ snapshot.subsystem.name }}</div></div>
+    <div class="col-md-6"><div class="small text-muted">Project</div><div class="fw-semibold">{{ snapshot.project.code }} — {{ snapshot.project.name }}</div></div>
+  </div>
+
+  <section class="certificate-section">
+    <h2>Issue-time readiness summary</h2>
+    <div class="row g-3">
+      <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Current Check Sheets</div><div class="h4 mb-0">{{ snapshot.readiness.current_check_sheets_signed }}/{{ snapshot.readiness.current_check_sheets_total }}</div><div class="small text-muted">Signed off</div></div></div>
+      <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Open A/B Punch</div><div class="h4 mb-0">{{ snapshot.readiness.open_category_a_b_punch }}</div><div class="small text-muted">At issue time</div></div></div>
+      <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Approved current documents</div><div class="h4 mb-0">{{ snapshot.readiness.current_documents_approved }}/{{ snapshot.readiness.current_documents_total }}</div><div class="small text-muted">Latest revisions</div></div></div>
+      <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Tasks completed</div><div class="h4 mb-0">{{ snapshot.readiness.tasks_completed }}/{{ snapshot.readiness.tasks_total }}</div><div class="small text-muted">Registered tasks</div></div></div>
+    </div>
+    <p class="small text-muted mt-2 mb-0">The MC issue gate enforces signed-off current Check Sheets and clearance of Category A/B Punch items. Other values are preserved as supporting evidence and are not silently treated as additional contractual acceptance rules.</p>
+  </section>
+
+  <section class="certificate-section">
+    <h2>Check Sheet register</h2>
+    <div class="table-responsive"><table class="table table-sm table-bordered certificate-table"><thead><tr><th>Sheet number</th><th>Rev</th><th>Title</th><th>Type</th><th>Status</th><th>Client signatory</th><th>Contractor signatory</th></tr></thead><tbody>
+    {% for item in snapshot.check_sheets %}<tr><td>{{ item.number }}</td><td>{{ item.revision }}</td><td>{{ item.title }}</td><td>{{ item.type }}</td><td>{{ item.status }}</td><td>{{ item.client_signatory_id or '—' }}</td><td>{{ item.contractor_signatory_id or '—' }}</td></tr>{% else %}<tr><td colspan="7" class="text-center text-muted">No Check Sheets in the issue-time register</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+
+  <section class="certificate-section">
+    <h2>Engineering document register</h2>
+    <div class="table-responsive"><table class="table table-sm table-bordered certificate-table"><thead><tr><th>Document number</th><th>Rev</th><th>Title</th><th>Type</th><th>Discipline</th><th>Status</th></tr></thead><tbody>
+    {% for item in snapshot.documents %}<tr><td>{{ item.number }}</td><td>{{ item.revision }}</td><td>{{ item.title }}</td><td>{{ item.type }}</td><td>{{ item.discipline }}</td><td>{{ item.status }}</td></tr>{% else %}<tr><td colspan="6" class="text-center text-muted">No engineering documents in the issue-time register</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+
+  <section class="certificate-section">
+    <h2>Punch List</h2>
+    <div class="table-responsive"><table class="table table-sm table-bordered certificate-table"><thead><tr><th>Punch number</th><th>Category</th><th>Severity</th><th>Description</th><th>Status</th><th>Target closure</th></tr></thead><tbody>
+    {% for item in snapshot.punch_items %}<tr><td>{{ item.number }}</td><td>{{ item.category }}</td><td>{{ item.severity }}</td><td>{{ item.description }}</td><td>{{ item.status }}</td><td>{{ item.target_closure_date or '—' }}</td></tr>{% else %}<tr><td colspan="6" class="text-center text-muted">No Punch items in the issue-time register</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+
+  <div class="row g-4">
+    <div class="col-md-6 certificate-section"><h2>Witness / Hold points</h2><div class="table-responsive"><table class="table table-sm table-bordered certificate-table"><thead><tr><th>Type</th><th>Scheduled</th><th>Status</th><th>Notified party</th></tr></thead><tbody>{% for item in snapshot.witness_points %}<tr><td>{{ item.type }}</td><td>{{ item.scheduled_at }}</td><td>{{ item.status }}</td><td>{{ item.notified_party or '—' }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No points recorded</td></tr>{% endfor %}</tbody></table></div></div>
+    <div class="col-md-6 certificate-section"><h2>Equipment / Tags</h2><div class="table-responsive"><table class="table table-sm table-bordered certificate-table"><thead><tr><th>Tag</th><th>Type</th><th>Description</th></tr></thead><tbody>{% for item in snapshot.equipment %}<tr><td>{{ item.tag }}</td><td>{{ item.type or '—' }}</td><td>{{ item.description or '—' }}</td></tr>{% else %}<tr><td colspan="3" class="text-center text-muted">No equipment recorded</td></tr>{% endfor %}</tbody></table></div></div>
+  </div>
+
+  <section class="certificate-section">
+    <h2>Commissioning task register</h2>
+    <div class="table-responsive"><table class="table table-sm table-bordered certificate-table"><thead><tr><th>Task number</th><th>Activity</th><th>Title</th><th>Discipline</th><th>Status</th><th>Actual finish</th></tr></thead><tbody>
+    {% for item in snapshot.tasks %}<tr><td>{{ item.number }}</td><td>{{ item.activity }}</td><td>{{ item.title }}</td><td>{{ item.discipline }}</td><td>{{ item.status }}</td><td>{{ item.actual_finish or '—' }}</td></tr>{% else %}<tr><td colspan="6" class="text-center text-muted">No tasks in the issue-time register</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+
+  <section class="certificate-section">
+    <h2>Issue record and acknowledgements</h2>
+    <div class="row g-4 mt-1">
+      <div class="col-md-4"><div class="border-top pt-2"><strong>Issued by</strong><div>{{ snapshot.certificate.issued_by }}</div><small class="text-muted">OPERA user ID {{ snapshot.certificate.issued_by_id }}</small></div></div>
+      <div class="col-md-4"><div class="border-top pt-2"><strong>Client representative</strong><div class="mt-4">Name / Signature / Date</div></div></div>
+      <div class="col-md-4"><div class="border-top pt-2"><strong>Operations representative</strong><div class="mt-4">Name / Signature / Date</div></div></div>
+    </div>
+    <p class="small text-muted mt-4">This certificate contains an immutable snapshot of OPERA records at the time of issue. The underlying registers may subsequently change without altering this certificate. Contractual validity, signatory authority and acceptance requirements remain governed by the approved project procedures and contract.</p>
+  </section>
+  <div class="d-flex justify-content-between small text-muted border-top pt-3 mt-4"><span>OPERA · Commissioning & Handover</span><span>Issued {{ snapshot.certificate.issued_at }}</span></div>
+</div>
+{% endblock %}
