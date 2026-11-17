@@ -2225,6 +2225,25 @@ def test_numeric_checksheet_measurement_limits_and_audit(client, app, opera_setu
         item = db.session.get(CheckSheetItem, item_id)
         assert item.result_status == ItemResultStatus.NA
         assert item.measured_value is None
+        sheet = db.session.get(CheckSheet, sheet_id)
+        sheet.status = CheckSheetStatus.SIGNED_OFF
+        sheet.signed_by_client_id = opera_setup["client"]
+        sheet.signed_by_contractor_id = opera_setup["manager"]
+        db.session.commit()
+
+    revised_sheet = client.post(
+        f"/commissioning/checksheets/{sheet_id}/revise",
+        data={"reason": "Preserve numeric acceptance limits in the next revision"},
+    )
+    assert revised_sheet.status_code == 302
+    revised_sheet_id = int(revised_sheet.headers["Location"].rsplit("/", 1)[-1])
+    with app.app_context():
+        revised_item = CheckSheetItem.query.filter_by(check_sheet_id=revised_sheet_id).one()
+        assert revised_item.measurement_type == "NUMERIC"
+        assert float(revised_item.minimum_value) == 2.5
+        assert float(revised_item.maximum_value) == 5.0
+        assert revised_item.measured_value is None
+        assert revised_item.result_status == ItemResultStatus.PENDING
 
     invalid_limits = client.post(template_url, data={
         "template_code": "PUMP-MEAS-BAD",
