@@ -156,6 +156,7 @@ class CommissioningProject(db.Model):
     target_end_date = db.Column(db.Date)
     status = db.Column(_enum(ProjectStatus, "commissioning_project_status"), nullable=False, default=ProjectStatus.PLANNING)
     description = db.Column(db.Text)
+    readiness_policy_json = db.Column(db.JSON, nullable=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - Readiness policy{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+    <div>
+      <a href="{{ url_for('commissioning.operations', project_id=project.id) }}">Back to commissioning operations</a>
+      <h1 class="h3 mt-2 mb-1">Readiness policy</h1>
+      <div class="text-muted">{{ project.project_code }} · {{ project.name }}</div>
+    </div>
+    <span class="badge text-bg-warning">Project approval required</span>
+  </div>
+
+  {% if policy_errors %}
+  <div class="alert alert-danger" role="alert">
+    <strong>Stored policy is invalid.</strong> Readiness gates fail closed until a valid policy is saved.
+    <ul class="mb-0">{% for error in policy_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <div class="alert alert-info">
+    These are project-specific OPERA rules, not universal ICAPS defaults. Confirm every selection against the approved completion procedure, ITP, contract and authority matrix before relying on it for handover.
+  </div>
+
+  <form method="post" class="vstack gap-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <section class="card">
+      <div class="card-header fw-semibold">Punch categories that block each milestone</div>
+      <div class="card-body">
+        <p class="small text-muted">Select the open Punch categories that prevent the corresponding readiness gate.</p>
+        <div class="row g-3">
+          {% for gate in gates %}
+          <div class="col-md-4">
+            <h2 class="h6">{{ gate }}</h2>
+            {% for category in punch_categories %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="punch_{{ gate }}_{{ category.value }}" name="punch_{{ gate }}" value="{{ category.value }}" {% if category.value in policy.punch_blocking_categories[gate] %}checked{% endif %}>
+              <label class="form-check-label" for="punch_{{ gate }}_{{ category.value }}">Category {{ category.value }}</label>
+            </div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header fw-semibold">Required Check Sheet types</div>
+      <div class="card-body">
+        <p class="small text-muted">Every registered sheet of a selected type must be signed off. Empty types are not blockers unless the presence option below is enabled.</p>
+        <div class="row g-3">
+          {% for gate in gates %}
+          <div class="col-md-4">
+            <h2 class="h6">{{ gate }}</h2>
+            {% for sheet_type in check_sheet_types %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="sheets_{{ gate }}_{{ sheet_type.value }}" name="sheets_{{ gate }}" value="{{ sheet_type.value }}" {% if sheet_type.value in policy.required_check_sheet_types[gate] %}checked{% endif %}>
+              <label class="form-check-label" for="sheets_{{ gate }}_{{ sheet_type.value }}">{{ sheet_type.value|replace('_', ' ')|title }}</label>
+            </div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        <hr>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="require_check_sheet_presence" name="require_check_sheet_presence" {% if policy.require_check_sheet_presence %}checked{% endif %}>
+          <label class="form-check-label" for="require_check_sheet_presence">Require at least one registered Check Sheet for every selected type</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header fw-semibold">Hold points and RFSU task completion</div>
+      <div class="card-body">
+        <p class="small text-muted">An unreleased Hold point linked to a Check Sheet blocks only the milestones selected below.</p>
+        {% for gate in gates %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="hold_{{ gate }}" name="hold_point_blocking_gates" value="{{ gate }}" {% if gate in policy.hold_point_blocking_gates %}checked{% endif %}>
+          <label class="form-check-label" for="hold_{{ gate }}">Unreleased Hold points block {{ gate }}</label>
+        </div>
+        {% endfor %}
+        <hr>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="require_all_tasks_complete_for_rfsu" name="require_all_tasks_complete_for_rfsu" {% if policy.require_all_tasks_complete_for_rfsu %}checked{% endif %}>
+          <label class="form-check-label" for="require_all_tasks_complete_for_rfsu">Require all subsystem tasks to be Completed or Cancelled before RFSU</label>
+        </div>
+      </div>
+    </section>
+
+    <div class="d-flex justify-content-end gap-2">
+      <a class="btn btn-outline-secondary" href="{{ url_for('commissioning.operations', project_id=project.id) }}">Cancel</a>
+      <button class="btn btn-primary" type="submit">Save readiness policy</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

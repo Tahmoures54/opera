@@ -6,7 +6,7 @@
   <div class="d-flex justify-content-between flex-wrap gap-2 mb-4">
     <div><a href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">Back to project structure</a><h1 class="h3 mt-2">{{ project.name }} — Commissioning operations</h1><div class="text-muted">{{ project.project_code }}</div></div>
     <div class="d-flex flex-wrap gap-2 align-items-start">
-      {% if can_manage_structure %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.engineering_data_exchange', project_id=project.id) }}">Engineering data exchange</a>{% endif %}
+      {% if can_manage_structure %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.engineering_data_exchange', project_id=project.id) }}">Engineering data exchange</a><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('commissioning.edit_readiness_policy', project_id=project.id) }}">Readiness policy</a>{% endif %}
       <span class="badge bg-primary">Check sheet progress: {{ progress }}%</span><span class="badge bg-secondary">Punch Open: {{ punch_open }}</span>
     </div>
   </div>

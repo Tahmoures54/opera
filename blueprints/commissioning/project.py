@@ -7,9 +7,10 @@ from flask_login import current_user, login_required
 from extensions import db
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem,
-    CommissioningSubsystem, CommissioningEquipment, CheckSheet, PunchItem, HandoverPackage, MembershipRole, ProjectStatus,
+    CommissioningSubsystem, CommissioningEquipment, CheckSheet, PunchItem, HandoverPackage, MembershipRole, ProjectStatus, PunchCategory, CheckSheetType,
 )
 from services.commissioning_access import add_audit_event, get_project, has_permission
+from services.commissioning_readiness_policy import GATES, normalize_readiness_policy
 from blueprints.commissioning import commissioning_bp
 
 
@@ -102,6 +103,51 @@ def project_detail(project_id):
     system_subsystems = {system.id: CommissioningSubsystem.query.filter_by(company_name=current_user.company_name, system_id=system.id).filter(CommissioningSubsystem.status != "ARCHIVED").order_by(CommissioningSubsystem.subsystem_code).all() for system in systems}
     return render_template("commissioning/project_structure.html", project=project, systems=systems, system_subsystems=system_subsystems)
 
+
+
+@commissioning_bp.route("/projects/<int:project_id>/readiness-policy", methods=["GET", "POST"])
+@login_required
+def edit_readiness_policy(project_id):
+    """Configure project-specific MC/RFC/RFSU blockers and evidence requirements."""
+    project = get_project(project_id)
+    if not has_permission(project_id, "project.manage"):
+        abort(403)
+
+    policy, errors = normalize_readiness_policy(project.readiness_policy_json)
+    if request.method == "POST":
+        updated = {
+            "punch_blocking_categories": {
+                gate: request.form.getlist(f"punch_{gate}") for gate in GATES
+            },
+            "hold_point_blocking_gates": request.form.getlist("hold_point_blocking_gates"),
+            "required_check_sheet_types": {
+                gate: request.form.getlist(f"sheets_{gate}") for gate in GATES
+            },
+            "require_check_sheet_presence": request.form.get("require_check_sheet_presence") == "on",
+            "require_all_tasks_complete_for_rfsu": request.form.get("require_all_tasks_complete_for_rfsu") == "on",
+        }
+        normalized, validation_errors = normalize_readiness_policy(updated)
+        if validation_errors:
+            abort(400, description="; ".join(validation_errors))
+        before = policy
+        project.readiness_policy_json = normalized
+        add_audit_event(
+            project.company_name, "CommissioningProject", project.id,
+            "READINESS_POLICY_UPDATED", before=before, after=normalized,
+        )
+        db.session.commit()
+        flash("Project readiness policy saved.", "success")
+        return redirect(url_for("commissioning.edit_readiness_policy", project_id=project.id))
+
+    return render_template(
+        "commissioning/readiness_policy.html",
+        project=project,
+        policy=policy,
+        gates=GATES,
+        punch_categories=list(PunchCategory),
+        check_sheet_types=list(CheckSheetType),
+        policy_errors=errors,
+    )
 
 
 

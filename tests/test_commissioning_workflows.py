@@ -1034,6 +1034,9 @@ def test_mc_rfc_certificates_capture_immutable_issue_time_evidence(client, app, 
             package_id=package_id, certificate_type="MC",
         ).one()
         assert mc_certificate.snapshot_json["readiness"]["current_check_sheets_signed"] == 1
+        assert mc_certificate.snapshot_json["readiness"]["gate"] == "MC"
+        assert mc_certificate.snapshot_json["readiness"]["gate_ready"] is True
+        assert mc_certificate.snapshot_json["readiness"]["readiness_policy"]["punch_blocking_categories"]["MC"] == ["A", "B"]
         mc_certificate_id = mc_certificate.id
         hold = WitnessPoint(
             company_name="Contractor A", project_id=opera_setup["project"],
@@ -1310,3 +1313,102 @@ def test_punch_close_requires_corrective_action_and_reopen_requires_reason(clien
         assert audit.after_json["previous_corrective_action"].startswith("Replaced the damaged gasket")
 
 
+
+
+def test_project_readiness_policy_is_configurable_and_audited(client, app, opera_setup):
+    from models_commissioning import CommissioningProject
+
+    _login_id(client, opera_setup["manager"])
+    url = f"/commissioning/projects/{opera_setup['project']}/readiness-policy"
+    page = client.get(url)
+    assert page.status_code == 200
+    assert b"Punch categories that block each milestone" in page.data
+
+    response = client.post(url, data={
+        "punch_MC": ["C"],
+        "punch_RFC": ["A", "C"],
+        "punch_RFSU": ["D"],
+        "hold_point_blocking_gates": ["RFC"],
+        "sheets_MC": ["PRE_COMM_A"],
+        "sheets_RFC": ["PRE_COMM_A", "COMM_C"],
+        "sheets_RFSU": ["COMM_C", "FUNCTIONAL_TEST"],
+        "require_check_sheet_presence": "on",
+        "require_all_tasks_complete_for_rfsu": "on",
+    })
+    assert response.status_code == 302
+
+    with app.app_context():
+        project = db.session.get(CommissioningProject, opera_setup["project"])
+        assert project.readiness_policy_json["punch_blocking_categories"]["MC"] == ["C"]
+        assert project.readiness_policy_json["punch_blocking_categories"]["RFC"] == ["A", "C"]
+        assert project.readiness_policy_json["hold_point_blocking_gates"] == ["RFC"]
+        audit = CommissioningAuditLog.query.filter_by(
+            company_name="Contractor A",
+            entity_type="CommissioningProject",
+            entity_id=project.id,
+            action="READINESS_POLICY_UPDATED",
+        ).one()
+        assert audit.after_json == project.readiness_policy_json
+
+
+def test_readiness_policy_changes_punch_blockers_per_gate(client, app, opera_setup):
+    from models_commissioning import CommissioningProject
+    from services.commissioning_readiness import evaluate_subsystem_readiness
+
+    with app.app_context():
+        project = db.session.get(CommissioningProject, opera_setup["project"])
+        punch = PunchItem(
+            company_name="Contractor A",
+            project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"],
+            punch_number="POLICY-001",
+            category=PunchCategory.C,
+            description="Paint damage requiring repair",
+            raised_by_id=opera_setup["manager"],
+            status=PunchStatus.OPEN,
+        )
+        db.session.add(punch)
+        db.session.commit()
+
+        default_result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
+        assert default_result.is_ready_for_mc is True
+
+        project.readiness_policy_json = {
+            "punch_blocking_categories": {
+                "MC": ["C"], "RFC": [], "RFSU": [],
+            },
+            "hold_point_blocking_gates": [],
+            "required_check_sheet_types": {"MC": [], "RFC": [], "RFSU": []},
+            "require_check_sheet_presence": False,
+            "require_all_tasks_complete_for_rfsu": False,
+        }
+        db.session.commit()
+        configured_result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
+        assert configured_result.is_ready_for_mc is False
+        assert configured_result.is_ready_for_rfc is True
+        assert configured_result.is_ready_for_rfsu is True
+        assert any(
+            issue.gate == "MC" and issue.entity_id == punch.id
+            for issue in configured_result.issues
+        )
+
+
+def test_invalid_readiness_policy_fails_closed_and_viewer_cannot_edit(client, app, opera_setup):
+    from models_commissioning import CommissioningProject
+    from services.commissioning_readiness import evaluate_subsystem_readiness
+
+    _login_id(client, opera_setup["viewer"])
+    url = f"/commissioning/projects/{opera_setup['project']}/readiness-policy"
+    assert client.get(url).status_code == 403
+
+    with app.app_context():
+        project = db.session.get(CommissioningProject, opera_setup["project"])
+        project.readiness_policy_json = {
+            "punch_blocking_categories": {"MC": ["NOT_A_CATEGORY"]},
+        }
+        db.session.commit()
+        result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
+        assert result.is_ready_for_mc is False
+        assert result.is_ready_for_rfc is False
+        assert result.is_ready_for_rfsu is False
+        assert any(issue.code == "INVALID_READINESS_POLICY" for issue in result.issues)

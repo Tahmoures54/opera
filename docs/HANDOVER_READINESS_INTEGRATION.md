@@ -27,6 +27,10 @@ When a package transitions from `MC_CERTIFIED` to `RFC_CERTIFIED`, OPERA:
 
 The certificate route accepts `RFC`. The former `RF` route remains a compatibility alias. Existing `RF` certificate types and `RF_CERTIFIED` / `RF_PENDING` handover values are migrated to `RFC`, `RFC_CERTIFIED` and `RFC_PENDING`. The old package-column names remain mapped internally to avoid dropping or rewriting legacy references; application code uses RFC names.
 
+## Project-configurable policy
+
+The project Readiness policy is stored in `CommissioningProject.readiness_policy_json` and managed by users with `project.manage`. It independently configures blocking Punch categories, required Check Sheet types for MC/RFC/RFSU, Hold-point blocking gates, Check Sheet presence requirements and whether all tasks must be complete before RFSU. Defaults preserve the previous OPERA A/B Punch and Check Sheet assumptions. Invalid stored policy data fails all readiness gates closed. Issued MC/RFC certificate snapshots include the effective policy and gate-specific issues. See [READINESS_POLICY.md](READINESS_POLICY.md).
+
 ## Verification scenarios
 
 1. An open Punch A/B, unreleased Hold point or unsigned required Pre-Comm sheet blocks MC with HTTP 409.
