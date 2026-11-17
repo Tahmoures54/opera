@@ -1,13 +1,13 @@
 # OPERA Release Readiness Checklist
 
-**Code baseline:** `ca37db49224160628e9fb28d3b7d51930acc099f`  
-**CI run:** [44074781281](https://github.com/Tahmoures54/opera/actions/runs/44074781281)
+**Code baseline:** `3d2095b0ff3e006f607429f95c0b531f83379f94` (merge commit for PR #39)  
+**CI run:** [44084364501](https://github.com/Tahmoures54/opera/actions/runs/44084364501) — PR head `417654cf6a2db1ac8ff94c3a45426307ab8fdcd9`; all quality-job steps passed.
 
 ## Repository and CI
-- [x] Main contains the merged Task, Check Sheet, Punch, document-control, engineering exchange, dossier, MC/RFC and readiness increments.
+- [x] Main contains Task, Check Sheet, Punch, document-control, engineering exchange, dossier index, MC/RFC, readiness, Preservation and S3-compatible evidence-storage increments.
 - [x] `quality` check passed on the baseline commit.
 - [x] `integration` check passed on the baseline commit.
-- [x] `docker` check passed on the baseline commit.
+- [x] `docker` check passed on the previous baseline commit; PR #39 quality job passed on its head commit.
 - [ ] Reconcile and remove obsolete remote feature branches after confirming merged ancestry; retain any branch with unmerged work.
 - [ ] Confirm no stale or duplicate pull requests remain open.
 
@@ -19,7 +19,7 @@
 - [ ] Migrate existing local evidence objects to the bucket and verify every stored SHA-256 checksum.
 - [ ] Verify object access controls, encryption, retention, malware scanning and off-host backup.
 - [ ] Perform paired database/evidence backup and restore rehearsal.
-- [ ] Verify deployment health, HTTPS, logging, monitoring and rollback procedure.
+- [ ] Verify deployment health, HTTPS, logging, monitoring and rollback procedure. The Vercel check on the merge commit currently reports `build-rate-limit`; deployment success is not verified.
 
 ## Project acceptance
 - [ ] Approve systemization, activity taxonomy, Check Sheet templates and the configured MC/RFC/RFSU readiness policy.
