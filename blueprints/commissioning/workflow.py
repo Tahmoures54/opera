@@ -1,8 +1,8 @@
 """OPERA operational workflows: membership, check sheets, punch, witness and handover."""
 import hashlib
 import json
-from decimal import Decimal, InvalidOperation
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
