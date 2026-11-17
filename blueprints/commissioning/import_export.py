@@ -6,11 +6,12 @@ official ICAPS template. Imports are create-only and dry-run validated first.
 from __future__ import annotations
 
 from datetime import date, datetime
+from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 import re
 
-from flask import abort, flash, redirect, render_template, request, send_file, url_for
+from flask import abort, flash, redirect, render_template, request, send_file, session, url_for
 from flask_login import current_user, login_required
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
@@ -537,6 +538,8 @@ def import_engineering_registers(project_id):
         abort(400, description="Workbook is empty.")
 
     errors = []
+    workbook_digest = sha256(raw).hexdigest()
+    session_key = f"opera_engineering_import:{project.id}"
     try:
         workbook = load_workbook(BytesIO(raw), read_only=True, data_only=False)
     except Exception:
@@ -567,15 +570,24 @@ def import_engineering_registers(project_id):
     summary = {name: len(rows) for name, rows in planned.items()}
     action = request.form.get("action", "validate")
     if errors:
+        session.pop(session_key, None)
         return render_template(
             "commissioning/engineering_data_exchange.html", project=project,
             errors=errors, summary=summary, imported=False, dry_run=True,
         ), 400
     if action != "import":
+        session[session_key] = workbook_digest
         return render_template(
             "commissioning/engineering_data_exchange.html", project=project,
             errors=[], summary=summary, imported=False, dry_run=True,
         )
+    if session.pop(session_key, None) != workbook_digest:
+        errors.append({"sheet": "Workbook", "row": "—", "field": "dry_run",
+                       "message": "The workbook does not match the last successful dry run. Validate this exact file again before importing."})
+        return render_template(
+            "commissioning/engineering_data_exchange.html", project=project,
+            errors=errors, summary=summary, imported=False, dry_run=False,
+        ), 409
     if planned["tasks"] and not has_permission(project.id, "tasks.create"):
         abort(403)
     try:
