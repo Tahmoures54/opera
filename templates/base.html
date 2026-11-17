@@ -439,6 +439,15 @@
   document.addEventListener('click', function (e) {
     if (e.target.closest('.mh-sidebar a') && window.innerWidth < 951) {
       document.body.classList.remove('mh-sidebar-open');
+      var menu = document.querySelector('.mh-menu');
+      if (menu) menu.setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+      document.body.classList.remove('mh-sidebar-open');
+      var menu = document.querySelector('.mh-menu');
+      if (menu) menu.setAttribute('aria-expanded', 'false');
     }
   });
 </script>
