@@ -610,6 +610,223 @@ def test_subsystem_dossier_is_tenant_scoped(client, opera_setup):
     assert response.status_code == 404
 
 
+def test_rejection_reissue_requires_fresh_signatures_and_qc(client, app, opera_setup):
+    from models_commissioning import CommissioningAuditLog, CommissioningSignature
+
+    manager_id = opera_setup["manager"]
+    _login_id(client, manager_id)
+    response = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/checksheets/new",
+        data={
+            "subsystem_id": opera_setup["subsystem"],
+            "sheet_type": CheckSheetType.COMM_C.value,
+            "title": "Reissue workflow test",
+        },
+    )
+    assert response.status_code == 302
+    with app.app_context():
+        sheet = CheckSheet.query.filter_by(project_id=opera_setup["project"]).one()
+        sheet_id = sheet.id
+        item = CheckSheetItem(
+            company_name="Contractor A", check_sheet_id=sheet.id, sequence=1,
+            description="Verify pressure test", expected_result="Within limits",
+        )
+        db.session.add(item)
+        db.session.commit()
+        item_id = item.id
+
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/issue").status_code == 302
+    assert client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"actual_result": "Within limits", "result_status": "OK"},
+    ).status_code == 302
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/sign").status_code == 409
+
+    _login_id(client, opera_setup["qc"])
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/items/{item_id}/verify").status_code == 302
+
+    _login_id(client, opera_setup["client"])
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/sign").status_code == 302
+    assert client.post(
+        f"/commissioning/checksheets/{sheet_id}/reject",
+        data={"reason": "Additional evidence required"},
+    ).status_code == 302
+
+    with app.app_context():
+        sheet = db.session.get(CheckSheet, sheet_id)
+        assert sheet.status is CheckSheetStatus.REJECTED
+        assert sheet.signed_by_client_id is None
+        assert sheet.signed_by_contractor_id is None
+        assert sheet.signed_at is None
+        assert sheet.rejection_reason == "Additional evidence required"
+        assert CommissioningSignature.query.filter_by(
+            company_name="Contractor A", entity_type="CheckSheet", entity_id=sheet_id
+        ).count() == 1
+
+    _login_id(client, manager_id)
+    rejected_detail = client.get(f"/commissioning/checksheets/{sheet_id}")
+    assert rejected_detail.status_code == 200
+    assert "Reissue check sheet" in rejected_detail.get_data(as_text=True)
+
+    _login_id(client, manager_id)
+    assert client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"actual_result": "Reworked within limits", "result_status": "OK"},
+    ).status_code == 302
+    with app.app_context():
+        sheet = db.session.get(CheckSheet, sheet_id)
+        item = CheckSheetItem.query.filter_by(id=item_id, check_sheet_id=sheet_id).one()
+        assert sheet.status is CheckSheetStatus.REJECTED
+        assert item.verified_by_id is None
+
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/issue").status_code == 302
+    with app.app_context():
+        sheet = db.session.get(CheckSheet, sheet_id)
+        assert sheet.status is CheckSheetStatus.ISSUED
+        assert sheet.rejection_reason is None
+        assert sheet.signed_by_client_id is None
+
+    _login_id(client, opera_setup["qc"])
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/items/{item_id}/verify").status_code == 302
+    _login_id(client, manager_id)
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/sign").status_code == 302
+    _login_id(client, opera_setup["client"])
+    assert client.post(f"/commissioning/checksheets/{sheet_id}/sign").status_code == 302
+
+    with app.app_context():
+        sheet = db.session.get(CheckSheet, sheet_id)
+        assert sheet.status is CheckSheetStatus.SIGNED_OFF
+        assert sheet.signed_by_contractor_id == manager_id
+        assert sheet.signed_by_client_id == opera_setup["client"]
+        assert CommissioningSignature.query.filter_by(
+            company_name="Contractor A", entity_type="CheckSheet", entity_id=sheet_id
+        ).count() == 3
+        assert CommissioningAuditLog.query.filter_by(
+            company_name="Contractor A", entity_type="CheckSheet",
+            entity_id=sheet_id, action="CHECKSHEET_REJECTED",
+        ).count() == 1
+
+
+def test_checksheet_revision_history_is_visible_and_latest_revision_is_enforced(client, app, opera_setup):
+    from models_commissioning import CheckSheetRevision
+
+    manager_id = opera_setup["manager"]
+    with app.app_context():
+        manager = db.session.get(User, manager_id)
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-C-REV-00001", sheet_type=CheckSheetType.COMM_C,
+            title="Revision history test", status=CheckSheetStatus.DRAFT,
+            created_by_id=manager.id,
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        sheet.status = CheckSheetStatus.SIGNED_OFF
+        db.session.commit()
+        sheet_id = sheet.id
+
+    _login_id(client, manager_id)
+    response = client.post(
+        f"/commissioning/checksheets/{sheet_id}/revise",
+        data={"reason": "Updated acceptance criteria"},
+    )
+    assert response.status_code == 302
+    with app.app_context():
+        revisions = CheckSheetRevision.query.filter_by(
+            company_name="Contractor A", sheet_number="FLOW-01-C-REV-00001"
+        ).all()
+        assert len(revisions) == 1
+        new_sheet_id = revisions[0].new_check_sheet_id
+
+    stale_response = client.post(
+        f"/commissioning/checksheets/{sheet_id}/revise",
+        data={"reason": "Attempt from stale revision"},
+    )
+    assert stale_response.status_code == 409
+
+    response = client.get(f"/commissioning/checksheets/{new_sheet_id}")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Revision history" in html
+    assert "Updated acceptance criteria" in html
+    assert "Rev 1" in html
+
+
+def test_checksheet_result_form_posts_enum_values(client, app, opera_setup):
+    manager_id = opera_setup["manager"]
+    with app.app_context():
+        manager = db.session.get(User, manager_id)
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-C-UI-00001", sheet_type=CheckSheetType.COMM_C,
+            title="Result form values", status=CheckSheetStatus.ISSUED,
+            created_by_id=manager.id,
+        )
+        db.session.add(sheet)
+        db.session.flush()
+        db.session.add(CheckSheetItem(
+            company_name="Contractor A", check_sheet_id=sheet.id, sequence=1,
+            description="Check valve", expected_result="Opens freely",
+        ))
+        db.session.commit()
+        sheet_id = sheet.id
+    _login_id(client, manager_id)
+    response = client.get(f"/commissioning/checksheets/{sheet_id}")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'option value="OK"' in html
+    assert 'option value="NOK"' in html
+    assert 'option value="NA"' in html
+
+
+def test_checksheet_detail_controls_follow_project_roles(client, app, opera_setup):
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-C-ROLE-00001",
+            sheet_type=CheckSheetType.COMM_C, title="Role scoped controls",
+            status=CheckSheetStatus.ISSUED, created_by_id=manager.id,
+        )
+        db.session.add(sheet)
+        db.session.flush()
+        item = CheckSheetItem(
+            company_name="Contractor A", check_sheet_id=sheet.id, sequence=1,
+            description="Verify valve operation", result_status=ItemResultStatus.OK,
+            actual_result="Pass", operator_id=manager.id,
+        )
+        db.session.add(item)
+        db.session.commit()
+        sheet_id, item_id = sheet.id, item.id
+
+    _login_id(client, opera_setup["viewer"])
+    viewer_html = client.get(f"/commissioning/checksheets/{sheet_id}").get_data(as_text=True)
+    for endpoint in (
+        f"/commissioning/checksheets/{sheet_id}/items",
+        f"/commissioning/checksheets/{sheet_id}/issue",
+        f"/commissioning/checksheets/{sheet_id}/reject",
+        f"/commissioning/checksheets/{sheet_id}/sign",
+        f"/commissioning/checksheets/{sheet_id}/revise",
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/verify",
+    ):
+        assert endpoint not in viewer_html
+
+    _login_id(client, opera_setup["qc"])
+    qc_html = client.get(f"/commissioning/checksheets/{sheet_id}").get_data(as_text=True)
+    assert f"/commissioning/checksheets/{sheet_id}/items/{item_id}/verify" in qc_html
+    assert f"/commissioning/checksheets/{sheet_id}/sign" not in qc_html
+    assert f"/commissioning/checksheets/{sheet_id}/reject" not in qc_html
+
+    _login_id(client, opera_setup["client"])
+    client_html = client.get(f"/commissioning/checksheets/{sheet_id}").get_data(as_text=True)
+    assert f"/commissioning/checksheets/{sheet_id}/sign" in client_html
+    assert f"/commissioning/checksheets/{sheet_id}/reject" in client_html
+    assert f"/commissioning/checksheets/{sheet_id}/issue" not in client_html
+
+
 def _make_dependency_task(setup, number, title):
     return CommissioningTask(
         company_name="Contractor A", project_id=setup["project"],
