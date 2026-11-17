@@ -11,7 +11,7 @@
     <div class="col-md-8"><div class="card h-100"><div class="card-body"><strong>OPERA</strong><p class="text-muted mb-0 mt-2">Manage project structure, check sheets, Punch List , inspection points and handover packages. Run commissioning workflows, manage Punch, inspection points and handover in one project workspace.</p></div></div></div>
   </div>
   <div class="card"><div class="card-header bg-white"><strong>Projects</strong></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Code</th><th>Project name</th><th>Client</th><th>Contractor</th><th>Status</th><th></th></tr></thead><tbody>
-  {% for project in projects %}<tr><td class="fw-semibold">{{ project.project_code }}</td><td>{{ project.name }}</td><td>{{ project.client or '—' }}</td><td>{{ project.contractor or '—' }}</td><td>{{ project.status.value }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">Project structure</a></td></tr>
+  {% for project in projects %}<tr><td class="fw-semibold">{{ project.project_code }}</td><td>{{ project.name }}</td><td>{{ project.client or '—' }}</td><td>{{ project.contractor or '—' }}</td><td>{{ project.status.value|replace('_', ' ')|title }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">Project structure</a></td></tr>
   {% else %}<tr><td colspan="6" class="text-center text-muted py-5">No projects yet. Create your first project to get started.</td></tr>{% endfor %}
   </tbody></table></div></div>
 </div>
