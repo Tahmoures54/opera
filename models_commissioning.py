@@ -470,6 +470,7 @@ class CommissioningDocument(db.Model):
                          name="uq_comm_document_revision_sequence"),
         UniqueConstraint("company_name", "project_id", "document_number", "revision",
                          name="uq_comm_document_revision"),
+        UniqueConstraint("id", "company_name", name="uq_comm_document_id_company"),
         ForeignKeyConstraint(["project_id", "company_name"],
                              ["commissioning_project.id", "commissioning_project.company_name"],
                              name="fk_comm_document_project_tenant"),
