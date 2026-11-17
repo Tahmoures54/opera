@@ -52,3 +52,7 @@ OPERA supports a private S3-compatible object-storage backend for commissioning 
 Keep the bucket private, enable provider-side versioning/retention as required, and configure independent backups. Never expose bucket credentials to browser code. Local storage remains available for persistent development installations; uploads are rejected with HTTP 503 when local storage is selected in a serverless runtime.
 
 Before switching an existing installation to S3, copy existing evidence objects to the bucket, preserve each database row's \`storage_key\`, and verify the stored SHA-256 checksums after migration.
+
+
+## Check Sheet template governance
+Managers create, revise and approve project-scoped Check Sheet/Test Sheet templates from Commissioning Operations. Approved revisions are immutable; a new revision must be created for changes. See [CHECKSHEET_TEMPLATES.md](CHECKSHEET_TEMPLATES.md) for the JSON item schema, approval lifecycle and sign-off rules.
