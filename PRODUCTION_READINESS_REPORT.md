@@ -18,7 +18,7 @@ The OPERA runtime exposes shared authentication, help, marketing, health and com
 
 ## Database safety
 
-Historical MaterialHub-era model mappings and migration revisions remain in place as a compatibility measure. No historical migration was rewritten and no production table was dropped. Removing those mappings or dropping tables requires a verified inventory of production data, backup validation and an explicit retention decision. Details are in `docs/LEGACY_DATA_COMPATIBILITY.md`.
+The active ORM registry now contains shared identity/recovery, OPERA document numbering, public demo-inquiry and OPERA commissioning models. Historical Alembic revisions remain immutable. PR #15 adds revision `20261117_0019`, which checks all retired MaterialHub tables for rows and checks obsolete `user.project_id` / `user.store_name` values before dropping anything. It aborts on unexpected data. The migration has not been run against production; take and verify a PostgreSQL backup before deployment. See `docs/LEGACY_DATA_COMPATIBILITY.md`.
 
 ## Validation performed in this cleanup
 
@@ -29,7 +29,7 @@ Historical MaterialHub-era model mappings and migration revisions remain in plac
 
 ## Not yet certified
 
-- GitHub Actions on the cleanup branch has not yet been observed.
+- The guarded database-retirement migration and new ORM-boundary test are pending CI validation.
 - A new Vercel deployment of this cleanup branch has not yet been created or tested.
 - Production database upgrade and live data inventory have not been run.
 - Docker/Trivy production image validation and PostgreSQL upgrade tests require the repository CI environment.

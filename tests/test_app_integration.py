@@ -1,29 +1,11 @@
 """Flask integration tests for MaterialHub."""
-import io
-from datetime import date, timedelta
-
 import pytest
 
 flask = pytest.importorskip("flask")
 
 from app import create_app
 from extensions import db
-from models import (
-    AccessLevel,
-    ApprovalStatus,
-    ContactInquiry,
-    Delivery,
-    DeliveryStatus,
-    InspectionStatus,
-    MaterialRequisition,
-    Project,
-    PurchaseOrder,
-    PurchaseOrderStatus,
-    QualityControl,
-    User,
-    WarehouseInventory,
-    MaterialMaster,
-)
+from models import AccessLevel, ContactInquiry, User
 
 
 def test_health_endpoint(client):
@@ -81,40 +63,6 @@ def test_contact_inquiry_is_persisted(client, app):
         inquiry = ContactInquiry.query.filter_by(email="sara@example.com").first()
         assert inquiry is not None
         assert inquiry.company == "EPC Co"
-
-
-def _ensure_test_material(app, user, material_code, description=None):
-    """Create a test Material Master row without switching sessions mid-transaction."""
-    from contextlib import nullcontext
-    from flask import has_app_context
-
-    context = nullcontext() if has_app_context() else app.app_context()
-    with context:
-        material = MaterialMaster.query.filter_by(
-            material_code=material_code, company_name=user.company_name
-        ).first()
-        if material:
-            return material
-        material = MaterialMaster(
-            material_code=material_code,
-            family_code="PIP",
-            material_name=description or material_code,
-            description=description or material_code,
-            unit="EA",
-            discipline="Piping",
-            fingerprint=(f"test:{user.company_name}:{material_code}").encode().hex().ljust(64, "0")[:64],
-            company_name=user.company_name,
-            created_by=user.id,
-            status="active",
-            lifecycle_status="active",
-        )
-        db.session.add(material)
-        db.session.commit()
-        db.session.refresh(material)
-        db.session.expunge(material)
-        return material
-
-
 
 
 def test_observability_endpoints(client):
