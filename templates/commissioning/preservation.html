@@ -81,8 +81,12 @@
               {% if can_manage and plan.status not in ('CLOSED',) %}
               <form method="post" action="{{ url_for('commissioning.update_preservation_plan_status', project_id=project.id, plan_id=plan.id) }}" class="mt-2">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if plan.status == 'ACTION_REQUIRED' %}
+                <input type="hidden" name="status" value="CLOSED"><button class="btn btn-sm btn-outline-danger w-100">Close plan</button>
+                {% else %}
                 <select class="form-select form-select-sm mb-1" name="status"><option value="SUSPENDED" {% if plan.status == 'SUSPENDED' %}selected{% endif %}>Suspend</option><option value="CLOSED">Close</option>{% if plan.status == 'SUSPENDED' %}<option value="ACTIVE">Reactivate</option>{% endif %}</select>
                 <button class="btn btn-sm btn-outline-secondary w-100">Update status</button>
+                {% endif %}
               </form>
               {% endif %}
             </td>
