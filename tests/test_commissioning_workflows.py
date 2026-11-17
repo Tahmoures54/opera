@@ -1748,6 +1748,7 @@ def test_checksheet_template_approval_revision_and_execution_snapshot(client, ap
             CheckSheetItem.sequence,
         ).all()
         assert sheet.template_id == template_id
+        assert sheet.discipline == "MECHANICAL"
         assert sheet.template_revision_snapshot == 1
         assert sheet.template_title_snapshot == "Pump conformity check"
         assert sheet.template_snapshot_json["template_code"] == "PUMP-CCK-01"
