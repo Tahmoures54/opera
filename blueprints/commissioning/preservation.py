@@ -241,8 +241,8 @@ def update_preservation_plan_status(project_id, plan_id):
         abort(400, description="Invalid preservation plan status.")
     if plan.status == "CLOSED" and new_status != "CLOSED":
         abort(409, description="Closed preservation plans cannot be reactivated.")
-    if plan.status == "ACTION_REQUIRED" and new_status == "ACTIVE":
-        abort(409, description="Record a compliant inspection before reactivating an action-required plan.")
+    if plan.status == "ACTION_REQUIRED" and new_status in ("ACTIVE", "SUSPENDED"):
+        abort(409, description="Record a compliant inspection before reactivating or suspending an action-required plan; it may only be closed.")
     before = _plan_snapshot(plan)
     plan.status = new_status
     add_audit_event(
