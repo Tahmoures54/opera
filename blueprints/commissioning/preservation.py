@@ -8,6 +8,7 @@ from blueprints.commissioning import commissioning_bp
 from extensions import db
 from models import User
 from models_commissioning import (
+    CommissioningAttachment,
     CommissioningEquipment,
     CommissioningPreservationInspection,
     CommissioningPreservationPlan,
@@ -80,6 +81,15 @@ def preservation_index(project_id):
     users = User.query.filter_by(company_name=project.company_name).order_by(User.full_name).all()
     equipment_by_id = {item.id: item for item in equipment}
     user_by_id = {item.id: item for item in users}
+    inspection_ids = [inspection.id for plan in plans for inspection in plan.inspections]
+    attachments = CommissioningAttachment.query.filter(
+        CommissioningAttachment.company_name == project.company_name,
+        CommissioningAttachment.entity_type == "CommissioningPreservationInspection",
+        CommissioningAttachment.entity_id.in_(inspection_ids or [-1]),
+    ).all()
+    attachments_by_inspection = {}
+    for attachment in attachments:
+        attachments_by_inspection.setdefault(attachment.entity_id, []).append(attachment)
     counts = {
         "total": len(plans),
         "overdue": sum(1 for row in plan_rows if row["due_status"] == "OVERDUE"),
@@ -90,6 +100,7 @@ def preservation_index(project_id):
         "commissioning/preservation.html",
         project=project, plan_rows=plan_rows, equipment=equipment, users=users,
         equipment_by_id=equipment_by_id, user_by_id=user_by_id,
+        attachments_by_inspection=attachments_by_inspection,
         counts=counts, today=today, can_manage=has_permission(project.id, "preservation.manage"),
         can_execute=any(has_permission(project.id, p) for p in ("preservation.execute", "preservation.manage")),
     )
