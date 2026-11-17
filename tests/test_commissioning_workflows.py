@@ -12,6 +12,8 @@ from models_commissioning import (
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
     CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, ProgressSnapshot, CommissioningAuditLog,
     CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
+    HandoverPackage, HandoverStatus, CommissioningCertificate,
+    WitnessPoint, WitnessType, WitnessStatus,
 )
 
 
@@ -972,3 +974,92 @@ def test_progress_snapshot_rejects_foreign_scope(client, opera_setup):
         data={"scope": f"subsystem:{opera_setup['subsystem']}", "snapshot_date": "2026-11-17"},
     )
     assert response.status_code == 404
+
+
+
+def test_mc_rf_certificates_capture_immutable_issue_time_evidence(client, app, opera_setup):
+    with app.app_context():
+        package = HandoverPackage(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], package_number="HP-SUB-01",
+        )
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="CERT-CS-001", sheet_type=CheckSheetType.PRE_COMM_A,
+            title="Subsystem completion check", status=CheckSheetStatus.SIGNED_OFF,
+            signed_by_client_id=opera_setup["client"],
+            signed_by_contractor_id=opera_setup["manager"],
+            signed_at=datetime.utcnow(), created_by_id=opera_setup["manager"],
+        )
+        db.session.add_all([package, sheet])
+        db.session.commit()
+        package_id = package.id
+        sheet_id = sheet.id
+
+    _login_id(client, opera_setup["manager"])
+    transition_url = f"/commissioning/handover/{package_id}/transition"
+    mc = client.post(transition_url, data={
+        "status": HandoverStatus.MC_CERTIFIED.value,
+        "certificate_number": "MC-CERT-001",
+        "certificate_date": "2026-11-17",
+    })
+    assert mc.status_code == 302
+
+    with app.app_context():
+        mc_certificate = CommissioningCertificate.query.filter_by(
+            package_id=package_id, certificate_type="MC",
+        ).one()
+        assert mc_certificate.snapshot_json["readiness"]["current_check_sheets_signed"] == 1
+        mc_certificate_id = mc_certificate.id
+        hold = WitnessPoint(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            check_sheet_id=sheet_id, type=WitnessType.HOLD,
+            scheduled_at=datetime.utcnow(), status=WitnessStatus.PLANNED,
+            notified_party="Client QC",
+        )
+        db.session.add(hold)
+        db.session.commit()
+        hold_id = hold.id
+
+    blocked_rf = client.post(transition_url, data={
+        "status": HandoverStatus.RF_CERTIFIED.value,
+        "certificate_number": "RF-CERT-001",
+        "certificate_date": "2026-11-17",
+    })
+    assert blocked_rf.status_code == 409
+
+    with app.app_context():
+        hold = db.session.get(WitnessPoint, hold_id)
+        hold.status = WitnessStatus.RELEASED
+        hold.released_by_id = opera_setup["qc"]
+        hold.released_at = datetime.utcnow()
+        db.session.commit()
+
+    rf = client.post(transition_url, data={
+        "status": HandoverStatus.RF_CERTIFIED.value,
+        "certificate_number": "RF-CERT-001",
+        "certificate_date": "2026-11-17",
+    })
+    assert rf.status_code == 302
+
+    certificate_page = client.get(
+        f"/commissioning/handover/{package_id}/certificates/RF",
+    )
+    assert certificate_page.status_code == 200
+    assert b"Ready for Commissioning Certificate" in certificate_page.data
+    assert b"MC-CERT-001" not in certificate_page.data
+
+    with app.app_context():
+        mc_certificate = db.session.get(CommissioningCertificate, mc_certificate_id)
+        assert mc_certificate.snapshot_json["readiness"]["pending_hold_points"] == 0
+        rf_certificate = CommissioningCertificate.query.filter_by(
+            package_id=package_id, certificate_type="RF",
+        ).one()
+        assert rf_certificate.snapshot_json["readiness"]["pending_hold_points"] == 0
+        assert rf_certificate.snapshot_json["witness_points"][0]["status"] == "RELEASED"
+        rf_certificate.snapshot_json = {"tampered": True}
+        with pytest.raises(ValueError, match="append-only"):
+            db.session.commit()
+        db.session.rollback()
+
