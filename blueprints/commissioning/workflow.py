@@ -835,7 +835,9 @@ def create_progress_snapshot(project_id):
         punches_query = punches_query.filter(PunchItem.subsystem_id.in_(subsystem_ids or [-1]))
         tasks_query = tasks_query.filter_by(system_id=system_id)
 
-    sheets = sheets_query.all()
+    all_sheets = sheets_query.all()
+    superseded_sheet_ids = {sheet.supersedes_id for sheet in all_sheets if sheet.supersedes_id is not None}
+    sheets = [sheet for sheet in all_sheets if sheet.id not in superseded_sheet_ids]
     punches = punches_query.all()
     tasks = tasks_query.filter(
         CommissioningTask.status != CommissioningTaskStatus.CANCELLED,
