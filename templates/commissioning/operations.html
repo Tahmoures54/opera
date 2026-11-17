@@ -13,6 +13,7 @@
     <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Inspection points</div><div class="display-6">{{ witnesses|length }}</div></div></div></div>
     <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Handover packages</div><div class="display-6">{{ packages|length }}</div></div></div></div>
   </div>
+  <section class="card mb-4"><div class="card-header fw-semibold">Subsystem completion dossiers</div><div class="card-body"><div class="row g-2">{% for sub in subsystems %}<div class="col-md-6 col-xl-4"><div class="border rounded p-3 d-flex justify-content-between align-items-center gap-2"><div><strong>{{ sub.subsystem_code }}</strong><div class="small text-muted">{{ sub.name }}</div></div><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.subsystem_dossier', project_id=project.id, subsystem_id=sub.id) }}">Open dossier</a></div></div>{% else %}<div class="col-12 text-muted small">Define project subsystems to create their completion dossiers.</div>{% endfor %}</div></div></section>
   <div class="row g-4">
     <div class="col-xl-6">
       <section class="card mb-4"><div class="card-header fw-bold">Project members & roles</div><div class="card-body">
