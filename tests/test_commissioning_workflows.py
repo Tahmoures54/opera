@@ -8,7 +8,7 @@ from models_commissioning import (
     CommissioningMembership, MembershipRole, CheckSheet, CheckSheetItem,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, PunchItem,
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
-    CommissioningTaskType, CommissioningTaskStatus, CommissioningAuditLog,
+    CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, CommissioningAuditLog,
     CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
 )
 
@@ -604,5 +604,73 @@ def test_subsystem_dossier_is_tenant_scoped(client, opera_setup):
     _login_id(client, opera_setup["outsider"])
     response = client.get(
         f"/commissioning/projects/{opera_setup['project']}/subsystems/{opera_setup['subsystem']}/dossier"
+    )
+    assert response.status_code == 404
+
+
+def _make_dependency_task(setup, number, title):
+    return CommissioningTask(
+        company_name="Contractor A", project_id=setup["project"],
+        system_id=setup["system"], subsystem_id=setup["subsystem"],
+        task_number=number, title=title, activity_type=CommissioningTaskType.CCK,
+        discipline="Mechanical", created_by_id=setup["manager"],
+    )
+
+
+def test_finish_to_start_dependencies_block_readiness_and_prevent_cycles(client, app, opera_setup):
+    with app.app_context():
+        first = _make_dependency_task(opera_setup, "DEP-001", "Install supports")
+        second = _make_dependency_task(opera_setup, "DEP-002", "Pressure test")
+        db.session.add_all([first, second])
+        db.session.commit()
+        first_id, second_id = first.id, second.id
+    _login_id(client, opera_setup["manager"])
+
+    linked = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/tasks/{second_id}/dependencies",
+        data={"predecessor_task_id": str(first_id), "lag_days": "2"},
+    )
+    assert linked.status_code == 302
+    with app.app_context():
+        dependency = CommissioningTaskDependency.query.filter_by(
+            company_name="Contractor A", predecessor_task_id=first_id,
+            successor_task_id=second_id,
+        ).one()
+        assert dependency.dependency_type == "FINISH_TO_START"
+        assert dependency.lag_days == 2
+
+    circular = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/tasks/{first_id}/dependencies",
+        data={"predecessor_task_id": str(second_id), "lag_days": "0"},
+    )
+    assert circular.status_code == 409
+
+    blocked = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/tasks/{second_id}/transition",
+        data={"status": "READY"},
+    )
+    assert blocked.status_code == 409
+
+    with app.app_context():
+        predecessor = db.session.get(CommissioningTask, first_id)
+        predecessor.status = CommissioningTaskStatus.COMPLETED
+        db.session.commit()
+    allowed = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/tasks/{second_id}/transition",
+        data={"status": "READY"},
+    )
+    assert allowed.status_code == 302
+
+
+def test_task_dependencies_are_project_and_tenant_scoped(client, app, opera_setup):
+    with app.app_context():
+        task = _make_dependency_task(opera_setup, "DEP-003", "Local task")
+        db.session.add(task)
+        db.session.commit()
+        task_id = task.id
+    _login_id(client, opera_setup["outsider"])
+    response = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/tasks/{task_id}/dependencies",
+        data={"predecessor_task_id": str(task_id), "lag_days": "0"},
     )
     assert response.status_code == 404
