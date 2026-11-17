@@ -557,3 +557,52 @@ def test_document_register_viewer_cannot_create_documents(client, opera_setup):
         },
     )
     assert response.status_code == 403
+
+
+def test_subsystem_dossier_aggregates_current_document_and_completion_records(client, app, opera_setup):
+    with app.app_context():
+        document = CommissioningDocument(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            document_number="FLOW-DOS-001", revision="B", revision_sequence=2,
+            title="Subsystem piping isometric", document_type="Isometric",
+            discipline="Piping", status=DocumentStatus.DRAFT,
+            created_by_id=opera_setup["manager"],
+        )
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-DOS-CS-001", sheet_type=CheckSheetType.PRE_COMM_A,
+            title="Line walkdown", created_by_id=opera_setup["manager"],
+        )
+        db.session.add_all([document, sheet])
+        db.session.flush()
+        punch = PunchItem(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], punch_number="FLOW-DOS-PUNCH-A-001",
+            category=PunchCategory.A, severity=PunchSeverity.HIGH,
+            description="Missing support clamp", raised_by_id=opera_setup["manager"],
+            status=PunchStatus.OPEN,
+        )
+        db.session.add(punch)
+        db.session.commit()
+    _login_id(client, opera_setup["manager"])
+    response = client.get(
+        f"/commissioning/projects/{opera_setup['project']}/subsystems/{opera_setup['subsystem']}/dossier"
+    )
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Subsystem Completion Dossier" in html
+    assert "FLOW-DOS-001" in html
+    assert "FLOW-DOS-CS-001" in html
+    assert "FLOW-DOS-PUNCH-A-001" in html
+    assert "Action required" in html
+    assert "0 of 1 current revisions approved" in html
+
+
+def test_subsystem_dossier_is_tenant_scoped(client, opera_setup):
+    _login_id(client, opera_setup["outsider"])
+    response = client.get(
+        f"/commissioning/projects/{opera_setup['project']}/subsystems/{opera_setup['subsystem']}/dossier"
+    )
+    assert response.status_code == 404
