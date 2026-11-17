@@ -202,6 +202,38 @@ class User(db.Model, UserMixin):
         return f"<User {self.company_email}: {self.access_level.value}>"
 
 
+class DocumentSequence(db.Model):
+    """Per-tenant monotonic counters for sequential document numbers.
+
+    Rows are keyed by (document type, company) so each OPERA tenant owns an
+    independent check-sheet and punch numbering sequence. The counter is incremented with a
+    single UPDATE statement, which makes allocation safe under concurrent
+    requests (unlike reading the last document number first).
+    """
+    __tablename__ = 'document_sequence'
+    key = db.Column(db.String(10), primary_key=True)
+    company_name = db.Column(db.String(100), primary_key=True)
+    last_value = db.Column(db.Integer, nullable=False, default=0)
+
+    def next_value(self):
+        """Atomically claim and return the next sequence value for this tenant."""
+        from sqlalchemy import select, update
+        db.session.execute(
+            update(DocumentSequence)
+            .where(DocumentSequence.key == self.key,
+                   DocumentSequence.company_name == self.company_name)
+            .values(last_value=DocumentSequence.last_value + 1)
+        )
+        # Read back through Core so we always see the committed increment
+        # even if an ORM instance with a stale attribute is in the identity map.
+        return db.session.execute(
+            select(DocumentSequence.last_value)
+            .where(DocumentSequence.key == self.key,
+                   DocumentSequence.company_name == self.company_name)
+        ).scalar_one()
+
+
+
 class ContactInquiry(db.Model):
     """Inbound demo / sales requests from the public growth funnel."""
     __tablename__ = 'contact_inquiry'
