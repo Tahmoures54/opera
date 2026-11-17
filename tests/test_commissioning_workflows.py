@@ -177,7 +177,7 @@ def test_viewer_cannot_transition_punch_status(client, app, opera_setup):
         punch_id = punch.id
     with app.app_context():
         viewer = db.session.get(User, opera_setup["viewer"])
-    _login(client, viewer)
+    _login_id(client, opera_setup["viewer"])
     response = client.post(
         f"/commissioning/punch/{punch_id}/transition",
         data={"status": "IN_PROGRESS"},
@@ -379,8 +379,8 @@ def test_task_register_enforces_project_role_and_company_boundary(client, app, o
 def test_task_lifecycle_transitions_are_controlled_and_audited(client, app, opera_setup):
     from models import User
     with app.app_context():
-        manager = db.session.get(User, opera_setup["manager"])
-    _login(client, manager)
+        manager_id = opera_setup["manager"]
+    _login_id(client, manager_id)
     project_id = opera_setup["project"]
     created = client.post(
         f"/commissioning/projects/{project_id}/tasks",
@@ -433,7 +433,6 @@ def test_task_lifecycle_transitions_are_controlled_and_audited(client, app, oper
 def test_task_lifecycle_requires_manager_permission(client, app, opera_setup):
     from models import User
     with app.app_context():
-        viewer = db.session.get(User, opera_setup["viewer"])
         task = CommissioningTask(
             company_name="Contractor A", project_id=opera_setup["project"],
             system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
