@@ -43,15 +43,20 @@ class ReadinessResult:
     subsystem_id: int
     company_name: str
     is_ready_for_mc: bool = False
-    is_ready_for_rf: bool = False  # Deprecated compatibility field; RFC semantics.
+    is_ready_for_rfc: bool = False
     is_ready_for_rfsu: bool = False
     progress_percent: float = 0.0
     issues: List[ReadinessIssue] = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
 
     @property
-    def is_ready_for_rfc(self) -> bool:
-        return self.is_ready_for_rf
+    def is_ready_for_rf(self) -> bool:
+        """Deprecated compatibility alias for the RFC readiness flag."""
+        return self.is_ready_for_rfc
+
+    @is_ready_for_rf.setter
+    def is_ready_for_rf(self, value: bool) -> None:
+        self.is_ready_for_rfc = value
 
     def add_blocker(self, code: str, message: str, entity_type: str = None, entity_id: int = None):
         self.issues.append(ReadinessIssue(code, "BLOCKER", message, entity_type, entity_id))
