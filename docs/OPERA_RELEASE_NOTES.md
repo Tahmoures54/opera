@@ -33,6 +33,10 @@
 Green CI validates the tested commit in CI. It does not replace staging migration rehearsal, production backup/restore, durable evidence storage, end-to-end multi-role acceptance or operational sign-off.
 
 
+### Controlled subsystem dossier lifecycle
+
+Added immutable subsystem dossier revision snapshots with SHA-256 integrity metadata, DRAFT/IN_REVIEW/APPROVED/REJECTED/ISSUED workflow, append-only review decisions, author/reviewer/issuer separation, readiness and evidence checks before approval/issue, and controlled issued PDF/ZIP exports. Existing current-state PDF/ZIP routes remain explicitly uncontrolled working exports.
+
 ### Check Sheet template engine
 
 Added project-scoped revision-controlled Check Sheet/Test Sheet templates, approved-template immutability, revision snapshots on instantiated sheets, mandatory/optional inspection items, item-level acceptance criteria and units, and sign-off gates for independent QC verification and witness release.
