@@ -125,3 +125,9 @@ The operations dashboard can save progress snapshots at project, system or subsy
 - Cancelled tasks are excluded from task progress. A missing register is reported as 0%, not 100%.
 
 Project, System and Subsystem snapshots are stored independently and audited. The current implementation does not combine the System/Subsystem weight_percent fields into a project-wide roll-up; project weight allocation and progress measurement bases must be approved in the project's progress measurement procedure before contractual reporting.
+
+
+## 13. Configurable subsystem dossier index
+Project managers can define mandatory current engineering document types for each subsystem dossier from **Commissioning Operations → Configurable dossier index**. Each rule specifies document type, discipline (or ANY), minimum count, approval requirement and whether an attachment record is required. OPERA evaluates only the latest revision of each document number and shows a per-rule PASS/MISSING result. If no active rules exist, the default remains at least one current engineering document with all current revisions approved. See [DOSSIER_INDEX.md](DOSSIER_INDEX.md).
+
+This is a dossier completeness/readiness view, not a generated PDF/ZIP turnover package and not a certificate issuance action.
