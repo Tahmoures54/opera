@@ -60,12 +60,6 @@ def upgrade():
             name="fk_comm_preservation_plan_equipment_tenant",
         ),
         sa.ForeignKeyConstraint(
-            ["project_id"], ["commissioning_project.id"], ondelete="RESTRICT",
-        ),
-        sa.ForeignKeyConstraint(
-            ["equipment_id"], ["commissioning_equipment.id"], ondelete="RESTRICT",
-        ),
-        sa.ForeignKeyConstraint(
             ["assigned_to_id"], ["user.id"], ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
@@ -122,12 +116,6 @@ def upgrade():
             ["plan_id", "company_name"],
             ["commissioning_preservation_plan.id", "commissioning_preservation_plan.company_name"],
             name="fk_comm_preservation_inspection_plan_tenant",
-        ),
-        sa.ForeignKeyConstraint(
-            ["project_id"], ["commissioning_project.id"], ondelete="RESTRICT",
-        ),
-        sa.ForeignKeyConstraint(
-            ["plan_id"], ["commissioning_preservation_plan.id"], ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
             ["performed_by_id"], ["user.id"], ondelete="RESTRICT",
