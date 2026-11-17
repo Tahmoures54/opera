@@ -314,7 +314,7 @@
     </a>
 
     {% if not current_user.is_authenticated %}
-      <nav class="mh-public-nav">
+      <nav class="mh-public-nav" aria-label="Main navigation">
         <a href="{{ url_for('product_overview') }}">Product</a>
         <a href="{{ url_for('help.getting_started') }}">Guide</a>
         
@@ -339,7 +339,7 @@
       <div class="mh-layout">
         <aside class="mh-sidebar">
           <div class="mh-nav-label">OPERA</div>
-          <nav class="mh-nav">
+          <nav class="mh-nav" aria-label="Workspace navigation">
             <a href="{{ url_for('commissioning.dashboard') }}"><i class="fas fa-industry"></i> Commissioning Projects</a>
           </nav>
           <div class="mh-nav-label">Account</div>
