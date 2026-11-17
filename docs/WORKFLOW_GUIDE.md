@@ -14,7 +14,7 @@ This guide describes the implemented baseline and distinguishes it from workflow
 3. Select the activity code, title, discipline, system and subsystem.
 4. Optionally link equipment and a check sheet belonging to the same project/system/subsystem.
 5. Record progress stage/substage, assigned group, estimated/spent man-hours and planned/actual dates.
-6. The initial task state is **Not Started**. Task sequencing, predecessor logic and controlled status transitions are not yet implemented in this increment.
+6. The initial task state is **Not Started**. Authorized project managers can move tasks through the controlled execution lifecycle. Finish-to-start predecessor links block a successor from becoming Ready or In Progress until all predecessors are Completed. The dependency graph rejects self-links, duplicates, cross-project links and cycles.
 
 Historical project ICAPS documentation describes activity codes CCK, STS, PIP, PRC, FTS, OTS and PVP. Their applicability and acceptance criteria must be confirmed against the current project procedure register.
 
@@ -36,7 +36,7 @@ Historical project ICAPS documentation describes activity codes CCK, STS, PIP, P
 The existing A/B/C/D values are OPERA's current configuration. They must be aligned with the project's contract and client procedure before production use.
 
 ## 5. Witness / Hold / Review
-Witness points can be scheduled against check-sheet items, attended and released through the existing workflow. The complete project-specific hold-point blocking matrix and automatic escalation policy remain to be implemented/confirmed.
+Witness points can be scheduled against check-sheet items, attended and released through the existing workflow. Hold points linked through Check Sheets are included in readiness evaluation. Project-specific witness/hold categories, release authorities, blocking matrix and automatic escalation policy still require approval/configuration.
 
 ## 6. MC / RFC / RFSU handover
 The user-facing milestone terminology is:
@@ -46,10 +46,10 @@ The user-facing milestone terminology is:
 3. **RFSU — Ready for Start-Up:** commissioning/start-up prerequisites accepted before start-up authorization.
 4. **Operations Acceptance:** formal Operations acceptance or rejection.
 
-**Current implementation mapping:** the certificate model currently permits `MC` and `RF` as internal certificate types. The internal `RF` value is the RFC (Ready for Commissioning) certificate; it is not a separate Ready-for-Start-Up certificate. The implemented handover sequence is DRAFT → MC_CERTIFIED → RF_CERTIFIED (user-facing RFC) → RFSU → ACCEPTED. A separate RF / Ready-for-Start-Up certificate type has not been implemented. Keep this distinction explicit in reports and training material. Contractual definitions, approved handover procedures and the project's authority matrix remain authoritative. The readiness gates in OPERA are a software baseline, not a substitute for client-approved completion dossiers or contractual acceptance.
+**Current implementation:** OPERA issues immutable `MC` and `RFC` certificate records. The handover sequence is DRAFT → MC_CERTIFIED → RFC_CERTIFIED → RFSU → ACCEPTED. RFC is Ready for Commissioning; RFSU is a distinct readiness/authorization gate and is not another name for RFC. The former RF naming is retained only where required for backward-compatible routes or legacy data. MC/RFC issuance captures an issue-time evidence snapshot and audit event. The exact readiness policy and signatory matrix must be approved for each project; OPERA defaults are not universal contractual rules.
 
 ## 7. Progress reporting
-Existing snapshots are based on stored check-sheet and Punch data. The new Task Register is not yet included in the official progress formula. Until the weighting method is approved and implemented, do not use task counts or task man-hours as a substitute for contractual progress.
+Progress snapshots can be recorded at project, system or subsystem scope. They include Check Sheet counts/weights, task counts/estimated-man-hour weights and Punch counts. Cancelled tasks are excluded; when all eligible task hours are zero, task count weighting is used. Empty registers do not imply 100% completion. System/Subsystem weight_percent values are not yet rolled up into a contractual project-wide percentage; obtain approval of the project progress measurement procedure before contractual reporting.
 
 ## 8. Production evidence
 Use only actual project records. Do not use sample/demo records as evidence of completion. Every rejected, reopened, waived or approved action must retain its reason and audit history.
