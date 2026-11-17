@@ -1,7 +1,7 @@
 # OPERA Functional Gap Analysis
 
-**Baseline:** main at commit d2734582146c5faed42043f426eeb94fede7dfea plus the controlled-dossier implementation branch, 17 November 2026.  
-**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40 and #42. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. The controlled-dossier increment is pending CI. This is a code-level capability assessment, not production acceptance.
+**Baseline:** PR #43 head commit 3a200612f40844b91f63d8dfa136f9b8a99b2e1e, based on main commit d2734582146c5faed42043f426eeb94fede7dfea, 17 November 2026.  
+**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40 and #42. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. PR #43 CI run 44090572416 passed quality, PostgreSQL integration and Docker checks. This is a code-level capability assessment, not production acceptance.
 
 ## Status definitions
 - **Implemented baseline:** code, route/UI and automated workflow coverage exist for the stated bounded scope.
@@ -25,7 +25,7 @@
 | Operations Acceptance | Implemented baseline | Authorized accept/reject transition after RFSU with audit | Full custody-transfer package and project-specific acceptance checklist |
 | Document Register | Implemented bounded scope | Revision records, evidence upload metadata, review/approval/rejection and history | Transmittals, bulk exchange, external numbering and configurable review cycles |
 | Engineering Excel exchange | Implemented bounded scope | OPERA XLSX template/export, dry run, row validation, SHA-256 confirmation, create-only atomic import and audit | More registers, revision-delta workflows, controlled retire/modify actions |
-| Subsystem dossier | Implemented bounded scope (pending CI) | Evidence-based readiness view and configurable document index; immutable numbered snapshots; DRAFT/IN_REVIEW/APPROVED/REJECTED/ISSUED workflow; separate author/reviewer/issuer controls; append-only review history; SHA-256 integrity checks; controlled issued PDF/ZIP exports; legacy working exports remain explicitly uncontrolled | Configurable dossier sections and authority matrix, Operations Acceptance linkage, qualified signatures and production evidence-retention/restore validation |
+| Subsystem dossier | Implemented bounded scope | Evidence-based readiness view and configurable document index; immutable numbered snapshots; DRAFT/IN_REVIEW/APPROVED/REJECTED/ISSUED workflow; separate author/reviewer/issuer controls; append-only review history; SHA-256 integrity checks; controlled issued PDF/ZIP exports; legacy working exports remain explicitly uncontrolled | Configurable dossier sections and authority matrix, Operations Acceptance linkage, qualified signatures and production evidence-retention/restore validation |
 | Progress reporting | Partial | Scoped snapshots, Check Sheet/Task count and weight metrics, Punch counts | Approved project/system roll-up, daily/weekly reports and contractual progress procedure |
 | Preservation | Partial | Project-scoped equipment plans, approved procedure/revision references, user-supplied interval/due date, append-only inspection history, compliant/non-compliant/not-applicable outcomes, corrective action, environmental conditions and evidence attachments | Plan revision editing, recurring calendar/reminders, preservation check-sheet templates, trend/compliance reports and durable production evidence storage |
 | Manpower / resource planning | Partial | Task estimated and spent man-hour fields | Timesheets/work logs, capacity, contractor allocation and approvals |
@@ -42,7 +42,7 @@
 6. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
 ## Recommended implementation order
-1. Validate the controlled dossier lifecycle in CI and staging; extend project-configurable dossier sections and authority matrices.
+1. Validate the controlled dossier lifecycle in staging; extend project-configurable dossier sections and authority matrices.
 2. Durable evidence storage and security/retention/restore controls.
 3. Advanced Check Sheet measurement capture, configurable result vocabularies and generated blank/test form packs.
 4. Preservation reminders, plan revisions, templates and compliance reporting.
