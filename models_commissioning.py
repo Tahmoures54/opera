@@ -718,6 +718,7 @@ class CommissioningPreservationInspection(db.Model):
     performed_at = db.Column(db.Date, nullable=False)
     result = db.Column(db.String(30), nullable=False)
     findings = db.Column(db.Text)
+    environmental_conditions = db.Column(db.Text)
     corrective_action = db.Column(db.Text)
     procedure_reference_snapshot = db.Column(db.String(150), nullable=False)
     procedure_revision_snapshot = db.Column(db.String(50), nullable=False)
