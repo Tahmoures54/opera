@@ -1,7 +1,7 @@
 # OPERA Functional Gap Analysis
 
-**Baseline:** main merge commit `f53d397b48bdea492c11271ff86e45c514e516bd` (PR #45), 17 November 2026.  
-**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40, #42, #43 and #45. PR #45 CI run 44094484713 passed quality, PostgreSQL integration and Docker jobs on its final head; the Vercel deployment check was blocked by the account's daily deployment quota. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. PR #43 was merged after CI run 44091665590 passed quality, PostgreSQL integration and Docker checks on the final PR head. This is a code-level capability assessment, not production acceptance.
+**Baseline:** main merge commit `5f12a776c304a1e177603a50048ce18a2510dc31` (PR #47), 17 November 2026.  
+**Evidence basis:** current models/routes/services and merged PRs #21–#29, #31, #39, #40, #42, #43 and #45–#47. PR #45 CI run 44094484713 passed quality, PostgreSQL integration and Docker jobs on its final head; the Vercel deployment check was blocked by the account's daily deployment quota. PR #46 passed quality, PostgreSQL integration and Docker checks before merge. PR #47 passed all three checks on final head `ae325969059c2733e2661781655f11478e5e4f17` (run 44111388252) and was merged as `5f12a776c304a1e177603a50048ce18a2510dc31`; the post-merge main workflow is still running at the time of this update. PR #39 CI run 44084364501, PR #40 CI run 44086055925 and PR #42 CI run 44087919325 passed quality, integration and docker jobs on their respective PR heads. PR #43 was merged after CI run 44091665590 passed quality, PostgreSQL integration and Docker checks on the final PR head. This is a code-level capability assessment, not production acceptance.
 
 ## Status definitions
 - **Implemented baseline:** code, route/UI and automated workflow coverage exist for the stated bounded scope.
@@ -18,7 +18,7 @@
 | OPERCOM activity taxonomy | Implemented baseline | CCK, STS, PIP, PRC, FTS, OTS, PVP | Project-approved catalog, templates and applicability rules |
 | Task Register | Implemented baseline | Task creation, controlled state transitions, actual dates, audit events | Task-to-multiple-disciplines/document links and configurable workflow templates |
 | Task sequencing | Implemented bounded scope | Finish-to-start dependencies, lag storage, duplicate/self/cycle and project-scope validation; predecessor completion gate | SS/FF/SF, leads, automatic rescheduling and critical-path calculation |
-| Check Sheet execution | Implemented bounded scope | Issue, item results, independent QC verification, two-party sign-off, rejection/rework, controlled revisions; project-scoped DRAFT/APPROVED/RETIRED templates with immutable approved revisions, execution snapshots, equipment/discipline matching, mandatory/optional items, acceptance criteria, qualitative or numeric measurement capture with unit and optional approved minimum/maximum limits, and witness-release gates | Configurable result vocabularies, qualified e-signatures, cross-project template sharing and generated blank form packs |
+| Check Sheet execution | Implemented bounded scope | Issue, item results, independent QC verification, two-party sign-off, rejection/rework, controlled revisions; project-scoped DRAFT/APPROVED/RETIRED templates with immutable approved revisions, execution snapshots, equipment/discipline matching, mandatory/optional items, acceptance criteria, qualitative or numeric measurement capture with unit and optional approved minimum/maximum limits, precision validation, out-of-range OK rejection, NOK capture, N/A handling, revision preservation and audit snapshots | Configurable result vocabularies, qualified e-signatures, cross-project template sharing and generated blank form packs |
 | Punch List | Implemented bounded scope | Raise/assign, corrective action, closure, audited reopen, history, verification and waiver evidence; milestone blocking categories are project-configurable | Project-configurable category definitions/meanings, waiver authority matrix and further clearance workflow controls |
 | Witness / Hold / Review | Partial | Scheduling, attendance/release; Hold-point blocking can be configured per MC/RFC/RFSU gate | Witness/review point requirements, overdue escalation and full authority matrix remain incomplete |
 | MC / RFC / RFSU | Implemented bounded scope | Immutable MC/RFC certificates; project-configurable Punch, Check Sheet, Hold-point and RFSU task rules; invalid policy fails closed; policy and gate issues captured in certificate snapshots | Project-specific signatory matrix, qualified electronic signatures and further procedure-linked approvals |
@@ -44,7 +44,7 @@
 ## Recommended implementation order
 1. Validate the controlled dossier lifecycle in staging; extend project-configurable dossier sections and authority matrices.
 2. Durable evidence storage and security/retention/restore controls.
-3. Advanced Check Sheet measurement capture, configurable result vocabularies and generated blank/test form packs.
+3. Configurable Check Sheet result vocabularies, qualified e-signatures, cross-project template sharing and generated blank/test form packs; numeric measurement capture is implemented on main.
 4. Preservation reminders, plan revisions, templates and compliance reporting.
 5. Work logs/manpower and expanded reports.
 6. Further document-control and engineering import/revision workflows.
