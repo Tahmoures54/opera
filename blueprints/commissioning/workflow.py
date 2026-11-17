@@ -903,7 +903,7 @@ def transition_handover(package_id):
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.MC_CERTIFIED:
             abort(403)
         require_ready_for_rfc(package.company_name, subsystem_id)
-        package.status, package.rf_issued_by_id = target, current_user.id
+        package.status, package.rfc_issued_by_id = target, current_user.id
         package.rfc_certificate_number = _required("certificate_number", 100)
         package.rfc_certificate_date = _date("certificate_date") or date.today()
         if CommissioningCertificate.query.filter_by(
@@ -927,7 +927,7 @@ def transition_handover(package_id):
                         after={"type": "RFC", "number": certificate.certificate_number,
                                "package_id": package.id})
     elif target == HandoverStatus.RFSU:
-        if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.RF_CERTIFIED:
+        if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.RFC_CERTIFIED:
             abort(403)
         require_ready_for_rfsu(package.company_name, subsystem_id)
         package.status = target
