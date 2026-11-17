@@ -1919,6 +1919,8 @@ def test_controlled_dossier_revision_review_issue_and_exports(client, app, opera
     with app.app_context():
         manager = db.session.get(User, opera_setup["manager"])
         client_rep = db.session.get(User, opera_setup["client"])
+        manager_id = manager.id
+        client_id = client_rep.id
         issuer = _user("Contractor A", "opera-flow-dossier-issuer@example.com", "Dossier Issuer")
         db.session.add(issuer)
         db.session.flush()
@@ -1942,13 +1944,11 @@ def test_controlled_dossier_revision_review_issue_and_exports(client, app, opera
         db.session.add_all([sheet, document])
         db.session.commit()
         sheet.status = CheckSheetStatus.SIGNED_OFF
-        sheet.signed_by_client_id = client_rep.id
-        sheet.signed_by_contractor_id = manager.id
+        sheet.signed_by_client_id = client_id
+        sheet.signed_by_contractor_id = manager_id
         sheet.signed_at = datetime.utcnow()
         db.session.commit()
         issuer_id = issuer.id
-        manager_id = manager.id
-        client_id = client_rep.id
         project_id = opera_setup["project"]
         subsystem_id = opera_setup["subsystem"]
 
