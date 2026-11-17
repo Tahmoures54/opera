@@ -26,6 +26,7 @@ OPERA is an independently implemented project completion, pre-commissioning, com
 - Project-configurable dossier document index with document type, discipline, minimum count, approval and attachment-record requirements; latest-revision matching and per-rule completeness results.
 - Immutable MC and RFC certificate records with issue-time evidence snapshots; distinct RFSU readiness gate and Operations Acceptance transition.
 - Project-configurable readiness policy for gate-specific Punch categories, required Check Sheet types, Hold-point blockers, Check Sheet presence and RFSU task completion. Invalid persisted policy fails all gates closed; issued certificate snapshots preserve the effective policy and gate-specific issues.
+- Equipment Preservation plans with procedure/revision references, interval and due-date tracking, append-only inspection history, corrective-action state and evidence attachments.
 - Progress snapshots with Check Sheet and Task count/weight metrics and Punch counts.
 - Tenant-scoped project membership, server-side role permissions and append-only audit/evidence records.
 
@@ -49,7 +50,7 @@ The implemented certificate types are MC and RFC. RFSU is a separate readiness/a
 - Further readiness-policy extensions: configurable witness/review point rules, waiver/signatory authority matrix and procedure-revision linkage.
 - Full revision-controlled dossier PDF/ZIP package, dossier approval workflow and durable evidence-byte verification.
 - Durable private object storage adapter, access controls, retention, malware scanning and paired database/object backup-restore.
-- Preservation plans, periodic inspection records and overdue reporting.
+- Automated reminders, recurring calendar planning, OEM interval library, preservation templates and advanced compliance reporting.
 - Daily work logs, approved manpower capacity planning and vendor mobilization.
 - Richer progress reporting and approved project/system roll-up formulas.
 - Full document transmittals and configurable review cycles.
