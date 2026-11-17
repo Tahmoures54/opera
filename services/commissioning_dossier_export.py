@@ -286,8 +286,10 @@ def build_subsystem_dossier_snapshot(company_name: str, project_id: int, subsyst
 
 
 def _pdf_text(value) -> str:
-    from xml.sax.saxutils import escape
-    return escape(str(value if value is not None else "—")).replace("\n", " ")
+    """Escape untrusted record text for ReportLab Paragraph markup."""
+    text = str(value if value is not None else "—").replace("\n", " ")
+    return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace(chr(34), "&quot;").replace(chr(39), "&#x27;"))
 
 
 def render_subsystem_dossier_pdf(snapshot: dict) -> bytes:
