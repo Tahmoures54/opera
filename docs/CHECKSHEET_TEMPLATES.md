@@ -40,3 +40,10 @@ Template JSON must be an array of 1–100 objects. Each object supports:
 ```
 
 See the Commissioning Operations page for template creation, revision, approval and Check Sheet instantiation.
+
+
+## Numeric measurement capture
+
+Approved Check Sheet templates may define individual items as either `QUALITATIVE` (the default for existing templates) or `NUMERIC`. Numeric items require a unit and may define an approved minimum and/or maximum value. During execution, the operator records the numeric reading separately from the qualitative result status. An item may be marked `OK` only when its reading is within every configured limit; an out-of-range reading must be recorded as `NOK` or corrected. Numeric readings, units, item type and result status are included in the append-only audit event. Existing templates and manually added items remain qualitative unless explicitly configured as numeric.
+
+Limits must come from the approved project/OEM procedure. OPERA does not invent measurement ranges or tolerance values.
