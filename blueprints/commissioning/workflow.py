@@ -1,6 +1,7 @@
 """OPERA operational workflows: membership, check sheets, punch, witness and handover."""
 from datetime import date, datetime
-from flask import abort, flash, redirect, render_template, request, send_file, url_for
+from io import BytesIO
+from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 
@@ -18,7 +19,7 @@ from models_commissioning import (
 from services.commissioning_access import (
     add_audit_event, get_project, has_permission,
 )
-from services.commissioning_storage import store_commissioning_upload, resolve_commissioning_upload
+from services.commissioning_storage import (store_commissioning_upload, read_commissioning_upload, delete_commissioning_upload)
 from services.commissioning_number_service import (
     next_checksheet_number, next_punch_number,
 )
@@ -1104,8 +1105,10 @@ def upload_evidence(entity_type, entity_id):
         db.session.commit()
     except Exception:
         db.session.rollback()
-        stored_path = resolve_commissioning_upload(metadata["storage_key"])
-        stored_path.unlink(missing_ok=True)
+        try:
+            delete_commissioning_upload(metadata["storage_key"])
+        except Exception:
+            current_app.logger.exception("Failed to clean up evidence after database rollback")
         raise
     flash("Evidence uploaded successfully.", "success")
     if entity_type == "CheckSheet":
@@ -1129,8 +1132,8 @@ def download_evidence(attachment_id):
     _, project_id = _attachment_entity(attachment.entity_type, attachment.entity_id)
     if not any(has_permission(project_id, permission) for permission in permissions["view"]):
         abort(403)
-    path = resolve_commissioning_upload(attachment.storage_key)
-    response = send_file(path, mimetype=attachment.mime_type, as_attachment=True,
+    content = read_commissioning_upload(attachment.storage_key)
+    response = send_file(BytesIO(content), mimetype=attachment.mime_type, as_attachment=True,
                          download_name=attachment.filename, max_age=0)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Cache-Control"] = "private, no-store"

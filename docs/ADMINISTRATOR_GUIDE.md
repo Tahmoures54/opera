@@ -43,3 +43,12 @@ Project administrators can define mandatory document types, disciplines, minimum
 
 ## Preservation management
 Project managers configure preservation plans only from approved project/OEM procedures. Inspectors record compliant/non-compliant/not-applicable outcomes, findings, environmental conditions, corrective actions and evidence. Inspection records are append-only. See [PRESERVATION_GUIDE.md](PRESERVATION_GUIDE.md) for workflow and limitations.
+
+
+## Durable evidence storage
+
+OPERA supports a private S3-compatible object-storage backend for commissioning evidence. For Vercel/serverless deployments, configure \`OPERA_STORAGE_BACKEND=s3\`, \`OPERA_S3_BUCKET\`, and \`OPERA_S3_REGION\`. For S3-compatible providers that require a custom endpoint, set \`OPERA_S3_ENDPOINT_URL\`. Provide \`OPERA_S3_ACCESS_KEY_ID\` and \`OPERA_S3_SECRET_ACCESS_KEY\` only when the provider does not support the deployment's IAM role. \`OPERA_S3_PREFIX\` defaults to \`opera-evidence\`. OPERA requests server-side AES-256 encryption for each uploaded object.
+
+Keep the bucket private, enable provider-side versioning/retention as required, and configure independent backups. Never expose bucket credentials to browser code. Local storage remains available for persistent development installations; uploads are rejected with HTTP 503 when local storage is selected in a serverless runtime.
+
+Before switching an existing installation to S3, copy existing evidence objects to the bucket, preserve each database row's \`storage_key\`, and verify the stored SHA-256 checksums after migration.

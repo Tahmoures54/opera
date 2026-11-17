@@ -17,6 +17,7 @@ Gunicorn==22.0.0
 psycopg2-binary==2.9.11
 
 openpyxl==3.1.5
+boto3>=1.35,<2
 python-barcode==0.15.1
 Flask-Limiter==4.1.1
 argon2-cffi==25.1.0
