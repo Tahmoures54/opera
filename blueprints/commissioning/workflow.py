@@ -149,7 +149,7 @@ def add_member(project_id):
     add_audit_event(project.company_name, "CommissioningMembership", user.id,
                     "MEMBER_ASSIGNED", after={"role": role.value, "project_id": project.id})
     db.session.commit()
-    flash("عضو پروژه به‌روزرسانی شد.", "success")
+    flash("Project membership updated successfully.", "success")
     return redirect(url_for("commissioning.operations", project_id=project.id))
 
 
@@ -721,7 +721,7 @@ def upload_evidence(entity_type, entity_id):
         stored_path = resolve_commissioning_upload(metadata["storage_key"])
         stored_path.unlink(missing_ok=True)
         raise
-    flash("مدرک با موفقیت بارگذاری شد.", "success")
+    flash("Evidence uploaded successfully.", "success")
     if entity_type == "CheckSheet":
         return redirect(url_for("commissioning.checksheet_detail", sheet_id=entity_id))
     return redirect(url_for("commissioning.operations", project_id=project_id))
@@ -774,5 +774,5 @@ def create_progress_snapshot(project_id):
     add_audit_event(project.company_name, "ProgressSnapshot", snapshot.id or 0,
                     "PROGRESS_SNAPSHOT_CREATED", after={"percent_complete": percent, "weighted_percent": weighted})
     db.session.commit()
-    flash("گزارش پیشرفت ذخیره شد.", "success")
+    flash("Progress report saved successfully.", "success")
     return redirect(url_for("commissioning.operations", project_id=project.id))
