@@ -175,8 +175,6 @@ def test_viewer_cannot_transition_punch_status(client, app, opera_setup):
         db.session.add(punch)
         db.session.commit()
         punch_id = punch.id
-    with app.app_context():
-        viewer = db.session.get(User, opera_setup["viewer"])
     _login_id(client, opera_setup["viewer"])
     response = client.post(
         f"/commissioning/punch/{punch_id}/transition",
@@ -442,7 +440,7 @@ def test_task_lifecycle_requires_manager_permission(client, app, opera_setup):
         db.session.add(task)
         db.session.commit()
         task_id = task.id
-    _login(client, viewer)
+    _login_id(client, opera_setup["viewer"])
     response = client.post(
         f"/commissioning/projects/{opera_setup['project']}/tasks/{task_id}/transition",
         data={"status": CommissioningTaskStatus.READY.value},
