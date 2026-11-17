@@ -6,13 +6,13 @@ OPERA records project inspection points against a Check Sheet or an individual C
 
 | State | Meaning | Allowed next action |
 |---|---|---|
-| PLANNED | Point scheduled with a named notified party and date/time | NOTIFIED or CANCELLED |
-| NOTIFIED | Notification recorded with a server timestamp | ATTENDED or CANCELLED |
+| PLANNED | Point scheduled with a named notified party and date/time | NOTIFIED; WITNESS/REVIEW may be CANCELLED |
+| NOTIFIED | Notification recorded with a server timestamp | ATTENDED; WITNESS/REVIEW may be CANCELLED |
 | ATTENDED | Attendance and a recorded result captured | RELEASED |
 | RELEASED | Authorized project manager records the release note | Terminal |
 | CANCELLED | Point cancelled with a reason before attendance | Terminal |
 
-An attended point cannot be cancelled or silently reopened. If an inspection must be repeated, create a new point and preserve the original history.
+An attended point cannot be cancelled or silently reopened. HOLD points cannot be cancelled through the ordinary lifecycle, even before attendance; a project-approved waiver/deviation process is required and must not be replaced by routine cancellation. If a witness/review inspection must be repeated, create a new point and preserve the original history.
 
 ## Authority
 
