@@ -169,7 +169,7 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
         for punch in gate_punches:
             result.add_blocker(
                 "OPEN_BLOCKING_PUNCH",
-                f"Open Punch {punch.category.value}-{punch.punch_number}: {punch.title or punch.description or ''}",
+                f"Open Punch {punch.category.value}-{punch.punch_number}: {punch.description or ''}",
                 entity_type="punch", entity_id=punch.id, gate=gate,
             )
             gate_issue_count += 1
