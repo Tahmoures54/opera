@@ -25,7 +25,7 @@
 | Operations Acceptance | Implemented baseline | Authorized accept/reject transition after RFSU with audit | Full custody-transfer package and project-specific acceptance checklist |
 | Document Register | Implemented bounded scope | Revision records, evidence upload metadata, review/approval/rejection and history | Transmittals, bulk exchange, external numbering and configurable review cycles |
 | Engineering Excel exchange | Implemented bounded scope | OPERA XLSX template/export, dry run, row validation, SHA-256 confirmation, create-only atomic import and audit | More registers, revision-delta workflows, controlled retire/modify actions |
-| Subsystem dossier | Partial | Evidence-based readiness view across current documents, Check Sheets, Punch, Hold points, tags and tasks | Configurable index, generated revision-controlled PDF, ZIP package and full completeness workflow |
+| Subsystem dossier | Partial | Evidence-based readiness view across current documents, Check Sheets, Punch, Hold points, tags and tasks; project-configurable document index with type/discipline/minimum-count/approval/evidence rules | Generated revision-controlled PDF, ZIP evidence package, dossier revision/approval workflow and durable evidence-byte verification |
 | Progress reporting | Partial | Scoped snapshots, Check Sheet/Task count and weight metrics, Punch counts | Approved project/system roll-up, daily/weekly reports and contractual progress procedure |
 | Preservation | Not implemented | — | Preservation plans, intervals, inspections, evidence, corrective actions and overdue reports |
 | Manpower / resource planning | Partial | Task estimated and spent man-hour fields | Timesheets/work logs, capacity, contractor allocation and approvals |
@@ -37,13 +37,13 @@
 1. **Evidence durability:** local filesystem storage is not suitable for Vercel/serverless persistence. Configure and test durable private object storage before using OPERA as the system of record for project evidence.
 2. **Readiness policy:** current A/B Punch and Check Sheet defaults must be reviewed and approved against the project's completion procedure, ITPs, contract and authority matrix.
 3. **Electronic signatures:** authenticated acknowledgement is not a qualified cryptographic signature.
-4. **Dossier:** the subsystem page is a readiness view, not yet a complete indexed turnover package.
+4. **Dossier:** configurable document index and completeness results exist, but the subsystem page is not yet a generated revision-controlled PDF/ZIP turnover package or approval workflow.
 5. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
 ## Recommended implementation order
-1. Reusable revision-controlled Check Sheet/Test Sheet templates and project instantiation.
-2. Dossier index, completeness engine, PDF/ZIP compilation.
-3. Durable evidence storage and security/retention/restore controls.
+1. Full dossier PDF/ZIP compilation, revision control and approval workflow.
+2. Durable evidence storage and security/retention/restore controls.
+3. Reusable revision-controlled Check Sheet/Test Sheet templates and project instantiation.
 4. Preservation management.
 5. Work logs/manpower and expanded reports.
 6. Further document-control and engineering import/revision workflows.

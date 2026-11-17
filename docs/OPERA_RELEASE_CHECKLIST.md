@@ -25,7 +25,9 @@
 - [ ] Approve Punch category meanings, Hold/Witness procedures, waiver rules and certificate signatory matrix.
 - [ ] Run a realistic end-to-end scenario using separate contractor, executor, QC, client and Operations accounts.
 - [ ] Verify direct HTTP requests cannot bypass role checks or readiness gates.
+- [ ] Configure and approve the project dossier index (document types, disciplines, minimum counts, approval and evidence requirements).
 - [ ] Verify certificate and dossier evidence against the approved project completion procedure.
+- [ ] Verify generated dossier PDF/ZIP package and revision/approval controls when that module is delivered.
 - [ ] Obtain project owner / Operations acceptance.
 
 A successful CI run is necessary but is not evidence of production deployment, durable evidence retention or project acceptance.

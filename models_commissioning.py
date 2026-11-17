@@ -613,6 +613,38 @@ class CommissioningDocumentReview(db.Model):
     decided_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
+class CommissioningDossierRequirement(db.Model):
+    """Project-level mandatory engineering-document index for each subsystem dossier."""
+    __tablename__ = "commissioning_dossier_requirement"
+    __table_args__ = (
+        UniqueConstraint("company_name", "project_id", "document_type", "discipline",
+                         name="uq_comm_dossier_requirement_scope"),
+        ForeignKeyConstraint(["project_id", "company_name"],
+                             ["commissioning_project.id", "commissioning_project.company_name"],
+                             name="fk_comm_dossier_requirement_project_tenant"),
+        CheckConstraint("minimum_count >= 1 AND minimum_count <= 1000",
+                        name="ck_comm_dossier_requirement_minimum"),
+        CheckConstraint("length(trim(document_type)) > 0",
+                        name="ck_comm_dossier_requirement_type"),
+        CheckConstraint("length(trim(discipline)) > 0",
+                        name="ck_comm_dossier_requirement_discipline"),
+        Index("ix_comm_dossier_requirement_project_active",
+              "company_name", "project_id", "is_active"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
+    document_type = db.Column(db.String(80), nullable=False)
+    discipline = db.Column(db.String(80), nullable=False, default="ANY")
+    minimum_count = db.Column(db.Integer, nullable=False, default=1)
+    require_approved = db.Column(db.Boolean, nullable=False, default=True)
+    require_evidence = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class ProgressSnapshot(db.Model):
     __tablename__ = "commissioning_progress_snapshot"
     __table_args__ = (
