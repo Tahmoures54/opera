@@ -8,7 +8,7 @@ from extensions import db
 from models import User
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskDependency, CommissioningTaskType, CommissioningTaskStatus,
-    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, DocumentStatus,
+    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningPreservationInspection, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
@@ -164,6 +164,7 @@ def operations(project_id):
         evidence_by_entity=evidence_by_entity,
         can_upload_punch_evidence=any(has_permission(project.id, p) for p in ("punch.raise", "punch.assign", "punch.verify")),
         can_manage_structure=has_permission(project.id, "structure.manage"),
+        can_view_preservation=any(has_permission(project.id, p) for p in ("preservation.view", "preservation.manage")),
         can_upload_handover_evidence=any(has_permission(project.id, p) for p in ("handover.manage", "handover.accept")),
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
@@ -1032,6 +1033,10 @@ _ATTACHMENT_PERMISSIONS = {
         "upload": ("documents.create", "documents.manage"),
         "view": ("documents.view", "documents.create", "documents.manage", "documents.review", "documents.approve"),
     },
+    "CommissioningPreservationInspection": {
+        "upload": ("preservation.execute", "preservation.manage"),
+        "view": ("preservation.view", "preservation.execute", "preservation.manage", "project.manage"),
+    },
 }
 
 
@@ -1053,6 +1058,11 @@ def _attachment_entity(entity_type, entity_id):
         return entity, entity.project_id
     if entity_type == "CommissioningDocument":
         entity = CommissioningDocument.query.filter_by(
+            id=entity_id, company_name=current_user.company_name
+        ).first_or_404()
+        return entity, entity.project_id
+    if entity_type == "CommissioningPreservationInspection":
+        entity = CommissioningPreservationInspection.query.filter_by(
             id=entity_id, company_name=current_user.company_name
         ).first_or_404()
         return entity, entity.project_id
@@ -1102,6 +1112,8 @@ def upload_evidence(entity_type, entity_id):
         return redirect(url_for("commissioning.checksheet_detail", sheet_id=entity_id))
     if entity_type == "CommissioningDocument":
         return redirect(url_for("commissioning.document_register", project_id=project_id))
+    if entity_type == "CommissioningPreservationInspection":
+        return redirect(url_for("commissioning.preservation_index", project_id=project_id))
     return redirect(url_for("commissioning.operations", project_id=project_id))
 
 

@@ -22,6 +22,7 @@
 
 ## Project acceptance
 - [ ] Approve systemization, activity taxonomy, Check Sheet templates and the configured MC/RFC/RFSU readiness policy.
+- [ ] Configure preservation plans from approved OEM/project procedures and verify the inspection/corrective-action workflow.
 - [ ] Approve Punch category meanings, Hold/Witness procedures, waiver rules and certificate signatory matrix.
 - [ ] Run a realistic end-to-end scenario using separate contractor, executor, QC, client and Operations accounts.
 - [ ] Verify direct HTTP requests cannot bypass role checks or readiness gates.

@@ -1,17 +1,18 @@
 """End-to-end tests for OPERA operational workflows."""
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 import pytest
 
 from extensions import db
 from models import AccessLevel, User
 from models_commissioning import (
-    CommissioningProject, CommissioningSystem, CommissioningSubsystem,
+    CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment,
     CommissioningMembership, MembershipRole, CheckSheet, CheckSheetItem,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, PunchItem,
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
     CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, ProgressSnapshot, CommissioningAuditLog,
     CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningAttachment, DocumentStatus,
+    CommissioningPreservationPlan, CommissioningPreservationInspection,
     HandoverPackage, HandoverStatus, CommissioningCertificate,
     WitnessPoint, WitnessType, WitnessStatus, PunchHistory,
 )
@@ -1527,3 +1528,153 @@ def test_subsystem_dossier_applies_current_document_count_approval_and_evidence_
     assert complete_index.status_code == 200
     assert b"2 / 2" in complete_index.data
     assert b"PASS" in complete_index.data
+
+
+def test_preservation_plan_inspection_cycle_and_immutable_history(client, app, opera_setup):
+    with app.app_context():
+        equipment = CommissioningEquipment(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], tag_number="P-1001",
+            equipment_type="Pump", description="Preservation test pump",
+        )
+        db.session.add(equipment)
+        db.session.commit()
+        equipment_id = equipment.id
+
+    _login_id(client, opera_setup["manager"])
+    page_url = f"/commissioning/projects/{opera_setup['project']}/preservation"
+    assert client.get(page_url).status_code == 200
+
+    create = client.post(f"/commissioning/projects/{opera_setup['project']}/preservation-plans", data={
+        "plan_number": "PRES-001",
+        "equipment_id": str(equipment_id),
+        "activity": "Preserve rotating equipment per OEM instruction",
+        "procedure_reference": "OEM-MANUAL-100",
+        "procedure_revision": "Rev 4",
+        "interval_days": "30",
+        "next_due_date": date.today().isoformat(),
+        "responsible_company": "Contractor A",
+    })
+    assert create.status_code == 302
+
+    with app.app_context():
+        plan = CommissioningPreservationPlan.query.filter_by(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            plan_number="PRES-001",
+        ).one()
+        plan_id = plan.id
+        assert plan.status == "ACTIVE"
+        assert plan.interval_days == 30
+
+    inspect_url = f"/commissioning/projects/{opera_setup['project']}/preservation-plans/{plan_id}/inspect"
+    missing_action = client.post(inspect_url, data={
+        "performed_at": date.today().isoformat(),
+        "result": "NON_COMPLIANT",
+        "findings": "Corrosion inhibitor below required condition",
+    })
+    assert missing_action.status_code == 400
+
+    non_compliant = client.post(inspect_url, data={
+        "performed_at": date.today().isoformat(),
+        "result": "NON_COMPLIANT",
+        "findings": "Corrosion inhibitor below required condition",
+        "corrective_action": "Reapply inhibitor according to OEM procedure",
+    })
+    assert non_compliant.status_code == 302
+    action_required_suspend = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/preservation-plans/{plan_id}/status",
+        data={"status": "SUSPENDED"},
+    )
+    assert action_required_suspend.status_code == 409
+    action_required_reactivate = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/preservation-plans/{plan_id}/status",
+        data={"status": "ACTIVE"},
+    )
+    assert action_required_reactivate.status_code == 409
+
+    with app.app_context():
+        plan = db.session.get(CommissioningPreservationPlan, plan_id)
+        inspection = CommissioningPreservationInspection.query.filter_by(plan_id=plan_id).one()
+        assert plan.status == "ACTION_REQUIRED"
+        assert plan.next_due_date == date.today()
+        assert inspection.interval_days_snapshot == 30
+        assert inspection.procedure_revision_snapshot == "Rev 4"
+        inspection.findings = "Tampered"
+        with pytest.raises(ValueError, match="append-only"):
+            db.session.commit()
+        db.session.rollback()
+
+    compliant = client.post(inspect_url, data={
+        "performed_at": date.today().isoformat(),
+        "result": "COMPLIANT",
+        "findings": "Corrective action verified; preservation condition acceptable",
+    })
+    assert compliant.status_code == 302
+
+    with app.app_context():
+        plan = db.session.get(CommissioningPreservationPlan, plan_id)
+        inspections = CommissioningPreservationInspection.query.filter_by(plan_id=plan_id).order_by(
+            CommissioningPreservationInspection.id,
+        ).all()
+        assert plan.status == "ACTIVE"
+        assert plan.last_performed_at == date.today()
+        assert plan.next_due_date == date.today() + timedelta(days=30)
+        assert [item.result for item in inspections] == ["NON_COMPLIANT", "COMPLIANT"]
+        assert CommissioningAuditLog.query.filter_by(
+            company_name="Contractor A", entity_type="CommissioningPreservationInspection",
+            action="PRESERVATION_INSPECTION_RECORDED",
+        ).count() == 2
+
+
+def test_preservation_permissions_tenant_scope_and_plan_closure(client, app, opera_setup):
+    with app.app_context():
+        equipment = CommissioningEquipment(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], tag_number="P-1002",
+            equipment_type="Valve", description="Preservation permission test",
+        )
+        db.session.add(equipment)
+        db.session.commit()
+        equipment_id = equipment.id
+
+    _login_id(client, opera_setup["viewer"])
+    page_url = f"/commissioning/projects/{opera_setup['project']}/preservation"
+    assert client.get(page_url).status_code == 200
+    denied = client.post(f"/commissioning/projects/{opera_setup['project']}/preservation-plans", data={
+        "plan_number": "PRES-DENIED", "equipment_id": str(equipment_id),
+        "activity": "Test", "procedure_reference": "OEM-REF",
+        "procedure_revision": "A", "interval_days": "30",
+        "next_due_date": date.today().isoformat(),
+    })
+    assert denied.status_code == 403
+
+    _login_id(client, opera_setup["outsider"])
+    assert client.get(page_url).status_code == 404
+
+    _login_id(client, opera_setup["manager"])
+    created = client.post(f"/commissioning/projects/{opera_setup['project']}/preservation-plans", data={
+        "plan_number": "PRES-CLOSE", "equipment_id": str(equipment_id),
+        "activity": "Valve preservation per approved procedure",
+        "procedure_reference": "OEM-VALVE-01", "procedure_revision": "B",
+        "interval_days": "45", "next_due_date": date.today().isoformat(),
+    })
+    assert created.status_code == 302
+    with app.app_context():
+        plan = CommissioningPreservationPlan.query.filter_by(plan_number="PRES-CLOSE").one()
+        plan_id = plan.id
+
+    close = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/preservation-plans/{plan_id}/status",
+        data={"status": "CLOSED"},
+    )
+    assert close.status_code == 302
+    reopen = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/preservation-plans/{plan_id}/status",
+        data={"status": "ACTIVE"},
+    )
+    assert reopen.status_code == 409
+    inspect_closed = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/preservation-plans/{plan_id}/inspect",
+        data={"performed_at": date.today().isoformat(), "result": "COMPLIANT"},
+    )
+    assert inspect_closed.status_code == 409

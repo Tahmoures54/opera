@@ -16,6 +16,7 @@
 - Project-configurable dossier document index with discipline, minimum-count, approval and attachment-record rules, evaluated against current document revisions.
 - Immutable MC and RFC certificates with issue-time evidence snapshots; separate RFSU gate and Operations Acceptance transition.
 - Project-configurable readiness policy for Punch blockers, required Check Sheet types, Hold-point gates, Check Sheet presence and RFSU task completion; invalid policy fails closed and certificate snapshots retain the effective policy.
+- Equipment Preservation plans with approved procedure references/revisions, user-supplied intervals and due dates, append-only inspection history, corrective-action workflow and evidence attachments.
 - Scoped progress snapshots with Check Sheet and Task count/weight metrics and Punch counts.
 - Project-scoped role authorization, tenant filters and append-only evidence/audit protections.
 
@@ -25,7 +26,7 @@
 - Reusable revision-controlled Check Sheet/Test Sheet template catalogue is incomplete.
 - Evidence upload currently uses local filesystem storage. Do not use it for Vercel/serverless production evidence retention until a durable private object-storage backend and backup/restore controls are configured and tested.
 - Electronic sign-off is an authenticated acknowledgement, not a qualified cryptographic signature.
-- Preservation plans, daily work logs, full resource/capacity planning and expanded reporting remain future work.
+- Preservation reminders, recurring scheduling, plan revision workflow, preservation templates and advanced compliance reporting remain future work. Daily work logs, full resource/capacity planning and expanded reporting also remain future work.
 - No claim is made that OPERA's Excel contract, report formulas, permissions or forms exactly match a current ICAPS release.
 
 ## Release rule
