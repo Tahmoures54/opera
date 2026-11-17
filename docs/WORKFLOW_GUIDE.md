@@ -135,3 +135,7 @@ This is a dossier completeness/readiness view, not a generated PDF/ZIP turnover 
 
 ## 14. Equipment preservation
 Open **Commissioning Operations → Preservation** to register equipment-specific plans from approved procedures/OEM instructions. Record the procedure reference/revision, positive interval and initial next-due date. Inspectors record findings and outcomes; non-compliant results require corrective action and place the plan in ACTION_REQUIRED until a compliant follow-up is recorded. Inspection history is append-only and can carry evidence attachments. See [PRESERVATION_GUIDE.md](PRESERVATION_GUIDE.md).
+
+
+## 15. Check Sheet and Test Sheet templates
+Managers create a DRAFT template from Commissioning Operations, define its type, discipline, optional equipment type, overall acceptance criteria and inspection items, then approve it. Approved templates are immutable. Create a new revision to change approved content; approval of the new revision retires the previous one. When a Check Sheet is created from an approved template, OPERA snapshots the template revision and creates the item register. See [CHECKSHEET_TEMPLATES.md](CHECKSHEET_TEMPLATES.md).
