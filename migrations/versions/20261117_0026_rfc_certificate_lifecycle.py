@@ -13,27 +13,6 @@ depends_on = None
 
 
 def upgrade():
-    # Add explicit RFC fields and copy legacy RF values without discarding
-    # the original columns. Keeping the old columns makes rollback/data audits safe.
-    op.add_column(
-        "commissioning_handover_package",
-        sa.Column("rfc_certificate_number", sa.String(length=100), nullable=True),
-    )
-    op.add_column(
-        "commissioning_handover_package",
-        sa.Column("rfc_certificate_date", sa.Date(), nullable=True),
-    )
-    op.add_column(
-        "commissioning_handover_package",
-        sa.Column("rfc_issued_by_id", sa.Integer(), nullable=True),
-    )
-    op.execute(
-        "UPDATE commissioning_handover_package "
-        "SET rfc_certificate_number = rf_certificate_number, "
-        "rfc_certificate_date = rf_certificate_date, "
-        "rfc_issued_by_id = rf_issued_by_id"
-    )
-
     # Drop the old two-character check before updating RF -> RFC.
     with op.batch_alter_table("commissioning_certificate", recreate="always") as batch:
         batch.drop_constraint("ck_comm_certificate_type", type_="check")
@@ -93,12 +72,3 @@ def downgrade():
             "certificate_type IN ('MC', 'RF')",
         )
 
-    op.execute(
-        "UPDATE commissioning_handover_package "
-        "SET rf_certificate_number = rfc_certificate_number, "
-        "rf_certificate_date = rfc_certificate_date, "
-        "rf_issued_by_id = rfc_issued_by_id"
-    )
-    op.drop_column("commissioning_handover_package", "rfc_issued_by_id")
-    op.drop_column("commissioning_handover_package", "rfc_certificate_date")
-    op.drop_column("commissioning_handover_package", "rfc_certificate_number")
