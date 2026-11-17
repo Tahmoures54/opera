@@ -33,16 +33,9 @@ def generate_qr_code(totp_uri):
 
 @auth_bp.route('/')
 def home():
-    """Render the home page and redirect authenticated users based on their role."""
+    """Redirect authenticated users to the OPERA commissioning dashboard."""
     if current_user.is_authenticated:
-        if current_user.is_admin:
-            return redirect(url_for('commissioning.dashboard'))
-        elif current_user.access_level == AccessLevel.supplier:
-            return redirect(url_for('commissioning.dashboard'))
-        elif current_user.access_level == AccessLevel.project_manager:
-            return redirect(url_for('commissioning.dashboard'))
-        else:
-            return redirect(url_for('commissioning.dashboard'))
+        return redirect(url_for('commissioning.dashboard'))
     return redirect(url_for('index'))
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -95,7 +88,6 @@ def register():
                 company_address=form.company_address.data,
                 country=form.country.data,
                 access_level=AccessLevel[form.access_level.data],
-                store_name=form.store_name.data if form.access_level.data == 'supplier' else None,
                 is_admin=(form.company_email.data == os.environ.get('ADMIN_EMAIL', '')),
                 totp_secret=User.encrypt_totp_secret(totp_secret),
                 qr_code_base64=None,
@@ -336,7 +328,7 @@ def reset_totp_with_token():
         ).decode('utf-8') if recovery.pending_totp_secret.startswith('enc:') else recovery.pending_totp_secret
         uri = pyotp.TOTP(new_secret).provisioning_uri(
             name=user.company_email,
-            issuer_name='MaterialHub',
+            issuer_name='OPERA',
         )
         return render_template(
             'auth/reset_totp.html',
@@ -398,7 +390,7 @@ def change_password():
             user.totp_secret = User.encrypt_totp_secret(new_totp_secret)
             totp_uri = pyotp.totp.TOTP(new_totp_secret).provisioning_uri(
                 name=user.company_email,
-                issuer_name="MaterialHub"
+                issuer_name="OPERA"
             )
             qr_code = generate_qr_code(totp_uri)
             user.qr_code_base64 = None

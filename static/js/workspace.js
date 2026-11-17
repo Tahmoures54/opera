@@ -1,5 +1,5 @@
 /**
- * MaterialHub Workspace UX helpers
+ * OPERA application UX helpers
  * - Active sidebar highlighting
  * - Dark mode toggle
  * - Button loading states
@@ -18,7 +18,7 @@
   }
 
   function initDarkMode() {
-    const stored = localStorage.getItem('mh-theme');
+    const stored = localStorage.getItem('opera-theme');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     const theme = stored || (prefersDark ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', theme);
@@ -38,7 +38,7 @@
         const current = document.documentElement.getAttribute('data-theme') || 'light';
         const next = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('mh-theme', next);
+        localStorage.setItem('opera-theme', next);
         btn.innerHTML = next === 'dark'
           ? '<i class="fas fa-sun"></i>'
           : '<i class="fas fa-moon"></i>';

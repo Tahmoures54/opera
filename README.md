@@ -2,7 +2,7 @@
 
 **OPERA** is a project-scoped commissioning and start-up management platform for EPC, industrial and construction projects. It provides controlled project/system/subsystem structure, check-sheet execution, punch management, witness/hold points, Mechanical Completion (MC), Ready for Start-up (RFSU), handover and progress evidence.
 
-OPERA is built on the proven Flask, SQLAlchemy, Alembic, authentication, TOTP and tenant-security foundation inherited from MaterialHub. MaterialHub is an internal platform foundation; OPERA is the product presented to users.
+OPERA is an independent product focused exclusively on Operations, Pre-commissioning, Commissioning, Systemization, Mechanical Completion, Handover and project readiness. Its Flask, SQLAlchemy, Alembic, authentication, TOTP and tenant-security infrastructure is maintained as OPERA infrastructure.
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green)
@@ -44,7 +44,7 @@ python app.py
 
 Open http://127.0.0.1:5000 and sign in using an existing OPERA-enabled account. The account's company boundary is reused as the OPERA tenant boundary.
 
-The OPERA product surface is the default: legacy MaterialHub procurement, warehouse, and workspace routes are disabled. Set `ENABLE_LEGACY_MODULES=true` only when intentionally running the combined legacy application for compatibility/testing. Shared users, authentication, TOTP, sessions, and document numbering remain available to OPERA.
+The application exposes only OPERA product workflows. Legacy procurement, warehouse, supplier, delivery, intelligence, generic reporting and role-workspace routes have been removed. Historical database mappings and migration history remain temporarily for safe upgrades; see [Legacy database compatibility](docs/LEGACY_DATA_COMPATIBILITY.md). Shared authentication, TOTP, sessions and project-scoped authorization remain active.
 
 ## Database and upgrade
 

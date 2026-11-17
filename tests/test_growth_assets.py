@@ -21,5 +21,8 @@ def test_production_docker_assets_exist():
     assert (ROOT/'Dockerfile.production').exists()
     assert (ROOT/'docker-compose.production.yml').exists()
 
-def test_role_workspace_service_exists():
-    assert (ROOT/'role_workspace.py').exists()
+def test_commissioning_workspace_is_the_only_operational_workspace():
+    assert (ROOT/'blueprints'/'commissioning'/'workflow.py').exists()
+    assert (ROOT/'templates'/'commissioning'/'dashboard.html').exists()
+    assert not (ROOT/'role_workspace.py').exists()
+    assert not (ROOT/'templates'/'workspaces').exists()

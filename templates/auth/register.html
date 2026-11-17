@@ -126,15 +126,7 @@
                         {% endfor %}
                     {% endif %}
                 </div>
-                <div class="input-group" id="store_name_group" {% if form.access_level.data != 'supplier' %}style="display: none;"{% endif %}>
-                    {{ form.store_name.label }}
-                    {{ form.store_name(class="w-full p-3 border border-gray-300 rounded-md", id="store_name", placeholder="Enter store name (required for Suppliers)", **{'aria-describedby': 'store_name_error', 'aria-label': 'Store Name'}) }}
-                    {% if form.store_name.errors %}
-                        {% for error in form.store_name.errors %}
-                            <span class="error" id="store_name_error" role="alert">{{ error }}</span>
-                        {% endfor %}
-                    {% endif %}
-                </div>
+
                 <div class="input-group captcha-group">
                     <p id="captcha_question" aria-describedby="captcha_error">{{ captcha_question }}</p>
                     {{ form.captcha_answer(class="w-full p-3 border border-gray-300 rounded-md", id="captcha_answer", placeholder="Enter answer", type="number", required=True, **{'aria-describedby': 'captcha_error captcha_question', 'aria-label': 'CAPTCHA Answer'}) }}
@@ -176,8 +168,6 @@
         const totpConfirmedCheckbox = document.getElementById('totp_confirmed');
         const confirmTotpBtn = document.getElementById('confirm-totp-btn');
         const totpError = document.getElementById('totp_confirmed_error');
-        const accessLevelSelect = document.getElementById('access_level');
-        const storeNameGroup = document.getElementById('store_name_group');
 
         // Manage terms checkbox and submit button for registration form
         if (registerForm && termsCheckbox && submitBtn && termsError) {
@@ -211,12 +201,7 @@
             });
         }
 
-        // Dynamically show/hide store_name based on access_level
-        if (accessLevelSelect && storeNameGroup) {
-            accessLevelSelect.addEventListener('change', () => {
-                storeNameGroup.style.display = accessLevelSelect.value === 'supplier' ? 'block' : 'none';
-            });
-        }
+
     });
 </script>
 {% endblock %}

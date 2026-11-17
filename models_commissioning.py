@@ -1,6 +1,6 @@
 """OPERA commissioning domain models.
 
-All records are tenant-scoped by the existing MaterialHub ``company_name``.
+All records are tenant-scoped by the OPERA company boundary.
 Workflow transitions and cross-tenant authorization are enforced by services
 and blueprints; database constraints additionally protect tenant-local keys.
 """
