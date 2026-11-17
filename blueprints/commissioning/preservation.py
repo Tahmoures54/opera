@@ -78,6 +78,8 @@ def preservation_index(project_id):
         company_name=project.company_name, project_id=project.id,
     ).order_by(CommissioningEquipment.tag_number).all()
     users = User.query.filter_by(company_name=project.company_name).order_by(User.full_name).all()
+    equipment_by_id = {item.id: item for item in equipment}
+    user_by_id = {item.id: item for item in users}
     counts = {
         "total": len(plans),
         "overdue": sum(1 for row in plan_rows if row["due_status"] == "OVERDUE"),
@@ -87,6 +89,7 @@ def preservation_index(project_id):
     return render_template(
         "commissioning/preservation.html",
         project=project, plan_rows=plan_rows, equipment=equipment, users=users,
+        equipment_by_id=equipment_by_id, user_by_id=user_by_id,
         counts=counts, today=today, can_manage=has_permission(project.id, "preservation.manage"),
         can_execute=any(has_permission(project.id, p) for p in ("preservation.execute", "preservation.manage")),
     )
