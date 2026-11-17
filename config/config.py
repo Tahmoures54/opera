@@ -209,6 +209,12 @@ class ProductionConfig(Config):
         if not database_url.startswith(("postgresql://", "postgresql+psycopg2://")):
             raise ValueError("Production database must be PostgreSQL.")
 
+        storage_backend = str(cls.OPERA_STORAGE_BACKEND or "").lower()
+        if storage_backend not in {"local", "s3"}:
+            raise ValueError("OPERA_STORAGE_BACKEND must be either local or s3.")
+        if storage_backend == "s3" and not cls.OPERA_S3_BUCKET:
+            raise ValueError("OPERA_S3_BUCKET is required when OPERA_STORAGE_BACKEND=s3.")
+
 
 
 class TestingConfig(Config):
