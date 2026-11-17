@@ -1196,3 +1196,26 @@ def test_engineering_excel_exchange_rejects_formula_cells_and_wrong_equipment_sc
     assert rejected.status_code == 400
     assert b"Formula cells are not accepted" in rejected.data
 
+    workbook = load_workbook(BytesIO(client.get(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/template",
+    ).data))
+    workbook["Systems"].append(["SYS-A", "System A", "", "", 0])
+    workbook["Systems"].append(["SYS-B", "System B", "", "", 0])
+    workbook["Subsystems"].append(["SYS-A", "SUB-A", "Subsystem A", "", 0, None, None])
+    workbook["Subsystems"].append(["SYS-B", "SUB-B", "Subsystem B", "", 0, None, None])
+    workbook["Equipment"].append(["EQ-B", "SYS-B", "SUB-B", "Pump", "", "", "", "", "ACTIVE"])
+    workbook["Tasks"].append([
+        "TASK-A", "SYS-A", "SUB-A", "EQ-B", "CCK", "Wrong equipment link",
+        "", "Mechanical", "", "", "", 1, None, None,
+    ])
+    payload = BytesIO()
+    workbook.save(payload)
+    payload.seek(0)
+    wrong_scope = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/import",
+        data={"action": "validate", "workbook": (payload, "wrong-scope.xlsx")},
+        content_type="multipart/form-data",
+    )
+    assert wrong_scope.status_code == 400
+    assert b"Equipment must belong to the same system and subsystem" in wrong_scope.data
+
