@@ -32,7 +32,7 @@ def require_ready_for_mc(company_name: str, subsystem_id: int) -> ReadinessResul
 def require_ready_for_rfc(company_name: str, subsystem_id: int) -> ReadinessResult:
     """Abort with 409 if the subsystem is not ready for Ready-for-Commissioning."""
     result = evaluate_subsystem_readiness(company_name, subsystem_id)
-    if not result.is_ready_for_rf:
+    if not result.is_ready_for_rfc:
         msg = _format_blockers(result) or "Subsystem is not ready for RFC"
         abort(409, description=f"RFC certification blocked: {msg}")
     return result
