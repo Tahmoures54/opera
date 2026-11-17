@@ -7,16 +7,40 @@
   {% if sheet.rejection_reason %}<div class="alert alert-warning">Rejection reason: {{ sheet.rejection_reason }}</div>{% endif %}
   {% if sheet.status.value in ['DRAFT','REJECTED'] %}
   <form method="post" action="{{ url_for('commissioning.add_checksheet_item', sheet_id=sheet.id) }}" class="card card-body mb-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><h2 class="h6">Add inspection item</h2><textarea class="form-control mb-2" name="description" placeholder="Inspection item description" required></textarea><input class="form-control mb-2" name="expected_result" placeholder="Acceptance criteria / expected result"><label><input type="checkbox" name="witness_required" value="1"> Witness required</label><button class="btn btn-primary mt-2 align-self-start">Add item</button></form>
-  <form method="post" action="{{ url_for('commissioning.issue_checksheet', sheet_id=sheet.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-outline-primary mb-3">Issue check sheet</button></form>
+  <form method="post" action="{{ url_for('commissioning.issue_checksheet', sheet_id=sheet.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-outline-primary mb-3">{% if sheet.status.value == 'REJECTED' %}Reissue check sheet{% else %}Issue check sheet{% endif %}</button></form>
   {% endif %}
   <div class="card"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Item</th><th>Description</th><th>Acceptance criteria</th><th>Actual result</th><th>Status</th><th>Action</th></tr></thead><tbody>
-  {% for item in items %}<tr><td>{{ item.sequence }}</td><td>{{ item.description }}</td><td>{{ item.expected_result or '—' }}</td><td>{{ item.actual_result or '—' }}</td><td>{{ item.result_status.value|replace('_', ' ')|title }}</td><td>{% if can_fill and sheet.status.value in ['ISSUED','IN_PROGRESS','REJECTED'] %}<form method="post" action="{{ url_for('commissioning.update_checksheet_item', sheet_id=sheet.id, item_id=item.id) }}" class="d-flex flex-column gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><textarea class="form-control form-control-sm" name="actual_result" placeholder="Actual result">{{ item.actual_result or '' }}</textarea><select class="form-select form-select-sm" name="result_status">{% for result in results %}<option value="{{ result.value|replace('_', ' ')|title }}" {% if result == item.result_status %}selected{% endif %}>{{ result.value|replace('_', ' ')|title }}</option>{% endfor %}</select><button class="btn btn-sm btn-outline-primary">Save</button></form>{% endif %}{% if can_verify and item.result_status.value in ['OK','NA'] and not item.verified_by_id %}<form method="post" action="{{ url_for('commissioning.verify_checksheet_item', sheet_id=sheet.id, item_id=item.id) }}" class="mt-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">Independent QC verification QC</button></form>{% elif item.verified_by_id %}<small class="text-success">Verified by: {{ item.verified_by_id }}</small>{% endif %}</td></tr>
+  {% for item in items %}<tr><td>{{ item.sequence }}</td><td>{{ item.description }}</td><td>{{ item.expected_result or '—' }}</td><td>{{ item.actual_result or '—' }}</td><td>{{ item.result_status.value|replace('_', ' ')|title }}</td><td>{% if can_fill and sheet.status.value in ['ISSUED','IN_PROGRESS','REJECTED'] %}<form method="post" action="{{ url_for('commissioning.update_checksheet_item', sheet_id=sheet.id, item_id=item.id) }}" class="d-flex flex-column gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><textarea class="form-control form-control-sm" name="actual_result" placeholder="Actual result">{{ item.actual_result or '' }}</textarea><select class="form-select form-select-sm" name="result_status">{% for result in results %}<option value="{{ result.value }}" {% if result == item.result_status %}selected{% endif %}>{{ result.value|replace('_', ' ')|title }}</option>{% endfor %}</select><button class="btn btn-sm btn-outline-primary">Save</button></form>{% endif %}{% if can_verify and item.result_status.value in ['OK','NA'] and not item.verified_by_id %}<form method="post" action="{{ url_for('commissioning.verify_checksheet_item', sheet_id=sheet.id, item_id=item.id) }}" class="mt-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">Independent QC verification</button></form>{% elif item.verified_by_id %}<small class="text-success">Verified by: {{ item.verified_by_id }}</small>{% endif %}</td></tr>
   {% else %}<tr><td colspan="6" class="text-center text-muted py-4">No inspection items added yet.</td></tr>{% endfor %}
   </tbody></table></div></div>
   {% if sheet.status.value in ['ISSUED','IN_PROGRESS'] %}
   <div class="card card-body mt-3"><form method="post" action="{{ url_for('commissioning.reject_checksheet', sheet_id=sheet.id) }}" class="mb-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="form-label">Reject check sheet (client)</label><input class="form-control mb-2" name="reason" placeholder="Rejection reason" required><button class="btn btn-outline-danger">Reject check sheet</button></form><h2 class="h6">Two-party electronic sign-off</h2><p class="small text-muted">Each sign-off is recorded against an authenticated session. The client and contractor signatures must be provided by two different users.</p><form method="post" action="{{ url_for('commissioning.sign_checksheet', sheet_id=sheet.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success">Record my signature</button></form><div class="mt-2 small">Client signature: {{ sheet.signed_by_client_id or 'Pending' }} · Contractor signature: {{ sheet.signed_by_contractor_id or 'Pending' }}</div></div>
   {% elif sheet.status.value == 'SIGNED_OFF' %}
-  <form method="post" action="{{ url_for('commissioning.revise_checksheet', sheet_id=sheet.id) }}" class="card card-body mt-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="form-label">Reason for a new revision</label><input class="form-control mb-2" name="reason" required><button class="btn btn-outline-primary align-self-start">Create Revision new</button></form>
+  <form method="post" action="{{ url_for('commissioning.revise_checksheet', sheet_id=sheet.id) }}" class="card card-body mt-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="form-label">Reason for a new revision</label><input class="form-control mb-2" name="reason" required><button class="btn btn-outline-primary align-self-start">Create new revision</button></form>
+  {% endif %}
+  {% if revision_history %}
+  <section class="card card-body mt-3">
+    <h2 class="h6">Revision history</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Revision</th><th>Reason</th><th>Created</th><th>Record</th></tr></thead>
+        <tbody>
+          {% for revision in revision_history %}
+          <tr>
+            <td>Rev {{ revision.revision_number }}</td>
+            <td>{{ revision.revision_reason }}</td>
+            <td>{{ revision.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+              <a href="{{ url_for('commissioning.checksheet_detail', sheet_id=revision.previous_check_sheet_id) }}">Previous</a>
+              <span class="text-muted">→</span>
+              <a href="{{ url_for('commissioning.checksheet_detail', sheet_id=revision.new_check_sheet_id) }}">New revision</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
   {% endif %}
   <section class="card card-body mt-3">
     <h2 class="h6">Check sheet evidence & attachments</h2>
