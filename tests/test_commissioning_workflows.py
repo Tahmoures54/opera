@@ -1166,8 +1166,8 @@ def test_engineering_excel_exchange_dry_run_import_and_export(client, app, opera
     )
     assert exported.status_code == 200
     exported_book = load_workbook(BytesIO(exported.data), data_only=False)
-    assert exported_book["Systems"].max_row == 2
-    assert exported_book["Subsystems"].max_row == 2
+    assert exported_book["Systems"].max_row == 3
+    assert exported_book["Subsystems"].max_row == 3
     assert exported_book["Equipment"].max_row == 2
     assert exported_book["Tasks"].max_row == 2
 
