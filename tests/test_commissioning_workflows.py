@@ -2213,6 +2213,18 @@ def test_numeric_checksheet_measurement_limits_and_audit(client, app, opera_setu
         ).order_by(CommissioningAuditLog.id.desc()).first()
         assert audit.after_json["measured_value"] == "3.75"
         assert audit.after_json["measurement_type"] == "NUMERIC"
+        assert audit.after_json["minimum_value"] == "2.50000000"
+        assert audit.after_json["maximum_value"] == "5.00000000"
+
+    not_applicable = client.post(
+        f"/commissioning/checksheets/{sheet_id}/items/{item_id}/result",
+        data={"result_status": "NA"},
+    )
+    assert not_applicable.status_code == 302
+    with app.app_context():
+        item = db.session.get(CheckSheetItem, item_id)
+        assert item.result_status == ItemResultStatus.NA
+        assert item.measured_value is None
 
     invalid_limits = client.post(template_url, data={
         "template_code": "PUMP-MEAS-BAD",
