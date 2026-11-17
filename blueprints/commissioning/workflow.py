@@ -612,6 +612,20 @@ def transition_punch(punch_id):
     return redirect(url_for("commissioning.operations", project_id=punch.project_id))
 
 
+@commissioning_bp.get("/punch/<int:punch_id>/history")
+@login_required
+def punch_history(punch_id):
+    punch = _punch(punch_id)
+    history = PunchHistory.query.filter_by(
+        company_name=punch.company_name, punch_item_id=punch.id,
+    ).order_by(PunchHistory.created_at.asc(), PunchHistory.id.asc()).all()
+    project = get_project(punch.project_id, punch.company_name)
+    return render_template(
+        "commissioning/punch_history.html", project=project,
+        punch=punch, history=history,
+    )
+
+
 @commissioning_bp.post("/projects/<int:project_id>/witness")
 @login_required
 def create_witness(project_id):
