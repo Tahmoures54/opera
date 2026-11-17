@@ -87,7 +87,7 @@ def test_operations_dashboard_is_available_to_project_member(client, opera_setup
     html = response.get_data(as_text=True)
     assert "Commissioning operations" in html
     title = html.split("<title>", 1)[1].split("</title>", 1)[0]
-    assert "OPERA - Project operations" in title
+    assert "OPERA — Project operations" in title
     assert "Evidence for Punch" not in title
     assert "Evidence for Punch and handover packages" in html
 
