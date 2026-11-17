@@ -12,14 +12,16 @@ from sqlalchemy.orm import synonym
 from extensions import db
 
 
-def _enum(enum_class, name):
-    return db.Enum(
-        enum_class,
-        name=name,
-        native_enum=False,
-        values_callable=lambda values: [item.value for item in values],
-        validate_strings=True,
-    )
+def _enum(enum_class, name, length=None):
+    options = {
+        "name": name,
+        "native_enum": False,
+        "values_callable": lambda values: [item.value for item in values],
+        "validate_strings": True,
+    }
+    if length is not None:
+        options["length"] = length
+    return db.Enum(enum_class, **options)
 
 
 class ProjectStatus(enum.Enum):
@@ -499,7 +501,7 @@ class HandoverPackage(db.Model):
     operations_accepted_at = db.Column(db.DateTime)
     rejection_reason = db.Column(db.Text)
     documents_json = db.Column(db.JSON)
-    status = db.Column(_enum(HandoverStatus, "commissioning_handover_status"), nullable=False, default=HandoverStatus.DRAFT)
+    status = db.Column(_enum(HandoverStatus, "commissioning_handover_status", length=30), nullable=False, default=HandoverStatus.DRAFT)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
