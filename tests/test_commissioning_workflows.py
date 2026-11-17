@@ -218,6 +218,12 @@ def test_witness_hold_lifecycle_requires_notification_release_and_cancellation_r
         assert witness.attended_by_id == qc_id
         assert witness.attended_at is not None
 
+    _login_id(client, qc_id)
+    response = client.post(transition, data={
+        "status": "RELEASED", "remarks": "QC cannot release own witness point.",
+    })
+    assert response.status_code == 403
+
     _login_id(client, manager_id)
     response = client.post(transition, data={"status": "RELEASED"})
     assert response.status_code == 400
