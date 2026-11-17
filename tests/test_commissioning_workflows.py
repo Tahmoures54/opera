@@ -1085,3 +1085,134 @@ def test_mc_rf_certificates_capture_immutable_issue_time_evidence(client, app, o
         with pytest.raises(ValueError, match="append-only"):
             db.session.commit()
         db.session.rollback()
+
+
+
+def test_engineering_excel_exchange_dry_run_import_and_export(client, app, opera_setup):
+    from datetime import date
+    from io import BytesIO
+    from openpyxl import load_workbook
+    from models_commissioning import (
+        CommissioningEquipment, CommissioningSystem, CommissioningSubsystem,
+        CommissioningTask,
+    )
+
+    _login_id(client, opera_setup["manager"])
+    template_response = client.get(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/template",
+    )
+    assert template_response.status_code == 200
+    workbook = load_workbook(BytesIO(template_response.data))
+    workbook["Systems"].append(["SYS-EX", "Exchange System", "Utilities", "P-100", 25])
+    workbook["Subsystems"].append([
+        "SYS-EX", "SUB-EX", "Exchange Subsystem", "Test scope", 50,
+        date(2026, 12, 1), date(2026, 12, 15),
+    ])
+    workbook["Equipment"].append([
+        "EQ-EX-001", "SYS-EX", "SUB-EX", "Pump", "Transfer pump",
+        "Vendor", "P-100", "SN-001", "ACTIVE",
+    ])
+    workbook["Tasks"].append([
+        "TASK-EX-001", "SYS-EX", "SUB-EX", "EQ-EX-001", "CCK",
+        "Verify pump", "Mechanical conformity check", "Mechanical",
+        "Pre-commissioning", "Conformity checks", "Mechanical Team", 12,
+        date(2026, 11, 20), date(2026, 11, 30),
+    ])
+    payload = BytesIO()
+    workbook.save(payload)
+    workbook_bytes = payload.getvalue()
+
+    dry_run = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/import",
+        data={"action": "validate", "workbook": (BytesIO(workbook_bytes), "engineering.xlsx")},
+        content_type="multipart/form-data",
+    )
+    assert dry_run.status_code == 200
+    assert b"Dry run passed" in dry_run.data
+    with app.app_context():
+        assert CommissioningSystem.query.filter_by(system_code="SYS-EX").count() == 0
+        assert CommissioningTask.query.filter_by(task_number="TASK-EX-001").count() == 0
+
+    imported = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/import",
+        data={"action": "import", "workbook": (BytesIO(workbook_bytes), "engineering.xlsx")},
+        content_type="multipart/form-data",
+    )
+    assert imported.status_code == 302
+    with app.app_context():
+        system = CommissioningSystem.query.filter_by(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_code="SYS-EX",
+        ).one()
+        subsystem = CommissioningSubsystem.query.filter_by(
+            company_name="Contractor A", system_id=system.id,
+            subsystem_code="SUB-EX",
+        ).one()
+        equipment = CommissioningEquipment.query.filter_by(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            tag_number="EQ-EX-001",
+        ).one()
+        task = CommissioningTask.query.filter_by(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            task_number="TASK-EX-001",
+        ).one()
+        assert equipment.subsystem_id == subsystem.id
+        assert task.equipment_id == equipment.id
+        assert task.estimated_man_hours == 12
+        assert task.status == CommissioningTaskStatus.NOT_STARTED
+
+    exported = client.get(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/export",
+    )
+    assert exported.status_code == 200
+    exported_book = load_workbook(BytesIO(exported.data), data_only=False)
+    assert exported_book["Systems"].max_row == 3
+    assert exported_book["Subsystems"].max_row == 3
+    assert exported_book["Equipment"].max_row == 2
+    assert exported_book["Tasks"].max_row == 2
+
+
+def test_engineering_excel_exchange_rejects_formula_cells_and_wrong_equipment_scope(client, app, opera_setup):
+    from io import BytesIO
+    from openpyxl import load_workbook
+
+    _login_id(client, opera_setup["manager"])
+    response = client.get(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/template",
+    )
+    workbook = load_workbook(BytesIO(response.data))
+    workbook["Systems"].append(["SYS-FORMULA", "=HYPERLINK(\"https://example.invalid\",\"bad\")", "", "", 0])
+    payload = BytesIO()
+    workbook.save(payload)
+    payload.seek(0)
+    rejected = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/import",
+        data={"action": "validate", "workbook": (payload, "formula.xlsx")},
+        content_type="multipart/form-data",
+    )
+    assert rejected.status_code == 400
+    assert b"Formula cells are not accepted" in rejected.data
+
+    workbook = load_workbook(BytesIO(client.get(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/template",
+    ).data))
+    workbook["Systems"].append(["SYS-A", "System A", "", "", 0])
+    workbook["Systems"].append(["SYS-B", "System B", "", "", 0])
+    workbook["Subsystems"].append(["SYS-A", "SUB-A", "Subsystem A", "", 0, None, None])
+    workbook["Subsystems"].append(["SYS-B", "SUB-B", "Subsystem B", "", 0, None, None])
+    workbook["Equipment"].append(["EQ-B", "SYS-B", "SUB-B", "Pump", "", "", "", "", "ACTIVE"])
+    workbook["Tasks"].append([
+        "TASK-A", "SYS-A", "SUB-A", "EQ-B", "CCK", "Wrong equipment link",
+        "", "Mechanical", "", "", "", 1, None, None,
+    ])
+    payload = BytesIO()
+    workbook.save(payload)
+    payload.seek(0)
+    wrong_scope = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/engineering-data/import",
+        data={"action": "validate", "workbook": (payload, "wrong-scope.xlsx")},
+        content_type="multipart/form-data",
+    )
+    assert wrong_scope.status_code == 400
+    assert b"Equipment must belong to the same system and subsystem" in wrong_scope.data
+

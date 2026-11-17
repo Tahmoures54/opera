@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - Engineering Data Exchange{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:1100px">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+      <a class="small text-decoration-none" href="{{ url_for('commissioning.operations', project_id=project.id) }}">← Back to commissioning operations</a>
+      <h1 class="h3 mt-2 mb-1">Engineering Data Exchange</h1>
+      <p class="text-muted mb-0">{{ project.project_code }} · {{ project.name }}</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-primary" href="{{ url_for('commissioning.download_engineering_template', project_id=project.id) }}">Download import template</a>
+      <a class="btn btn-primary" href="{{ url_for('commissioning.export_engineering_registers', project_id=project.id) }}">Export registers (.xlsx)</a>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-2"><span class="badge text-bg-primary">OPERA XLSX v1</span><span class="small text-muted">Create-only · Project-scoped · Audited</span></div>
+      <h2 class="h5">Import engineering registers</h2>
+      <p class="text-muted">Use the OPERA template to import Systems, Subsystems, Equipment and Commissioning Tasks. The validator checks identifiers and references against this project before any records are created.</p>
+      <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="border rounded p-3 h-100"><strong>1. Systems</strong><div class="small text-muted mt-1">System codes, names and weights</div></div></div>
+        <div class="col-md-3"><div class="border rounded p-3 h-100"><strong>2. Subsystems</strong><div class="small text-muted mt-1">Parent system and MC/RF target dates</div></div></div>
+        <div class="col-md-3"><div class="border rounded p-3 h-100"><strong>3. Equipment</strong><div class="small text-muted mt-1">Tag numbers and technical attributes</div></div></div>
+        <div class="col-md-3"><div class="border rounded p-3 h-100"><strong>4. Tasks</strong><div class="small text-muted mt-1">ICAPS-aligned activity codes and man-hours</div></div></div>
+      </div>
+      <div class="alert alert-info small">
+        Imports are create-only: existing records are never overwritten. Duplicate identifiers, unknown references, invalid dates, negative hours and formula cells are rejected. A dry run does not write to the database.
+      </div>
+      <form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.import_engineering_registers', project_id=project.id) }}" class="row g-3 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-8">
+          <label class="form-label" for="workbook">Engineering workbook (.xlsx, max 5 MB)</label>
+          <input class="form-control" id="workbook" type="file" name="workbook" accept=".xlsx" required>
+        </div>
+        <div class="col-md-4"><button class="btn btn-outline-primary w-100" name="action" value="validate">Validate workbook (dry run)</button></div>
+      </form>
+    </div>
+  </div>
+
+  {% if summary is defined %}
+  <section class="card mb-4">
+    <div class="card-header fw-semibold">Validation summary</div>
+    <div class="card-body">
+      <div class="row g-2">
+        {% for name, count in summary.items() %}
+        <div class="col-6 col-md-3"><div class="border rounded p-3"><div class="small text-muted">{{ name }}</div><div class="h3 mb-0">{{ count }}</div><div class="small text-muted">valid rows</div></div></div>
+        {% endfor %}
+      </div>
+      {% if errors %}
+      <div class="alert alert-danger mt-3 mb-0"><strong>{{ errors|length }} validation issue(s) found.</strong> No data was imported.</div>
+      {% elif dry_run %}
+      <div class="alert alert-success mt-3 mb-3"><strong>Dry run passed.</strong> No records have been written yet. Re-select the same workbook below to commit the validated rows.</div>
+      <form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.import_engineering_registers', project_id=project.id) }}" class="row g-2 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="import">
+        <div class="col-md-8"><label class="form-label" for="confirm-workbook">Re-select the validated workbook</label><input class="form-control" id="confirm-workbook" type="file" name="workbook" accept=".xlsx" required></div>
+        <div class="col-md-4"><button class="btn btn-primary w-100">Import validated records</button></div>
+      </form>
+      {% endif %}
+    </div>
+    {% if errors %}
+    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Worksheet</th><th>Row</th><th>Field</th><th>Issue</th></tr></thead>
+      <tbody>{% for item in errors %}<tr><td>{{ item.sheet }}</td><td>{{ item.row }}</td><td>{{ item.field }}</td><td>{{ item.message }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <div class="small text-muted">
+    Workbook contract: <code>OPERA XLSX v1</code>. The format is independently designed for OPERA and is not an official ICAPS workbook. Approved Check Sheets, document revisions and execution evidence are not overwritten by engineering imports.
+  </div>
+</div>
+{% endblock %}
