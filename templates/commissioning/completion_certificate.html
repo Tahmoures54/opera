@@ -25,8 +25,8 @@
   </div>
   <div class="certificate-rule"></div>
   <div class="text-center mb-4">
-    <div class="text-uppercase small fw-bold text-muted">{{ certificate.certificate_type }} Certificate</div>
-    <h1 class="h2 mt-2">{% if certificate.certificate_type == 'MC' %}Mechanical Completion Certificate{% else %}Ready for Commissioning Certificate{% endif %}</h1>
+    <div class="text-uppercase small fw-bold text-muted">{% if certificate.certificate_type == 'RF' %}RFC{% else %}{{ certificate.certificate_type }}{% endif %} Certificate</div>
+    <h1 class="h2 mt-2">{% if certificate.certificate_type == 'MC' %}Mechanical Completion Certificate{% else %}Ready for Commissioning (RFC) Certificate{% endif %}</h1>
     <p class="text-muted mb-0">System / Subsystem Completion Record</p>
   </div>
   <div class="certificate-meta row g-3">
@@ -48,7 +48,7 @@
       <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Approved current documents</div><div class="h4 mb-0">{{ snapshot.readiness.current_documents_approved }}/{{ snapshot.readiness.current_documents_total }}</div><div class="small text-muted">Latest revisions</div></div></div>
       <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Tasks completed</div><div class="h4 mb-0">{{ snapshot.readiness.tasks_completed }}/{{ snapshot.readiness.tasks_total }}</div><div class="small text-muted">Registered tasks</div></div></div>
     </div>
-    <p class="small text-muted mt-2 mb-0">The MC issue gate enforces signed-off current Check Sheets and clearance of Category A/B Punch items. Other values are preserved as supporting evidence and are not silently treated as additional contractual acceptance rules.</p>
+    <p class="small text-muted mt-2 mb-0">This certificate is the RFC (Ready for Commissioning) certificate. Its legacy internal type is RF. The issue-time snapshot preserves supporting evidence; the project's approved completion procedure and contractual acceptance rules remain authoritative.</p>
   </section>
 
   <section class="certificate-section">
