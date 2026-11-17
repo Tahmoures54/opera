@@ -2229,6 +2229,7 @@ def test_numeric_checksheet_measurement_limits_and_audit(client, app, opera_setu
         sheet.status = CheckSheetStatus.SIGNED_OFF
         sheet.signed_by_client_id = opera_setup["client"]
         sheet.signed_by_contractor_id = opera_setup["manager"]
+        sheet.signed_at = datetime.utcnow()
         db.session.commit()
 
     revised_sheet = client.post(
