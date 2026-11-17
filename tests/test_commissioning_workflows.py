@@ -1034,6 +1034,9 @@ def test_mc_rfc_certificates_capture_immutable_issue_time_evidence(client, app, 
             package_id=package_id, certificate_type="MC",
         ).one()
         assert mc_certificate.snapshot_json["readiness"]["current_check_sheets_signed"] == 1
+        assert mc_certificate.snapshot_json["readiness"]["gate"] == "MC"
+        assert mc_certificate.snapshot_json["readiness"]["gate_ready"] is True
+        assert mc_certificate.snapshot_json["readiness"]["readiness_policy"]["punch_blocking_categories"]["MC"] == ["A", "B"]
         mc_certificate_id = mc_certificate.id
         hold = WitnessPoint(
             company_name="Contractor A", project_id=opera_setup["project"],
