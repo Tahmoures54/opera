@@ -17,6 +17,61 @@
     <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Handover packages</div><div class="display-6">{{ packages|length }}</div></div></div></div>
   </div>
   <section class="card mb-4"><div class="card-header fw-semibold">Subsystem completion dossiers</div><div class="card-body"><div class="row g-2">{% for sub in subsystems %}<div class="col-md-6 col-xl-4"><div class="border rounded p-3 d-flex justify-content-between align-items-center gap-2"><div><strong>{{ sub.subsystem_code }}</strong><div class="small text-muted">{{ sub.name }}</div></div><a class="btn btn-sm btn-outline-primary" href="{{ url_for('commissioning.subsystem_dossier', project_id=project.id, subsystem_id=sub.id) }}">Open dossier</a></div></div>{% else %}<div class="col-12 text-muted small">Define project subsystems to create their completion dossiers.</div>{% endfor %}</div></div></section>
+  <section class="card mb-4">
+    <div class="card-header fw-semibold">Configurable dossier index</div>
+    <div class="card-body">
+      <p class="small text-muted">Set mandatory current engineering document types for subsystem dossiers. Rules can require approved status and uploaded evidence. Without project rules, the existing default requires at least one current document and all current revisions approved.</p>
+      {% if can_manage_dossier_requirements %}
+      <form method="post" action="{{ url_for('commissioning.save_dossier_requirement', project_id=project.id) }}" class="row g-2 align-items-end mb-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="save">
+        <div class="col-lg-3"><label class="form-label small">Document type</label><input class="form-control form-control-sm" name="document_type" maxlength="80" placeholder="P&ID, Isometric, Datasheet..." required></div>
+        <div class="col-lg-2"><label class="form-label small">Discipline</label><input class="form-control form-control-sm" name="discipline" maxlength="80" placeholder="ANY"></div>
+        <div class="col-lg-2"><label class="form-label small">Minimum count</label><input class="form-control form-control-sm" type="number" name="minimum_count" min="1" max="1000" value="1" required></div>
+        <div class="col-lg-3">
+          <div class="form-check"><input class="form-check-input" type="checkbox" name="require_approved" id="new-dossier-approved" checked><label class="form-check-label small" for="new-dossier-approved">Must be approved</label></div>
+          <div class="form-check"><input class="form-check-input" type="checkbox" name="require_evidence" id="new-dossier-evidence"><label class="form-check-label small" for="new-dossier-evidence">Evidence required</label></div>
+        </div>
+        <div class="col-lg-2"><button class="btn btn-sm btn-primary w-100">Add requirement</button></div>
+      </form>
+      {% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Document type</th><th>Discipline</th><th>Minimum</th><th>Approval</th><th>Evidence</th>{% if can_manage_dossier_requirements %}<th>Actions</th>{% endif %}</tr></thead>
+          <tbody>
+          {% for rule in dossier_requirements %}
+            <tr>
+              {% if can_manage_dossier_requirements %}
+              <td colspan="6">
+                <form method="post" action="{{ url_for('commissioning.save_dossier_requirement', project_id=project.id) }}" class="row g-2 align-items-center">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save"><input type="hidden" name="requirement_id" value="{{ rule.id }}">
+                  <div class="col-md-3"><input class="form-control form-control-sm" name="document_type" maxlength="80" value="{{ rule.document_type }}" required></div>
+                  <div class="col-md-2"><input class="form-control form-control-sm" name="discipline" maxlength="80" value="{{ '' if rule.discipline == 'ANY' else rule.discipline }}" placeholder="ANY"></div>
+                  <div class="col-md-1"><input class="form-control form-control-sm" type="number" name="minimum_count" min="1" max="1000" value="{{ rule.minimum_count }}" required></div>
+                  <div class="col-md-2">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="require_approved" id="approved-{{ rule.id }}" {% if rule.require_approved %}checked{% endif %}><label class="form-check-label small" for="approved-{{ rule.id }}">Approved</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="require_evidence" id="evidence-{{ rule.id }}" {% if rule.require_evidence %}checked{% endif %}><label class="form-check-label small" for="evidence-{{ rule.id }}">Evidence</label></div>
+                  </div>
+                  <div class="col-md-2"><button class="btn btn-sm btn-outline-primary">Save</button></div>
+                </form>
+                <form method="post" action="{{ url_for('commissioning.save_dossier_requirement', project_id=project.id) }}" class="mt-1">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="deactivate"><input type="hidden" name="requirement_id" value="{{ rule.id }}">
+                  <button class="btn btn-sm btn-outline-danger">Deactivate</button>
+                </form>
+              </td>
+              {% else %}
+              <td colspan="5"><div class="d-flex flex-wrap gap-3"><strong>{{ rule.document_type }}</strong><span>{{ rule.discipline }}</span><span>Minimum {{ rule.minimum_count }}</span><span>{{ 'Approved' if rule.require_approved else 'Approval optional' }}</span><span>{{ 'Evidence required' if rule.require_evidence else 'Evidence optional' }}</span></div></td>
+              {% endif %}
+            </tr>
+          {% else %}
+            <tr><td colspan="{% if can_manage_dossier_requirements %}6{% else %}5{% endif %}" class="text-muted">No project-specific index rules. The default approval gate remains active.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <div class="row g-4">
     <div class="col-xl-6">
       <section class="card mb-4"><div class="card-header fw-bold">Project members & roles</div><div class="card-body">
