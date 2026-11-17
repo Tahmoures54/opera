@@ -19,9 +19,9 @@
 | Task Register | Implemented baseline | Task creation, controlled state transitions, actual dates, audit events | Task-to-multiple-disciplines/document links and configurable workflow templates |
 | Task sequencing | Implemented bounded scope | Finish-to-start dependencies, lag storage, duplicate/self/cycle and project-scope validation; predecessor completion gate | SS/FF/SF, leads, automatic rescheduling and critical-path calculation |
 | Check Sheet execution | Implemented bounded scope | Issue, item results, independent QC verification, two-party sign-off, rejection/rework, controlled revisions and immutability | Reusable template catalogue, richer measurements, controlled witness matrix and qualified e-signatures |
-| Punch List | Implemented bounded scope | Raise/assign, corrective action, closure, audited reopen, history, verification and waiver evidence | Project-configurable category definitions and milestone blocking/waiver matrix |
-| Witness / Hold / Review | Partial | Scheduling, attendance/release and Hold-point readiness blocking | Project-configurable witness rules, overdue escalation and complete authority matrix |
-| MC / RFC / RFSU | Implemented bounded scope | Immutable MC and RFC certificates with issue-time evidence; distinct RFSU gate | Configurable readiness rules and certificate signatory matrix; qualified electronic signatures |
+| Punch List | Implemented bounded scope | Raise/assign, corrective action, closure, audited reopen, history, verification and waiver evidence; milestone blocking categories are project-configurable | Project-configurable category definitions/meanings, waiver authority matrix and further clearance workflow controls |
+| Witness / Hold / Review | Partial | Scheduling, attendance/release; Hold-point blocking can be configured per MC/RFC/RFSU gate | Witness/review point requirements, overdue escalation and full authority matrix remain incomplete |
+| MC / RFC / RFSU | Implemented bounded scope | Immutable MC/RFC certificates; project-configurable Punch, Check Sheet, Hold-point and RFSU task rules; invalid policy fails closed; policy and gate issues captured in certificate snapshots | Project-specific signatory matrix, qualified electronic signatures and further procedure-linked approvals |
 | Operations Acceptance | Implemented baseline | Authorized accept/reject transition after RFSU with audit | Full custody-transfer package and project-specific acceptance checklist |
 | Document Register | Implemented bounded scope | Revision records, evidence upload metadata, review/approval/rejection and history | Transmittals, bulk exchange, external numbering and configurable review cycles |
 | Engineering Excel exchange | Implemented bounded scope | OPERA XLSX template/export, dry run, row validation, SHA-256 confirmation, create-only atomic import and audit | More registers, revision-delta workflows, controlled retire/modify actions |
@@ -41,13 +41,13 @@
 5. **Production acceptance:** successful CI does not establish production migration, deployment, backup/restore or multi-party project acceptance.
 
 ## Recommended implementation order
-1. Project-configurable readiness and Punch/Check Sheet policy.
-2. Reusable revision-controlled Check Sheet/Test Sheet templates.
-3. Dossier index, completeness engine, PDF/ZIP compilation.
-4. Durable evidence storage and security/retention/restore controls.
-5. Preservation management.
-6. Work logs/manpower and expanded reports.
-7. Additional engineering import registers and controlled revision delta workflows.
+1. Reusable revision-controlled Check Sheet/Test Sheet templates and project instantiation.
+2. Dossier index, completeness engine, PDF/ZIP compilation.
+3. Durable evidence storage and security/retention/restore controls.
+4. Preservation management.
+5. Work logs/manpower and expanded reports.
+6. Further document-control and engineering import/revision workflows.
+7. Procedure-linked witness, signatory and waiver authority configuration.
 
 ## Acceptance evidence
 A capability is complete only when its model constraints, migrations, backend service, route authorization, UI, audit history, tenant-isolation tests, rejection-path tests and relevant output tests are verified. Production readiness additionally requires a staging acceptance scenario, production-equivalent database migration test and evidence backup/restore rehearsal.
