@@ -164,6 +164,7 @@ def operations(project_id):
         evidence_by_entity=evidence_by_entity,
         can_upload_punch_evidence=any(has_permission(project.id, p) for p in ("punch.raise", "punch.assign", "punch.verify")),
         can_manage_structure=has_permission(project.id, "structure.manage"),
+        can_view_preservation=any(has_permission(project.id, p) for p in ("preservation.view", "preservation.manage")),
         can_upload_handover_evidence=any(has_permission(project.id, p) for p in ("handover.manage", "handover.accept")),
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
