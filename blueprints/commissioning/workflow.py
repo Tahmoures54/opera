@@ -832,6 +832,7 @@ def _completion_certificate_snapshot(package, certificate_type, certificate_numb
             "number": item.punch_number, "category": item.category.value,
             "severity": item.severity.value, "status": item.status.value,
             "description": item.description,
+            "corrective_action": item.corrective_action,
             "target_closure_date": item.target_closure_date.isoformat() if item.target_closure_date else None,
         } for item in punches],
         "witness_points": [{
