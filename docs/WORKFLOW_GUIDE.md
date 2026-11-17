@@ -131,3 +131,7 @@ Project, System and Subsystem snapshots are stored independently and audited. Th
 Project managers can define mandatory current engineering document types for each subsystem dossier from **Commissioning Operations → Configurable dossier index**. Each rule specifies document type, discipline (or ANY), minimum count, approval requirement and whether an attachment record is required. OPERA evaluates only the latest revision of each document number and shows a per-rule PASS/MISSING result. If no active rules exist, the default remains at least one current engineering document with all current revisions approved. See [DOSSIER_INDEX.md](DOSSIER_INDEX.md).
 
 This is a dossier completeness/readiness view, not a generated PDF/ZIP turnover package and not a certificate issuance action.
+
+
+## 14. Equipment preservation
+Open **Commissioning Operations → Preservation** to register equipment-specific plans from approved procedures/OEM instructions. Record the procedure reference/revision, positive interval and initial next-due date. Inspectors record findings and outcomes; non-compliant results require corrective action and place the plan in ACTION_REQUIRED until a compliant follow-up is recorded. Inspection history is append-only and can carry evidence attachments. See [PRESERVATION_GUIDE.md](PRESERVATION_GUIDE.md).
