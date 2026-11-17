@@ -80,12 +80,9 @@ def _preservation_report_data(project, today, status_filter="ALL", equipment_id=
         CommissioningPreservationPlan.next_due_date,
         CommissioningPreservationPlan.plan_number,
     ).all()
-    equipment_ids = {plan.equipment_id for plan in plans}
-    equipment = CommissioningEquipment.query.filter(
-        CommissioningEquipment.company_name == project.company_name,
-        CommissioningEquipment.project_id == project.id,
-        CommissioningEquipment.id.in_(equipment_ids or [-1]),
-    ).all()
+    equipment = CommissioningEquipment.query.filter_by(
+        company_name=project.company_name, project_id=project.id,
+    ).order_by(CommissioningEquipment.tag_number).all()
     equipment_by_id = {item.id: item for item in equipment}
     user_ids = {plan.assigned_to_id for plan in plans if plan.assigned_to_id is not None}
     users = User.query.filter(
