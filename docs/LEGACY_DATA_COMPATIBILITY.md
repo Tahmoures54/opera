@@ -9,6 +9,7 @@ from `models_commissioning.py`.
 - `user`: shared authentication identity referenced by commissioning records.
 - `account_recovery_token`: short-lived, single-use authenticator recovery.
 - `contact_inquiry`: public demo/contact form submissions.
+- `document_sequence`: tenant-scoped sequential numbering used by OPERA check sheets and punch items.
 
 ## Retired MaterialHub tables
 
