@@ -416,6 +416,7 @@ class PunchItem(db.Model):
     raised_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     assigned_to_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
     target_closure_date = db.Column(db.Date)
+    corrective_action = db.Column(db.Text)
     status = db.Column(_enum(PunchStatus, "commissioning_punch_status"), nullable=False, default=PunchStatus.OPEN)
     closed_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
     closed_at = db.Column(db.DateTime)
