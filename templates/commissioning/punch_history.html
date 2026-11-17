@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - Punch History{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:1000px">
+  <a class="small text-decoration-none" href="{{ url_for('commissioning.operations', project_id=project.id) }}">← Back to commissioning operations</a>
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mt-2 mb-4">
+    <div><h1 class="h3 mb-1">Punch Item History</h1><div class="text-muted">{{ punch.punch_number }} · Category {{ punch.category.value }} · {{ punch.status.value|replace('_', ' ')|title }}</div></div>
+    <span class="badge text-bg-secondary">{{ history|length }} recorded events</span>
+  </div>
+  <section class="card mb-4"><div class="card-body">
+    <div class="small text-muted">Deficiency</div><p class="mb-3">{{ punch.description }}</p>
+    <div class="row g-3">
+      <div class="col-md-4"><div class="small text-muted">Raised</div><strong>{{ punch.raised_at.strftime('%Y-%m-%d %H:%M') }}</strong></div>
+      <div class="col-md-4"><div class="small text-muted">Target closure</div><strong>{{ punch.target_closure_date or 'Not set' }}</strong></div>
+      <div class="col-md-4"><div class="small text-muted">Assigned user ID</div><strong>{{ punch.assigned_to_id or 'Unassigned' }}</strong></div>
+    </div>
+    {% if punch.corrective_action %}<div class="alert alert-success mt-3 mb-0"><strong>Current corrective action</strong><div>{{ punch.corrective_action }}</div></div>{% endif %}
+    {% if punch.waiver_reason %}<div class="alert alert-warning mt-3 mb-0"><strong>Waiver reason</strong><div>{{ punch.waiver_reason }}</div></div>{% endif %}
+  </div></section>
+  <section class="card"><div class="card-header fw-semibold">Immutable status timeline</div><div class="list-group list-group-flush">
+    {% for event in history %}
+    <div class="list-group-item py-3">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div><strong>{% if event.old_status %}{{ event.old_status.value|replace('_', ' ')|title }}{% else %}Raised{% endif %} → {{ event.new_status.value|replace('_', ' ')|title }}</strong><div class="small text-muted mt-1">Changed by user #{{ event.changed_by_id }}</div></div>
+        <time class="small text-muted">{{ event.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</time>
+      </div>
+      {% if event.remarks %}<p class="mb-0 mt-2">{{ event.remarks }}</p>{% endif %}
+    </div>
+    {% else %}<div class="list-group-item text-muted">No status history recorded.</div>{% endfor %}
+  </div></section>
+  <p class="small text-muted mt-3">Status transitions and closure/reopen reasons are preserved as an append-only history. A reopened Punch retains its previous closure event in this timeline.</p>
+</div>
+{% endblock %}
