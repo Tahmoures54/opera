@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from extensions import db
 from models_commissioning import (
     CommissioningProject, CommissioningSystem, CommissioningSubsystem,
-    CommissioningEquipment, CheckSheet, CheckSheetItem, CheckSheetType,
+    CommissioningEquipment, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus, CheckSheet, CheckSheetItem, CheckSheetType,
     CheckSheetStatus, ItemResultStatus, PunchItem, PunchCategory,
     PunchSeverity, PunchStatus, CommissioningMembership, MembershipRole,
 )
@@ -27,7 +27,7 @@ def _project(company, code="PRJ-01"):
 def test_opera_tables_are_registered(app):
     expected = {
         "commissioning_project", "commissioning_system", "commissioning_subsystem",
-        "commissioning_equipment", "commissioning_check_sheet",
+        "commissioning_equipment", "commissioning_task", "commissioning_check_sheet",
         "commissioning_check_sheet_item", "commissioning_check_sheet_revision",
         "commissioning_punch_item", "commissioning_punch_history",
         "commissioning_witness_point", "commissioning_handover_package",
@@ -140,5 +140,51 @@ def test_signed_off_check_sheet_metadata_is_immutable(app):
     db.session.commit()
     sheet.title = "Changed after sign-off"
     with pytest.raises(ValueError, match="immutable"):
+        db.session.commit()
+    db.session.rollback()
+
+
+def test_commissioning_task_register_links_project_system_subsystem_and_equipment(app):
+    project = _project("Contractor A", code="TASK-01")
+    system = CommissioningSystem(company_name=project.company_name, project_id=project.id, system_code="SYS-01", name="Utilities")
+    db.session.add(system)
+    db.session.flush()
+    subsystem = CommissioningSubsystem(company_name=project.company_name, system_id=system.id, subsystem_code="SUB-01", name="Instrument Air")
+    db.session.add(subsystem)
+    db.session.flush()
+    equipment = CommissioningEquipment(company_name=project.company_name, project_id=project.id, subsystem_id=subsystem.id, tag_number="K-1001", equipment_type="Compressor")
+    db.session.add(equipment)
+    db.session.flush()
+    task = CommissioningTask(
+        company_name=project.company_name, project_id=project.id, system_id=system.id,
+        subsystem_id=subsystem.id, equipment_id=equipment.id, task_number="TASK-01-CCK-0001",
+        title="Verify equipment installation", activity_type=CommissioningTaskType.CCK,
+        discipline="Mechanical", progress_stage="Pre-commissioning",
+        progress_substage="Conformity Checks", estimated_man_hours=3.5,
+        spent_man_hours=0, status=CommissioningTaskStatus.NOT_STARTED,
+    )
+    db.session.add(task)
+    db.session.commit()
+    assert task.equipment_id == equipment.id
+    assert task.activity_type is CommissioningTaskType.CCK
+    assert task.status is CommissioningTaskStatus.NOT_STARTED
+
+
+def test_commissioning_task_rejects_negative_man_hours(app):
+    project = _project("Contractor A", code="TASK-02")
+    system = CommissioningSystem(company_name=project.company_name, project_id=project.id, system_code="SYS-01", name="Utilities")
+    db.session.add(system)
+    db.session.flush()
+    subsystem = CommissioningSubsystem(company_name=project.company_name, system_id=system.id, subsystem_code="SUB-01", name="Instrument Air")
+    db.session.add(subsystem)
+    db.session.flush()
+    task = CommissioningTask(
+        company_name=project.company_name, project_id=project.id, system_id=system.id,
+        subsystem_id=subsystem.id, task_number="TASK-02-STS-0001", title="Pressure test",
+        activity_type=CommissioningTaskType.STS, discipline="Piping",
+        estimated_man_hours=-1, spent_man_hours=0,
+    )
+    db.session.add(task)
+    with pytest.raises(IntegrityError):
         db.session.commit()
     db.session.rollback()

@@ -9,12 +9,12 @@ from models_commissioning import CommissioningMembership, CommissioningProject, 
 
 
 ROLE_PERMISSIONS = {
-    MembershipRole.COMMISSIONING_MANAGER: frozenset({"project.manage", "structure.manage", "checksheets.manage", "punch.raise", "punch.assign", "punch.verify", "witness.manage", "handover.manage", "handover.accept", "reports.view", "members.manage"}),
-    MembershipRole.COMMISSIONING_ENGINEER: frozenset({"structure.view", "checksheets.create", "checksheets.fill", "punch.raise", "witness.view", "reports.view"}),
-    MembershipRole.QC_INSPECTOR: frozenset({"structure.view", "checksheets.view", "checksheets.verify", "punch.verify", "witness.attend", "reports.view"}),
-    MembershipRole.CLIENT_REPRESENTATIVE: frozenset({"structure.view", "checksheets.view", "checksheets.sign", "punch.view", "witness.view", "reports.view"}),
-    MembershipRole.OPERATIONS_LEAD: frozenset({"structure.view", "checksheets.view", "punch.view", "handover.accept", "reports.view"}),
-    MembershipRole.VIEWER: frozenset({"structure.view", "checksheets.view", "punch.view", "witness.view", "handover.view", "reports.view"}),
+    MembershipRole.COMMISSIONING_MANAGER: frozenset({"project.manage", "structure.manage", "tasks.view", "tasks.create", "tasks.manage", "checksheets.manage", "punch.raise", "punch.assign", "punch.verify", "witness.manage", "handover.manage", "handover.accept", "reports.view", "members.manage"}),
+    MembershipRole.COMMISSIONING_ENGINEER: frozenset({"structure.view", "tasks.view", "tasks.create", "checksheets.create", "checksheets.fill", "punch.raise", "witness.view", "reports.view"}),
+    MembershipRole.QC_INSPECTOR: frozenset({"structure.view", "tasks.view", "checksheets.view", "checksheets.verify", "punch.verify", "witness.attend", "reports.view"}),
+    MembershipRole.CLIENT_REPRESENTATIVE: frozenset({"structure.view", "tasks.view", "checksheets.view", "checksheets.sign", "punch.view", "witness.view", "reports.view"}),
+    MembershipRole.OPERATIONS_LEAD: frozenset({"structure.view", "tasks.view", "checksheets.view", "punch.view", "handover.accept", "reports.view"}),
+    MembershipRole.VIEWER: frozenset({"structure.view", "tasks.view", "checksheets.view", "punch.view", "witness.view", "handover.view", "reports.view"}),
 }
 
 

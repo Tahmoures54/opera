@@ -1,0 +1,48 @@
+# OPERA Workflow Guide
+
+This guide describes the implemented baseline and distinguishes it from workflows still requiring configuration or development.
+
+## 1. Project setup
+1. A company-scoped administrator or project manager creates a project.
+2. The project manager defines Systems and Subsystems.
+3. Equipment / Tags are registered against a project and subsystem.
+4. Project members are assigned OPERA roles. Roles do not alter the user's account-level role.
+
+## 2. Commissioning Task Register
+1. Open the project and choose **Task register**.
+2. Assign a unique task number within the company.
+3. Select the activity code, title, discipline, system and subsystem.
+4. Optionally link equipment and a check sheet belonging to the same project/system/subsystem.
+5. Record progress stage/substage, assigned group, estimated/spent man-hours and planned/actual dates.
+6. The initial task state is **Not Started**. Task sequencing, predecessor logic and controlled status transitions are not yet implemented in this increment.
+
+Historical project ICAPS documentation describes activity codes CCK, STS, PIP, PRC, FTS, OTS and PVP. Their applicability and acceptance criteria must be confirmed against the current project procedure register.
+
+## 3. Check Sheet execution
+1. Create a Check Sheet under a project and subsystem.
+2. Add inspection/test items and acceptance criteria.
+3. Issue the sheet.
+4. Record actual results as execution proceeds.
+5. Required QC verification and two-party sign-off are enforced by the existing check-sheet workflow.
+6. A signed-off sheet is immutable; create a controlled revision for corrections.
+
+## 4. Punch management
+1. Raise a Punch against the project/subsystem and optionally equipment or check sheet.
+2. Assign the responsible person and target closure date.
+3. Record corrective evidence.
+4. Verify clearance independently where the role permits.
+5. Waivers require a reason and an authorized role.
+
+The existing A/B/C/D values are OPERA's current configuration. They must be aligned with the project's contract and client procedure before production use.
+
+## 5. Witness / Hold / Review
+Witness points can be scheduled against check-sheet items, attended and released through the existing workflow. The complete project-specific hold-point blocking matrix and automatic escalation policy remain to be implemented/confirmed.
+
+## 6. MC / RF / RFSU handover
+The current handover package stores milestone references and acceptance information. Full certificate generation, dossier completeness rules and every contractual gate are not yet equivalent to a controlled client-approved completion procedure.
+
+## 7. Progress reporting
+Existing snapshots are based on stored check-sheet and Punch data. The new Task Register is not yet included in the official progress formula. Until the weighting method is approved and implemented, do not use task counts or task man-hours as a substitute for contractual progress.
+
+## 8. Production evidence
+Use only actual project records. Do not use sample/demo records as evidence of completion. Every rejected, reopened, waived or approved action must retain its reason and audit history.

@@ -2,12 +2,13 @@
 from datetime import date, datetime
 from flask import abort, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 
 from extensions import db
 from models import User
 from models_commissioning import (
-    CommissioningMembership, CommissioningProject, CommissioningSystem,
-    CommissioningSubsystem, CheckSheet, CheckSheetItem, CheckSheetRevision,
+    CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus,
+    CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
     WitnessPoint, WitnessType, WitnessStatus, HandoverPackage, HandoverStatus,
@@ -776,3 +777,120 @@ def create_progress_snapshot(project_id):
     db.session.commit()
     flash("Progress report saved successfully.", "success")
     return redirect(url_for("commissioning.operations", project_id=project.id))
+
+
+@commissioning_bp.route("/projects/<int:project_id>/tasks", methods=["GET", "POST"])
+@login_required
+def task_register(project_id):
+    """Manage the project task branch and its equipment/progress associations."""
+    _need(project_id, "tasks.view", "tasks.create", "tasks.manage", "project.manage")
+    project = get_project(project_id)
+    if request.method == "POST":
+        if not (has_permission(project.id, "tasks.create") or has_permission(project.id, "tasks.manage") or has_permission(project.id, "project.manage")):
+            abort(403)
+        task_number = _required("task_number", 100)
+        if CommissioningTask.query.filter_by(company_name=project.company_name, task_number=task_number).first():
+            abort(409, description="Task number is already in use in this company.")
+        system = CommissioningSystem.query.filter_by(
+            id=request.form.get("system_id", type=int), company_name=project.company_name,
+            project_id=project.id,
+        ).first_or_404()
+        subsystem = CommissioningSubsystem.query.filter_by(
+            id=request.form.get("subsystem_id", type=int), company_name=project.company_name,
+            system_id=system.id,
+        ).first_or_404()
+        equipment_id = request.form.get("equipment_id", type=int)
+        check_sheet_id = request.form.get("check_sheet_id", type=int)
+        if check_sheet_id is not None:
+            linked_sheet = CheckSheet.query.filter_by(
+                id=check_sheet_id, company_name=project.company_name,
+                project_id=project.id, system_id=system.id, subsystem_id=subsystem.id,
+            ).first()
+            if linked_sheet is None:
+                abort(400, description="Check sheet must belong to the selected system and subsystem.")
+        if equipment_id is not None:
+            equipment = CommissioningEquipment.query.filter_by(
+                id=equipment_id, company_name=project.company_name,
+                project_id=project.id, subsystem_id=subsystem.id,
+            ).first()
+            if equipment is None:
+                abort(400, description="Equipment must belong to the selected subsystem.")
+        activity = _enum(CommissioningTaskType, _required("activity_type", 10), "activity_type")
+        try:
+            estimated = float(request.form.get("estimated_man_hours") or 0)
+            spent = float(request.form.get("spent_man_hours") or 0)
+        except (TypeError, ValueError):
+            abort(400, description="Man-hours must be numeric.")
+        if estimated < 0 or spent < 0:
+            abort(400, description="Man-hours cannot be negative.")
+        planned_start = _date("planned_start_date")
+        planned_finish = _date("planned_finish_date")
+        actual_start = _date("actual_start_date")
+        actual_finish = _date("actual_finish_date")
+        if planned_start and planned_finish and planned_finish < planned_start:
+            abort(400, description="Planned finish cannot precede planned start.")
+        if actual_start and actual_finish and actual_finish < actual_start:
+            abort(400, description="Actual finish cannot precede actual start.")
+        task = CommissioningTask(
+            company_name=project.company_name, project_id=project.id,
+            system_id=system.id, subsystem_id=subsystem.id, equipment_id=equipment_id,
+            check_sheet_id=check_sheet_id, task_number=task_number, title=_required("title", 200),
+            description=(request.form.get("description") or "").strip()[:5000] or None,
+            activity_type=activity, discipline=_required("discipline", 80),
+            progress_stage=(request.form.get("progress_stage") or "").strip()[:80] or None,
+            progress_substage=(request.form.get("progress_substage") or "").strip()[:80] or None,
+            assigned_group=(request.form.get("assigned_group") or "").strip()[:120] or None,
+            estimated_man_hours=estimated, spent_man_hours=spent,
+            planned_start_date=planned_start, planned_finish_date=planned_finish,
+            actual_start_date=actual_start, actual_finish_date=actual_finish,
+            status=CommissioningTaskStatus.NOT_STARTED, created_by_id=current_user.id,
+        )
+        db.session.add(task)
+        db.session.flush()
+        add_audit_event(project.company_name, "CommissioningTask", task.id, "TASK_CREATED",
+                        after={"task_number": task.task_number, "activity_type": task.activity_type.value,
+                               "system_id": system.id, "subsystem_id": subsystem.id,
+                               "equipment_id": equipment_id})
+        db.session.commit()
+        flash("Commissioning task added to the project register.", "success")
+        return redirect(url_for("commissioning.task_register", project_id=project.id))
+
+    tasks_query = CommissioningTask.query.filter_by(company_name=project.company_name, project_id=project.id)
+    activity_filter = (request.args.get("activity_type") or "").strip()
+    status_filter = (request.args.get("status") or "").strip()
+    search_term = (request.args.get("q") or "").strip()[:100]
+    if activity_filter:
+        tasks_query = tasks_query.filter(CommissioningTask.activity_type == _enum(CommissioningTaskType, activity_filter, "activity_type"))
+    if status_filter:
+        tasks_query = tasks_query.filter(CommissioningTask.status == _enum(CommissioningTaskStatus, status_filter, "status"))
+    if search_term:
+        like = f"%{search_term}%"
+        tasks_query = tasks_query.filter(or_(
+            CommissioningTask.task_number.ilike(like),
+            CommissioningTask.title.ilike(like),
+            CommissioningTask.discipline.ilike(like),
+            CommissioningTask.assigned_group.ilike(like),
+        ))
+    tasks = tasks_query.order_by(CommissioningTask.task_number).all()
+    systems = CommissioningSystem.query.filter_by(company_name=project.company_name, project_id=project.id).filter(CommissioningSystem.status != "ARCHIVED").order_by(CommissioningSystem.system_code).all()
+    subsystems = CommissioningSubsystem.query.join(CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id).filter(
+        CommissioningSubsystem.company_name == project.company_name,
+        CommissioningSystem.project_id == project.id,
+        CommissioningSubsystem.status != "ARCHIVED",
+    ).order_by(CommissioningSubsystem.subsystem_code).all()
+    equipment = CommissioningEquipment.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(CommissioningEquipment.tag_number).all()
+    check_sheets = CheckSheet.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(CheckSheet.sheet_number).all()
+    system_by_id = {item.id: item for item in systems}
+    subsystem_by_id = {item.id: item for item in subsystems}
+    equipment_by_id = {item.id: item for item in equipment}
+    sheet_by_id = {item.id: item for item in check_sheets}
+    return render_template(
+        "commissioning/task_register.html", project=project, tasks=tasks,
+        systems=systems, subsystems=subsystems, equipment=equipment, check_sheets=check_sheets,
+        system_by_id=system_by_id, subsystem_by_id=subsystem_by_id,
+        equipment_by_id=equipment_by_id, sheet_by_id=sheet_by_id,
+        activity_types=list(CommissioningTaskType), task_statuses=list(CommissioningTaskStatus),
+        can_create=any(has_permission(project.id, p) for p in ("tasks.create", "tasks.manage", "project.manage")),
+        selected_activity=activity_filter, selected_status=status_filter, search_term=search_term,
+    )
+
