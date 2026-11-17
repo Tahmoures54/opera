@@ -1678,3 +1678,38 @@ def test_preservation_permissions_tenant_scope_and_plan_closure(client, app, ope
         data={"performed_at": date.today().isoformat(), "result": "COMPLIANT"},
     )
     assert inspect_closed.status_code == 409
+
+
+
+def test_subsystem_dossier_pdf_and_zip_exports_are_scoped_and_labelled(client, app, opera_setup):
+    import json
+    from io import BytesIO
+    from zipfile import ZipFile
+    from models import User
+
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        manager_id = manager.id
+    _login_id(client, manager_id)
+
+    base = f"/commissioning/projects/{opera_setup['project']}/subsystems/{opera_setup['subsystem']}/dossier"
+    pdf = client.get(base + "/export.pdf")
+    assert pdf.status_code == 200
+    assert pdf.data.startswith(b"%PDF-")
+    assert pdf.headers["Cache-Control"] == "private, no-store"
+
+    bundle = client.get(base + "/export.zip")
+    assert bundle.status_code == 200
+    assert bundle.headers["Content-Type"].startswith("application/zip")
+    with ZipFile(BytesIO(bundle.data)) as archive:
+        assert "dossier.pdf" in archive.namelist()
+        assert "manifest.json" in archive.namelist()
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["export_classification"] == "UNCONTROLLED_WORKING_EXPORT"
+        assert manifest["project"]["code"] == "FLOW-01"
+        assert manifest["subsystem"]["code"] == "SUB-01"
+        assert manifest["counts"]["evidence_files"] == 0
+
+    _login_id(client, opera_setup["outsider"])
+    denied = client.get(base + "/export.pdf")
+    assert denied.status_code == 404
