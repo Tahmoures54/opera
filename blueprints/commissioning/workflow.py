@@ -6,7 +6,7 @@ from flask_login import current_user, login_required
 from extensions import db
 from models import User
 from models_commissioning import (
-    CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus,
+    CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus,
     CommissioningSubsystem, CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
