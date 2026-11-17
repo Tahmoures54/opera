@@ -1,5 +1,6 @@
 """End-to-end tests for OPERA operational workflows."""
 from datetime import date, datetime, timedelta
+import json
 
 import pytest
 
@@ -12,7 +13,7 @@ from models_commissioning import (
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
     CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, ProgressSnapshot, CommissioningAuditLog,
     CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningAttachment, DocumentStatus,
-    CommissioningPreservationPlan, CommissioningPreservationInspection,
+    CommissioningPreservationPlan, CommissioningPreservationInspection, CommissioningCheckSheetTemplate,
     HandoverPackage, HandoverStatus, CommissioningCertificate,
     WitnessPoint, WitnessType, WitnessStatus, PunchHistory,
 )
@@ -1678,3 +1679,159 @@ def test_preservation_permissions_tenant_scope_and_plan_closure(client, app, ope
         data={"performed_at": date.today().isoformat(), "result": "COMPLIANT"},
     )
     assert inspect_closed.status_code == 409
+
+
+def test_checksheet_template_approval_revision_and_execution_snapshot(client, app, opera_setup):
+    _login_id(client, opera_setup["manager"])
+    project_id = opera_setup["project"]
+    template_url = f"/commissioning/projects/{project_id}/checksheet-templates"
+    items_v1 = [
+        {
+            "description": "Verify equipment tag and nameplate",
+            "expected_result": "Matches approved equipment register",
+            "acceptance_criteria": "No mismatch",
+            "unit": None,
+            "witness_required": False,
+            "mandatory": True,
+        },
+        {
+            "description": "Record vibration reading",
+            "expected_result": "Within approved OEM limit",
+            "acceptance_criteria": "Use current OEM procedure",
+            "unit": "mm/s",
+            "witness_required": True,
+            "mandatory": False,
+        },
+    ]
+    created = client.post(template_url, data={
+        "template_code": "PUMP-CCK-01",
+        "title": "Pump conformity check",
+        "sheet_type": "PRE_COMM_A",
+        "discipline": "MECHANICAL",
+        "acceptance_criteria": "Apply approved project/OEM procedure",
+        "items_json": json.dumps(items_v1),
+    })
+    assert created.status_code == 302
+
+    with app.app_context():
+        template = CommissioningCheckSheetTemplate.query.filter_by(
+            company_name="Contractor A", project_id=project_id,
+            template_code="PUMP-CCK-01", revision=1,
+        ).one()
+        template_id = template.id
+        assert template.status == "DRAFT"
+
+    approved = client.post(
+        f"/commissioning/projects/{project_id}/checksheet-templates/{template_id}/approve",
+    )
+    assert approved.status_code == 302
+
+    with app.app_context():
+        template = db.session.get(CommissioningCheckSheetTemplate, template_id)
+        assert template.status == "APPROVED"
+        assert template.approved_by_id == opera_setup["manager"]
+
+    created_sheet = client.post(f"/commissioning/projects/{project_id}/checksheets/new", data={
+        "title": "Pump 1001 conformity",
+        "sheet_type": "PRE_COMM_A",
+        "subsystem_id": str(opera_setup["subsystem"]),
+        "equipment_id": "",
+        "template_id": str(template_id),
+    })
+    assert created_sheet.status_code == 302
+    sheet_location = created_sheet.headers["Location"]
+    sheet_id = int(sheet_location.rsplit("/", 1)[-1])
+
+    with app.app_context():
+        sheet = db.session.get(CheckSheet, sheet_id)
+        sheet_items = CheckSheetItem.query.filter_by(check_sheet_id=sheet_id).order_by(
+            CheckSheetItem.sequence,
+        ).all()
+        assert sheet.template_id == template_id
+        assert sheet.template_revision_snapshot == 1
+        assert sheet.template_title_snapshot == "Pump conformity check"
+        assert sheet.template_snapshot_json["template_code"] == "PUMP-CCK-01"
+        assert len(sheet_items) == 2
+        assert sheet_items[0].mandatory is True
+        assert sheet_items[1].mandatory is False
+        assert sheet_items[1].unit == "mm/s"
+        assert sheet_items[1].witness_required is True
+
+    revised = client.post(
+        f"/commissioning/projects/{project_id}/checksheet-templates/{template_id}/revise",
+    )
+    assert revised.status_code == 302
+    with app.app_context():
+        revision_2 = CommissioningCheckSheetTemplate.query.filter_by(
+            company_name="Contractor A", project_id=project_id,
+            template_code="PUMP-CCK-01", revision=2,
+        ).one()
+        revision_2_id = revision_2.id
+
+    items_v2 = items_v1 + [{
+        "description": "Verify coupling guard installation",
+        "expected_result": "Guard installed and secured",
+        "acceptance_criteria": "No exposed rotating parts",
+        "unit": None,
+        "witness_required": False,
+        "mandatory": True,
+    }]
+    updated = client.post(
+        f"/commissioning/projects/{project_id}/checksheet-templates/{revision_2_id}/update",
+        data={
+            "title": "Pump conformity check",
+            "discipline": "MECHANICAL",
+            "acceptance_criteria": "Apply approved project/OEM procedure",
+            "items_json": json.dumps(items_v2),
+        },
+    )
+    assert updated.status_code == 302
+    approved_v2 = client.post(
+        f"/commissioning/projects/{project_id}/checksheet-templates/{revision_2_id}/approve",
+    )
+    assert approved_v2.status_code == 302
+
+    with app.app_context():
+        revision_1 = db.session.get(CommissioningCheckSheetTemplate, template_id)
+        revision_2 = db.session.get(CommissioningCheckSheetTemplate, revision_2_id)
+        old_sheet = db.session.get(CheckSheet, sheet_id)
+        assert revision_1.status == "RETIRED"
+        assert revision_2.status == "APPROVED"
+        assert old_sheet.template_revision_snapshot == 1
+        assert len(old_sheet.template_snapshot_json["items"]) == 2
+        revision_2.title = "Tampered approved template"
+        with pytest.raises(ValueError, match="immutable"):
+            db.session.commit()
+        db.session.rollback()
+
+
+def test_checksheet_template_validation_and_template_type_mismatch(client, app, opera_setup):
+    _login_id(client, opera_setup["manager"])
+    project_id = opera_setup["project"]
+    url = f"/commissioning/projects/{project_id}/checksheet-templates"
+    invalid = client.post(url, data={
+        "template_code": "BAD-TEMPLATE", "title": "Invalid template",
+        "sheet_type": "PRE_COMM_A", "items_json": "not-json",
+    })
+    assert invalid.status_code == 400
+
+    created = client.post(url, data={
+        "template_code": "VALVE-CCK-01", "title": "Valve conformity",
+        "sheet_type": "PRE_COMM_A", "equipment_type": "VALVE",
+        "items_json": json.dumps([{"description": "Verify valve tag", "mandatory": True}]),
+    })
+    assert created.status_code == 302
+    with app.app_context():
+        template = CommissioningCheckSheetTemplate.query.filter_by(
+            company_name="Contractor A", project_id=project_id,
+            template_code="VALVE-CCK-01",
+        ).one()
+        template_id = template.id
+    assert client.post(
+        f"/commissioning/projects/{project_id}/checksheet-templates/{template_id}/approve",
+    ).status_code == 302
+    mismatch = client.post(f"/commissioning/projects/{project_id}/checksheets/new", data={
+        "title": "Wrong type", "sheet_type": "PRE_COMM_B",
+        "subsystem_id": str(opera_setup["subsystem"]), "template_id": str(template_id),
+    })
+    assert mismatch.status_code == 400
