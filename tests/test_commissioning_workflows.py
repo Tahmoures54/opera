@@ -310,3 +310,66 @@ def test_signed_off_checksheet_rejects_new_evidence(client, app, opera_setup, tm
         content_type="multipart/form-data",
     )
     assert response.status_code == 409
+
+
+
+def test_task_register_create_and_filter_is_project_scoped(client, app, opera_setup):
+    from models import User
+    from models_commissioning import (
+        CommissioningTask, CommissioningTaskType, CheckSheet,
+        CommissioningAuditLog,
+    )
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-CCK-00001", sheet_type=CheckSheetType.COMM_C,
+            title="Instrument air conformity check",
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        manager_id, sheet_id = manager.id, sheet.id
+    _login_id(client, manager_id)
+    url = f"/commissioning/projects/{opera_setup['project']}/tasks"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert b"Commissioning Task Register" in response.data
+    response = client.post(url, data={
+        "task_number": "FLOW-01-CCK-00001",
+        "title": "Verify instrument air installation",
+        "activity_type": CommissioningTaskType.CCK.value,
+        "discipline": "Mechanical",
+        "system_id": opera_setup["system"],
+        "subsystem_id": opera_setup["subsystem"],
+        "check_sheet_id": sheet_id,
+        "progress_stage": "Pre-commissioning",
+        "progress_substage": "Conformity Checks",
+        "estimated_man_hours": "4.5",
+        "spent_man_hours": "1.0",
+        "planned_start_date": "2026-11-18",
+        "planned_finish_date": "2026-11-19",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        task = CommissioningTask.query.filter_by(task_number="FLOW-01-CCK-00001").one()
+        assert task.check_sheet_id == sheet_id
+        assert task.activity_type is CommissioningTaskType.CCK
+        assert CommissioningAuditLog.query.filter_by(
+            entity_type="CommissioningTask", entity_id=task.id, action="TASK_CREATED"
+        ).count() == 1
+    response = client.get(url + "?activity_type=CCK&q=instrument")
+    assert response.status_code == 200
+    assert b"FLOW-01-CCK-00001" in response.data
+
+
+def test_task_register_enforces_project_role_and_company_boundary(client, app, opera_setup):
+    from models import User
+    url = f"/commissioning/projects/{opera_setup['project']}/tasks"
+    with app.app_context():
+        viewer = db.session.get(User, opera_setup["viewer"])
+        outsider = db.session.get(User, opera_setup["outsider"])
+    _login(client, viewer)
+    assert client.get(url).status_code == 200
+    _login(client, outsider)
+    assert client.get(url).status_code == 404
