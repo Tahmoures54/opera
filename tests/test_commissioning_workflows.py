@@ -11,7 +11,7 @@ from models_commissioning import (
     CheckSheetType, CheckSheetStatus, ItemResultStatus, PunchItem,
     PunchCategory, PunchSeverity, PunchStatus, CommissioningTask,
     CommissioningTaskType, CommissioningTaskStatus, CommissioningTaskDependency, ProgressSnapshot, CommissioningAuditLog,
-    CommissioningDocument, CommissioningDocumentReview, DocumentStatus,
+    CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningAttachment, DocumentStatus,
     HandoverPackage, HandoverStatus, CommissioningCertificate,
     WitnessPoint, WitnessType, WitnessStatus, PunchHistory,
 )
@@ -1412,3 +1412,118 @@ def test_invalid_readiness_policy_fails_closed_and_viewer_cannot_edit(client, ap
         assert result.is_ready_for_rfc is False
         assert result.is_ready_for_rfsu is False
         assert any(issue.code == "INVALID_READINESS_POLICY" for issue in result.issues)
+
+
+def test_project_dossier_index_requirements_are_managed_and_audited(client, app, opera_setup):
+    _login_id(client, opera_setup["manager"])
+    url = f"/commissioning/projects/{opera_setup['project']}/dossier-requirements"
+    created = client.post(url, data={
+        "action": "save", "document_type": "P&ID", "discipline": "Process",
+        "minimum_count": "2", "require_approved": "on", "require_evidence": "on",
+    })
+    assert created.status_code == 302
+    with app.app_context():
+        rule = CommissioningDossierRequirement.query.filter_by(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            document_type="P&ID", discipline="PROCESS",
+        ).one()
+        rule_id = rule.id
+        assert rule.minimum_count == 2
+        assert rule.require_approved is True
+        assert rule.require_evidence is True
+        event = CommissioningAuditLog.query.filter_by(
+            company_name="Contractor A", entity_type="CommissioningDossierRequirement",
+            entity_id=rule.id, action="DOSSIER_REQUIREMENT_CREATED",
+        ).one()
+        assert event.after_json["minimum_count"] == 2
+
+    duplicate = client.post(url, data={
+        "action": "save", "document_type": "P&ID", "discipline": "process",
+        "minimum_count": "1",
+    })
+    assert duplicate.status_code == 409
+
+    _login_id(client, opera_setup["viewer"])
+    denied = client.post(url, data={
+        "action": "save", "document_type": "Datasheet", "minimum_count": "1",
+    })
+    assert denied.status_code == 403
+
+    _login_id(client, opera_setup["manager"])
+    deactivated = client.post(url, data={
+        "action": "deactivate", "requirement_id": str(rule_id),
+    })
+    assert deactivated.status_code == 302
+    with app.app_context():
+        rule = db.session.get(CommissioningDossierRequirement, rule_id)
+        assert rule.is_active is False
+        assert CommissioningAuditLog.query.filter_by(
+            company_name="Contractor A", entity_type="CommissioningDossierRequirement",
+            entity_id=rule_id, action="DOSSIER_REQUIREMENT_DEACTIVATED",
+        ).count() == 1
+
+
+def test_subsystem_dossier_applies_current_document_count_approval_and_evidence_rules(
+    client, app, opera_setup,
+):
+    with app.app_context():
+        requirement = CommissioningDossierRequirement(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            document_type="P&ID", discipline="PROCESS", minimum_count=2,
+            require_approved=True, require_evidence=True,
+            created_by_id=opera_setup["manager"],
+        )
+        documents = [
+            CommissioningDocument(
+                company_name="Contractor A", project_id=opera_setup["project"],
+                subsystem_id=opera_setup["subsystem"], document_number="PID-001",
+                revision="A", revision_sequence=1, title="Utility P&ID 001",
+                document_type="P&ID", discipline="Process",
+                status=DocumentStatus.APPROVED, created_by_id=opera_setup["manager"],
+            ),
+            CommissioningDocument(
+                company_name="Contractor A", project_id=opera_setup["project"],
+                subsystem_id=opera_setup["subsystem"], document_number="PID-002",
+                revision="A", revision_sequence=1, title="Utility P&ID 002",
+                document_type="P&ID", discipline="Process",
+                status=DocumentStatus.DRAFT, created_by_id=opera_setup["manager"],
+            ),
+        ]
+        db.session.add_all([requirement, *documents])
+        db.session.flush()
+        db.session.add(CommissioningAttachment(
+            company_name="Contractor A", entity_type="CommissioningDocument",
+            entity_id=documents[0].id, filename="pid-001.pdf",
+            stored_filename="pid-001.pdf", storage_key="test/pid-001.pdf",
+            mime_type="application/pdf", file_size=128,
+            checksum="a" * 64, uploaded_by_id=opera_setup["manager"],
+        ))
+        db.session.commit()
+        subsystem_id = opera_setup["subsystem"]
+        second_document_id = documents[1].id
+
+    _login_id(client, opera_setup["manager"])
+    dossier_url = f"/commissioning/projects/{opera_setup['project']}/subsystems/{subsystem_id}/dossier"
+    incomplete = client.get(dossier_url)
+    assert incomplete.status_code == 200
+    assert b"Configured dossier index" in incomplete.data
+    assert b"P&amp;ID" in incomplete.data
+    assert b"1 / 2" in incomplete.data
+    assert b"MISSING" in incomplete.data
+
+    with app.app_context():
+        second = db.session.get(CommissioningDocument, second_document_id)
+        second.status = DocumentStatus.APPROVED
+        db.session.add(CommissioningAttachment(
+            company_name="Contractor A", entity_type="CommissioningDocument",
+            entity_id=second.id, filename="pid-002.pdf",
+            stored_filename="pid-002.pdf", storage_key="test/pid-002.pdf",
+            mime_type="application/pdf", file_size=128,
+            checksum="b" * 64, uploaded_by_id=opera_setup["manager"],
+        ))
+        db.session.commit()
+
+    complete_index = client.get(dossier_url)
+    assert complete_index.status_code == 200
+    assert b"2 / 2" in complete_index.data
+    assert b"PASS" in complete_index.data
