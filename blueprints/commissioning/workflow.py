@@ -138,6 +138,7 @@ def _validate_template_items(raw):
         abort(400, description="A template must contain at least one mandatory item.")
     return normalized
 
+
 def _positive_int(name):
     try:
         value = int(_required(name, 20))
