@@ -2,12 +2,13 @@
 from datetime import date, datetime
 from flask import abort, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 
 from extensions import db
 from models import User
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskType, CommissioningTaskStatus,
-    CommissioningSubsystem, CheckSheet, CheckSheetItem, CheckSheetRevision,
+    CheckSheet, CheckSheetItem, CheckSheetRevision,
     CheckSheetType, CheckSheetStatus, ItemResultStatus, MembershipRole,
     PunchItem, PunchHistory, PunchCategory, PunchSeverity, PunchStatus,
     WitnessPoint, WitnessType, WitnessStatus, HandoverPackage, HandoverStatus,
@@ -856,7 +857,7 @@ def task_register(project_id):
         tasks_query = tasks_query.filter(CommissioningTask.status == _enum(CommissioningTaskStatus, status_filter, "status"))
     if search_term:
         like = f"%{search_term}%"
-        tasks_query = tasks_query.filter(db.or_(
+        tasks_query = tasks_query.filter(or_(
             CommissioningTask.task_number.ilike(like),
             CommissioningTask.title.ilike(like),
             CommissioningTask.discipline.ilike(like),
