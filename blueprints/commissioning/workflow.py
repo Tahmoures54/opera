@@ -832,12 +832,52 @@ def transition_handover(package_id):
         package.status, package.mc_issued_by_id = target, current_user.id
         package.mc_certificate_number = _required("certificate_number", 100)
         package.mc_certificate_date = _date("certificate_date") or date.today()
+        if CommissioningCertificate.query.filter_by(
+            company_name=package.company_name,
+            certificate_number=package.mc_certificate_number,
+        ).first():
+            abort(409, description="Certificate number is already in use in this company.")
+        certificate = CommissioningCertificate(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=package.subsystem_id, package_id=package.id,
+            certificate_type="MC", certificate_number=package.mc_certificate_number,
+            certificate_date=package.mc_certificate_date, issued_by_id=current_user.id,
+            snapshot_json=_completion_certificate_snapshot(
+                package, "MC", package.mc_certificate_number, package.mc_certificate_date,
+            ),
+        )
+        db.session.add(certificate)
+        db.session.flush()
+        add_audit_event(package.company_name, "CommissioningCertificate", certificate.id,
+                        "COMPLETION_CERTIFICATE_ISSUED",
+                        after={"type": "MC", "number": certificate.certificate_number,
+                               "package_id": package.id})
     elif target == HandoverStatus.RF_CERTIFIED:
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.MC_CERTIFIED:
             abort(403)
         package.status, package.rf_issued_by_id = target, current_user.id
         package.rf_certificate_number = _required("certificate_number", 100)
         package.rf_certificate_date = _date("certificate_date") or date.today()
+        if CommissioningCertificate.query.filter_by(
+            company_name=package.company_name,
+            certificate_number=package.rf_certificate_number,
+        ).first():
+            abort(409, description="Certificate number is already in use in this company.")
+        certificate = CommissioningCertificate(
+            company_name=package.company_name, project_id=package.project_id,
+            subsystem_id=package.subsystem_id, package_id=package.id,
+            certificate_type="RF", certificate_number=package.rf_certificate_number,
+            certificate_date=package.rf_certificate_date, issued_by_id=current_user.id,
+            snapshot_json=_completion_certificate_snapshot(
+                package, "RF", package.rf_certificate_number, package.rf_certificate_date,
+            ),
+        )
+        db.session.add(certificate)
+        db.session.flush()
+        add_audit_event(package.company_name, "CommissioningCertificate", certificate.id,
+                        "COMPLETION_CERTIFICATE_ISSUED",
+                        after={"type": "RF", "number": certificate.certificate_number,
+                               "package_id": package.id})
     elif target == HandoverStatus.RFSU:
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.RF_CERTIFIED:
             abort(403)
