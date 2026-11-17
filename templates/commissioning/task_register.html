@@ -61,9 +61,9 @@
             <td><span class="badge bg-light text-dark border">{{ task.activity_type.value }}</span></td>
             <td>{{ task.title }}{% if task.description %}<div class="small text-muted">{{ task.description }}</div>{% endif %}</td>
             <td>{{ task.discipline }}</td>
-            <td>{{ task.system_id }} / {{ task.subsystem_id }}</td>
-            <td>{{ task.equipment_id or '—' }}</td>
-            <td>{{ task.check_sheet_id or '—' }}</td>
+            <td>{{ system_by_id.get(task.system_id).system_code if system_by_id.get(task.system_id) else '—' }} / {{ subsystem_by_id.get(task.subsystem_id).subsystem_code if subsystem_by_id.get(task.subsystem_id) else '—' }}</td>
+            <td>{{ equipment_by_id.get(task.equipment_id).tag_number if equipment_by_id.get(task.equipment_id) else '—' }}</td>
+            <td>{{ sheet_by_id.get(task.check_sheet_id).sheet_number if sheet_by_id.get(task.check_sheet_id) else '—' }}</td>
             <td>{{ task.spent_man_hours }} / {{ task.estimated_man_hours }}</td>
             <td><small>{{ task.planned_start_date or '—' }} → {{ task.planned_finish_date or '—' }}</small></td>
             <td>{{ task.status.value|replace('_',' ')|title }}</td>
