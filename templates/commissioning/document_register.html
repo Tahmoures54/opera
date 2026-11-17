@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %} | OPERA - Document Register{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+      <a href="{{ url_for('commissioning.project_detail', project_id=project.id) }}">Back to project</a>
+      <h1 class="h3 mt-2 mb-1">Engineering Document Register</h1>
+      <div class="text-muted">{{ project.project_code }} · {{ project.name }}</div>
+    </div>
+    <span class="badge bg-primary fs-6">{{ documents|length }} revisions</span>
+  </div>
+
+  {% if can_create %}
+  <section class="card shadow-sm mb-4">
+    <div class="card-header fw-semibold">Register a new document</div>
+    <div class="card-body">
+      <form method="post" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-lg-3 col-md-6"><label class="form-label">Document number *</label><input class="form-control" name="document_number" maxlength="120" required placeholder="e.g. PRJ-ME-DWG-001"></div>
+        <div class="col-lg-4 col-md-6"><label class="form-label">Document title *</label><input class="form-control" name="title" maxlength="250" required></div>
+        <div class="col-lg-2 col-md-4"><label class="form-label">Document type *</label><select class="form-select" name="document_type" required><option value="">Select type</option>{% for v in ['P&ID','GA Drawing','Isometric','Data Sheet','Calculation','Procedure','Method Statement','Test Report','Certificate','Vendor Document','Other'] %}<option>{{ v }}</option>{% endfor %}</select></div>
+        <div class="col-lg-3 col-md-4"><label class="form-label">Discipline *</label><select class="form-select" name="discipline" required><option value="">Select discipline</option>{% for v in ['Process','Mechanical','Piping','Civil','Structural','Electrical','Instrumentation','Telecom','HSE','Quality','Commissioning','Operations','Multi-discipline'] %}<option>{{ v }}</option>{% endfor %}</select></div>
+        <div class="col-lg-3 col-md-4"><label class="form-label">Purpose / suitability</label><select class="form-select" name="purpose"><option value="">Not specified</option>{% for v in ['For Information','For Review','For Approval','For Construction','As Built','For Commissioning','For Operation'] %}<option>{{ v }}</option>{% endfor %}</select></div>
+        <div class="col-lg-3"><label class="form-label">System</label><select class="form-select" name="system_id"><option value="">Not linked</option>{% for item in systems %}<option value="{{ item.id }}">{{ item.system_code }} — {{ item.name }}</option>{% endfor %}</select></div>
+        <div class="col-lg-3"><label class="form-label">Subsystem</label><select class="form-select" name="subsystem_id"><option value="">Not linked</option>{% for item in subsystems %}<option value="{{ item.id }}">{{ item.subsystem_code }} — {{ item.name }}</option>{% endfor %}</select></div>
+        <div class="col-lg-3"><label class="form-label">Equipment / Tag</label><select class="form-select" name="equipment_id"><option value="">Not linked</option>{% for item in equipment %}<option value="{{ item.id }}">{{ item.tag_number }}</option>{% endfor %}</select></div>
+        <div class="col-12"><button class="btn btn-primary">Create revision A</button><span class="small text-muted ms-2">Upload the controlled file before submitting it for review.</span></div>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card shadow-sm">
+    <div class="card-header fw-semibold">Document register and revision history</div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Document No. / Rev.</th><th>Title / Type</th><th>Discipline</th><th>System / Subsystem</th><th>Status</th><th>Controlled file</th><th>Review trail / actions</th></tr></thead>
+        <tbody>
+        {% for doc in documents %}
+          <tr>
+            <td class="text-nowrap"><strong>{{ doc.document_number }}</strong><div class="small text-muted">Revision {{ doc.revision }}</div></td>
+            <td>{{ doc.title }}<div class="small text-muted">{{ doc.document_type }}{% if doc.purpose %} · {{ doc.purpose }}{% endif %}</div></td>
+            <td>{{ doc.discipline }}</td>
+            <td><small>{{ doc.system_id or '—' }} / {{ doc.subsystem_id or '—' }}</small></td>
+            <td>
+              {% set color = 'success' if doc.status.value == 'APPROVED' else ('danger' if doc.status.value == 'REJECTED' else ('primary' if doc.status.value == 'IN_REVIEW' else ('secondary' if doc.status.value == 'SUPERSEDED' else 'warning'))) %}
+              <span class="badge bg-{{ color }}">{{ doc.status.value|replace('_',' ')|title }}</span>
+              {% if doc.approved_at %}<div class="small text-muted mt-1">Approved {{ doc.approved_at.strftime('%Y-%m-%d') }}</div>{% endif %}
+            </td>
+            <td style="min-width:190px">
+              {% for file in attachment_by_document.get(doc.id, []) %}
+                <div class="small mb-1"><a href="{{ url_for('commissioning.download_evidence', attachment_id=file.id) }}">{{ file.filename }}</a></div>
+              {% endfor %}
+              {% if doc.status.value in ('DRAFT','REJECTED') and can_create %}
+              <form method="post" enctype="multipart/form-data" action="{{ url_for('commissioning.upload_evidence', entity_type='CommissioningDocument', entity_id=doc.id) }}" class="mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input class="form-control form-control-sm mb-1" type="file" name="file" required>
+                <button class="btn btn-sm btn-outline-secondary">Upload file</button>
+              </form>
+              {% endif %}
+            </td>
+            <td style="min-width:260px">
+              {% if review_by_document.get(doc.id) %}
+                {% for review in review_by_document.get(doc.id) %}
+                  <div class="small mb-1"><strong>{{ review.decision }}</strong> · {{ review.decided_at.strftime('%Y-%m-%d %H:%M') }}{% if review.comments %}<div class="text-muted">{{ review.comments }}</div>{% endif %}</div>
+                {% endfor %}
+              {% else %}<span class="small text-muted">No review decision yet</span>{% endif %}
+              {% if doc.status.value in ('DRAFT','REJECTED') and can_create %}
+                <form method="post" action="{{ url_for('commissioning.submit_document', document_id=doc.id) }}" class="mt-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-primary">Submit for review</button></form>
+              {% endif %}
+              {% if doc.status.value == 'IN_REVIEW' and (can_review or can_approve) %}
+                <form method="post" action="{{ url_for('commissioning.decide_document', document_id=doc.id) }}" class="mt-2">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input class="form-control form-control-sm mb-1" name="comments" maxlength="3000" placeholder="Review comments (required for rejection)">
+                  <div class="d-flex gap-1">
+                    {% if can_approve %}<button class="btn btn-sm btn-success" name="decision" value="APPROVE">Approve</button>{% endif %}
+                    {% if can_review %}<button class="btn btn-sm btn-outline-danger" name="decision" value="REJECT">Reject</button>{% endif %}
+                  </div>
+                </form>
+              {% endif %}
+              {% if doc.status.value in ('APPROVED','REJECTED') and can_create %}
+                <form method="post" action="{{ url_for('commissioning.create_document_revision', document_id=doc.id) }}" class="mt-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-secondary">Create next revision</button></form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-5">No engineering documents have been registered for this project.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <p class="small text-muted mt-3">Each revision is a separate controlled record. Approved revisions are superseded, not overwritten. Review decisions and audit events are retained. OPERA's review gates must be aligned with the project's approved document control procedure before contractual use.</p>
+</div>
+{% endblock %}
