@@ -658,7 +658,7 @@ class CommissioningPreservationPlan(db.Model):
         ForeignKeyConstraint(["equipment_id", "company_name"],
                              ["commissioning_equipment.id", "commissioning_equipment.company_name"],
                              name="fk_comm_preservation_plan_equipment_tenant"),
-        CheckConstraint("interval_days > 0 AND interval_days <= 3650",
+        CheckConstraint("interval_days > 0",
                         name="ck_comm_preservation_interval"),
         CheckConstraint("length(trim(plan_number)) > 0",
                         name="ck_comm_preservation_plan_number"),
