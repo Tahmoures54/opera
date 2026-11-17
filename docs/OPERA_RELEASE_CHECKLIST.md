@@ -1,16 +1,16 @@
 # OPERA Release Readiness Checklist
 
-**Code baseline:** c1945633f592db4823558921b0abd109a9abce58 (merge commit for PR #42)  
-**CI run:** [44087919325](https://github.com/Tahmoures54/opera/actions/runs/44087919325) — PR head 578a609392b538f27091f16e64ce9ef8e23b8161; quality, PostgreSQL integration and docker jobs passed.
+**Code baseline:** main merge commit `56bcc9de1a5cec81d4aea68e3ad8d9d8f11e9211` (PR #43).  
+**CI run:** [44091665590](https://github.com/Tahmoures54/opera/actions/runs/44091665590) — quality, PostgreSQL integration and Docker jobs passed on the final PR head.
 
 ## Repository and CI
-- [x] Main contains Task, revision-controlled Check Sheet templates, Punch, document-control, engineering exchange, dossier index and working PDF/ZIP exports, MC/RFC, readiness, Preservation and S3-compatible evidence-storage increments.
-- [ ] Merge and verify controlled dossier revision lifecycle after CI passes.
+- [x] Main contains Task, revision-controlled Check Sheet templates, Punch, document-control, engineering exchange, dossier index, controlled dossier revisions, MC/RFC, readiness, Preservation and S3-compatible evidence-storage increments.
+- [x] PR #43 controlled dossier lifecycle merged after all CI checks passed.
 - [x] `quality`, `integration` and `docker` checks passed on the earlier baseline `ca37db49224160628e9fb28d3b7d51930acc099f`.
 - [x] PR #39 `quality`, `integration` and `docker` jobs passed on head commit `417654cf6a2db1ac8ff94c3a45426307ab8fdcd9`.
 - [x] PR #40 `quality`, `integration` and `docker` jobs passed on head commit `283a30c30c1f6bd5fe998636c56e38c70cb5e7e6`.
 - [x] PR #42 `quality`, PostgreSQL `integration` and `docker` jobs passed on head commit `578a609392b538f27091f16e64ce9ef8e23b8161`.
-- [x] PR #43 `quality`, PostgreSQL `integration` and `docker` jobs passed on head commit `3a200612f40844b91f63d8dfa136f9b8a99b2e1e`.
+- [x] PR #43 `quality`, PostgreSQL `integration` and `docker` jobs passed on final head commit `b2366a8b52fb3f1011caf179d5ae92a251b43559`.
 - [ ] Reconcile and remove obsolete remote feature branches after confirming merged ancestry; retain any branch with unmerged work.
 - [ ] Confirm no stale or duplicate pull requests remain open.
 
