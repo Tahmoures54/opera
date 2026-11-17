@@ -1,79 +1,44 @@
 # Handover ↔ Readiness Engine Integration
 
-**Status:** Helpers are live in `services/commissioning_handover_gates.py`.  
-**Next action:** Drop the three calls below into `blueprints/commissioning/workflow.py::transition_handover`.
+**Status:** MC, RFC and RFSU readiness gates are wired into the handover transition workflow.  
+**Certificate lifecycle:** MC and RFC certificates are issued as immutable issue-time records. RFSU is a gated readiness transition followed by Operations Acceptance.
 
-## Why this approach
+## Implemented handover sequence
 
-The original `transition_handover` contains long ad-hoc queries for punch clearance and sheet sign-off. Those checks are now centralized in the Readiness Engine so that:
+`DRAFT → MC_CERTIFIED → RFC_CERTIFIED → RFSU → ACCEPTED`
 
-- MC / RF / RFSU rules stay consistent with progress reporting.
-- Error messages list every blocker instead of a single generic sentence.
-- Future project-specific rule overrides can live in one place.
+- **MC:** `require_ready_for_mc` checks the pre-commissioning readiness criteria.
+- **RFC:** `require_ready_for_rfc` checks MC prerequisites plus Commissioning C / Functional Test completion.
+- **RFSU:** `require_ready_for_rfsu` checks RFC prerequisites, remaining Punch A/B blockers and task completion.
+- **Operations Acceptance:** only a user with `handover.accept` can accept or reject after RFSU.
 
-## Exact patch to apply
+## RFC certificate issuance
 
-Inside `transition_handover`, replace the existing sheet/punch checks for each gate with the following.
+When a package transitions from `MC_CERTIFIED` to `RFC_CERTIFIED`, OPERA:
 
-### 1. Import (top of workflow.py)
+1. Enforces the project-scoped `handover.manage` permission.
+2. Evaluates the RFC readiness gate before changing the package state.
+3. Requires a certificate number and issue date in the operations form.
+4. Enforces a company-wide unique certificate number.
+5. Stores the authenticated issuer and issue timestamp.
+6. Captures an immutable issue-time snapshot of the project, subsystem, package, readiness metrics, check sheets, documents, Punch items, witness/hold points, equipment and tasks.
+7. Writes a `COMPLETION_CERTIFICATE_ISSUED` audit event and a handover status audit event in the same transaction.
+8. Exposes the issued record through the printable RFC certificate view.
 
-```python
-from services.commissioning_handover_gates import (
-    require_ready_for_mc,
-    require_ready_for_rf,
-    require_ready_for_rfsu,
-)
-```
+The certificate route accepts `RFC`. The former `RF` route remains a compatibility alias. Existing `RF` certificate types and `RF_CERTIFIED` / `RF_PENDING` handover values are migrated to `RFC`, `RFC_CERTIFIED` and `RFC_PENDING`. The old package-column names remain mapped internally to avoid dropping or rewriting legacy references; application code uses RFC names.
 
-### 2. MC_CERTIFIED branch
+## Verification scenarios
 
-Replace the block that queries all sheets and open_critical punches with:
+1. An open Punch A/B, unreleased Hold point or unsigned required Pre-Comm sheet blocks MC with HTTP 409.
+2. A missing Comm-C / Functional Test sign-off blocks RFC.
+3. RFC issuance with a duplicate company certificate number is rejected.
+4. RFC issuance captures the authenticated issuer, issue date and evidence snapshot.
+5. Attempting to mutate an issued certificate snapshot is rejected by the append-only model guard.
+6. The `/certificates/RFC` and legacy `/certificates/RF` URLs resolve to the same RFC certificate.
+7. Incomplete commissioning tasks or remaining blockers prevent RFSU.
 
-```python
-if target == HandoverStatus.MC_CERTIFIED:
-    if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.DRAFT:
-        abort(403)
-    # Centralized OPERA readiness gate (Pre-Comm sheets + Punch A/B + Holds)
-    require_ready_for_mc(package.company_name, subsystem_id)
-    package.status, package.mc_issued_by_id = target, current_user.id
-    # ... keep existing certificate_number / date / CommissioningCertificate creation ...
-```
+## Important limitations
 
-### 3. RF_CERTIFIED branch
-
-```python
-elif target == HandoverStatus.RF_CERTIFIED:
-    if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.MC_CERTIFIED:
-        abort(403)
-    require_ready_for_rf(package.company_name, subsystem_id)
-    package.status, package.rf_issued_by_id = target, current_user.id
-    # ... keep existing RF certificate issuance ...
-```
-
-### 4. RFSU branch
-
-```python
-elif target == HandoverStatus.RFSU:
-    if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.RF_CERTIFIED:
-        abort(403)
-    require_ready_for_rfsu(package.company_name, subsystem_id)
-    package.status = target
-```
-
-## Behaviour after the patch
-
-- Attempting MC while any Punch A/B is open, any Hold is unreleased, or any Pre-Comm A/B sheet is not SIGNED_OFF → HTTP 409 with a list of concrete blockers.
-- RF additionally requires all Comm-C and Functional-Test sheets to be signed-off.
-- RFSU additionally requires every task in the subsystem to be COMPLETED or CANCELLED.
-
-## Verification
-
-1. Create a subsystem with one open Punch A → MC transition must fail with a clear message.
-2. Clear the punch and sign all Pre-Comm sheets → MC succeeds.
-3. Leave a Comm-C sheet unsigned → RF fails.
-4. Complete remaining tasks → RFSU succeeds.
-
-## Notes
-
-- The Readiness Engine currently treats *all* Pre-Comm and Comm sheets as required. If a project later needs a configurable “required sheet set”, extend `evaluate_subsystem_readiness` rather than re-introducing ad-hoc queries in the blueprint.
-- Certificate snapshot and immutable `CommissioningCertificate` records remain unchanged.
+- Electronic sign-off is an authenticated acknowledgement, not a qualified cryptographic signature.
+- The readiness rules are OPERA's configured baseline. Project contracts, approved completion procedures, ITPs and authority matrices remain authoritative.
+- The Readiness Engine currently treats all registered Pre-Comm and Commissioning / Functional Test sheets in scope as required. Project-specific required-sheet configuration remains future work.

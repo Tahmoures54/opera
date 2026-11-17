@@ -18,7 +18,7 @@ OPERA is an independent product focused exclusively on Operations, Pre-commissio
 - Signed-off check sheets are immutable; corrections create a new revision.
 - Punch A/B/C/D, project-member assignment, closure, independent verification and controlled waiver with history.
 - Witness, Hold and Review point scheduling, attendance and release.
-- MC and RFC (internally stored as legacy certificate type RF), RFSU and operations acceptance gates.
+- MC and RFC certificates, RFSU and operations acceptance gates.
 - Progress snapshots, project audit evidence and private PDF/image/text/CSV attachments for check sheets, Punch items and handover packages.
 - Tenant-scoped database constraints and authorization checks.
 
@@ -69,7 +69,7 @@ The OPERA foundation migration is 20261116_0019, chained after the inherited sch
 7. Record separate contractor and client sign-offs. A signed-off sheet is immutable.
 8. Raise and resolve punch items. Category A/B punch items block MC certification.
 9. Create subsystem handover packages and progress snapshots.
-10. Follow the project-approved milestone sequence: MC → RFC → RFSU → Operations Acceptance. In the current implementation, the RFC certificate is stored with internal type `RF`; a separate RF / Ready-for-Start-Up certificate type is not available.
+10. Follow the project-approved milestone sequence: MC → RFC → RFSU → Operations Acceptance. The RFC certificate has its own certificate type, number, issue date, authenticated issuer, immutable issue-time snapshot and audit event. A separate RF / Ready-for-Start-Up certificate is not part of this lifecycle.
 
 ## Task register
 
@@ -79,7 +79,7 @@ The task register is a project-scoped execution planning register. It records ta
 
 | Role | Primary responsibilities |
 |---|---|
-| Commissioning Manager | Project setup, membership, workflow administration and MC/RF management |
+| Commissioning Manager | Project setup, membership, workflow administration and MC/RFC management |
 | Commissioning Engineer | Check-sheet preparation/execution and punch raising |
 | QC Inspector | Independent check-sheet verification, Punch verification and witness attendance |
 | Client Representative | Client-side check-sheet sign-off |

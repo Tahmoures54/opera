@@ -24,7 +24,7 @@ from services.commissioning_number_service import (
 )
 from services.commissioning_handover_gates import (
     require_ready_for_mc,
-    require_ready_for_rf,
+    require_ready_for_rfc,
     require_ready_for_rfsu,
 )
 from blueprints.commissioning import commissioning_bp
@@ -116,7 +116,8 @@ def operations(project_id):
     ).order_by(CommissioningCertificate.issued_at).all()
     certificates_by_package = {}
     for certificate in certificates:
-        certificates_by_package.setdefault(certificate.package_id, {})[certificate.certificate_type] = certificate
+        certificate_key = "RFC" if certificate.certificate_type == "RF" else certificate.certificate_type
+        certificates_by_package.setdefault(certificate.package_id, {})[certificate_key] = certificate
     evidence = CommissioningAttachment.query.filter(
         CommissioningAttachment.company_name == project.company_name,
         CommissioningAttachment.entity_type.in_(["PunchItem", "HandoverPackage"]),
@@ -158,6 +159,7 @@ def operations(project_id):
         sheet_types=list(CheckSheetType), punch_categories=list(PunchCategory),
         punch_severities=list(PunchSeverity), witness_types=list(WitnessType),
         progress=percent, weighted_progress=weighted_progress,
+        today=date.today().isoformat(),
         signed=signed, total=total, punch_open=punch_open,
     )
 
@@ -864,7 +866,10 @@ def _completion_certificate_snapshot(package, certificate_type, certificate_numb
 def transition_handover(package_id):
     package = HandoverPackage.query.filter_by(id=package_id, company_name=current_user.company_name).first_or_404()
     _need(package.project_id, "handover.manage", "handover.accept", "project.manage")
-    target = _enum(HandoverStatus, _required("status", 30), "handover status")
+    raw_target = _required("status", 30)
+    if raw_target == "RF_CERTIFIED":  # Accept legacy clients during rollout.
+        raw_target = "RFC_CERTIFIED"
+    target = _enum(HandoverStatus, raw_target, "handover status")
     old = package.status
     subsystem_id = package.subsystem_id
     if target == HandoverStatus.MC_CERTIFIED:
@@ -895,35 +900,35 @@ def transition_handover(package_id):
                         "COMPLETION_CERTIFICATE_ISSUED",
                         after={"type": "MC", "number": certificate.certificate_number,
                                "package_id": package.id})
-    elif target == HandoverStatus.RF_CERTIFIED:
+    elif target == HandoverStatus.RFC_CERTIFIED:
         if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.MC_CERTIFIED:
             abort(403)
-        require_ready_for_rf(package.company_name, subsystem_id)
-        package.status, package.rf_issued_by_id = target, current_user.id
-        package.rf_certificate_number = _required("certificate_number", 100)
-        package.rf_certificate_date = _date("certificate_date") or date.today()
+        require_ready_for_rfc(package.company_name, subsystem_id)
+        package.status, package.rfc_issued_by_id = target, current_user.id
+        package.rfc_certificate_number = _required("certificate_number", 100)
+        package.rfc_certificate_date = _date("certificate_date") or date.today()
         if CommissioningCertificate.query.filter_by(
             company_name=package.company_name,
-            certificate_number=package.rf_certificate_number,
+            certificate_number=package.rfc_certificate_number,
         ).first():
             abort(409, description="Certificate number is already in use in this company.")
         certificate = CommissioningCertificate(
             company_name=package.company_name, project_id=package.project_id,
             subsystem_id=package.subsystem_id, package_id=package.id,
-            certificate_type="RF", certificate_number=package.rf_certificate_number,
-            certificate_date=package.rf_certificate_date, issued_by_id=current_user.id,
+            certificate_type="RFC", certificate_number=package.rfc_certificate_number,
+            certificate_date=package.rfc_certificate_date, issued_by_id=current_user.id,
             snapshot_json=_completion_certificate_snapshot(
-                package, "RF", package.rf_certificate_number, package.rf_certificate_date,
+                package, "RFC", package.rfc_certificate_number, package.rfc_certificate_date,
             ),
         )
         db.session.add(certificate)
         db.session.flush()
         add_audit_event(package.company_name, "CommissioningCertificate", certificate.id,
                         "COMPLETION_CERTIFICATE_ISSUED",
-                        after={"type": "RF", "number": certificate.certificate_number,
+                        after={"type": "RFC", "number": certificate.certificate_number,
                                "package_id": package.id})
     elif target == HandoverStatus.RFSU:
-        if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.RF_CERTIFIED:
+        if not has_permission(package.project_id, "handover.manage") or old != HandoverStatus.RFC_CERTIFIED:
             abort(403)
         require_ready_for_rfsu(package.company_name, subsystem_id)
         package.status = target
@@ -934,7 +939,7 @@ def transition_handover(package_id):
         package.operations_accepted_by_id, package.operations_accepted_at = current_user.id, datetime.utcnow()
     elif target == HandoverStatus.REJECTED:
         if not has_permission(package.project_id, "handover.accept") or old not in (
-            HandoverStatus.MC_CERTIFIED, HandoverStatus.RF_CERTIFIED, HandoverStatus.RFSU):
+            HandoverStatus.MC_CERTIFIED, HandoverStatus.RFC_CERTIFIED, HandoverStatus.RFSU):
             abort(403)
         package.status, package.rejection_reason = target, _required("reason", 2000)
     else:
@@ -948,14 +953,16 @@ def transition_handover(package_id):
 @commissioning_bp.get("/handover/<int:package_id>/certificates/<string:certificate_type>")
 @login_required
 def completion_certificate(package_id, certificate_type):
-    """Render the immutable issue-time MC/RF certificate for print or PDF export."""
+    """Render the immutable issue-time MC/RFC certificate for print or PDF export."""
     package = HandoverPackage.query.filter_by(
         id=package_id, company_name=current_user.company_name,
     ).first_or_404()
     _need(package.project_id, "handover.view", "handover.manage",
           "handover.accept", "project.manage")
     certificate_type = certificate_type.upper()
-    if certificate_type not in ("MC", "RF"):
+    if certificate_type == "RF":  # Legacy certificate URL alias.
+        certificate_type = "RFC"
+    if certificate_type not in ("MC", "RFC"):
         abort(404)
     certificate = CommissioningCertificate.query.filter_by(
         company_name=package.company_name, project_id=package.project_id,

@@ -977,7 +977,7 @@ def test_progress_snapshot_rejects_foreign_scope(client, opera_setup):
 
 
 
-def test_mc_rf_certificates_capture_immutable_issue_time_evidence(client, app, opera_setup):
+def test_mc_rfc_certificates_capture_immutable_issue_time_evidence(client, app, opera_setup):
     with app.app_context():
         package = HandoverPackage(
             company_name="Contractor A", project_id=opera_setup["project"],
@@ -1067,21 +1067,31 @@ def test_mc_rf_certificates_capture_immutable_issue_time_evidence(client, app, o
     assert rf.status_code == 302
 
     certificate_page = client.get(
-        f"/commissioning/handover/{package_id}/certificates/RF",
+        f"/commissioning/handover/{package_id}/certificates/RFC",
     )
     assert certificate_page.status_code == 200
-    assert b"Ready for Commissioning Certificate" in certificate_page.data
+    assert b"Ready for Commissioning (RFC) Certificate" in certificate_page.data
+    legacy_certificate_page = client.get(
+        f"/commissioning/handover/{package_id}/certificates/RF",
+    )
+    assert legacy_certificate_page.status_code == 200
     assert b"MC-CERT-001" not in certificate_page.data
 
     with app.app_context():
         mc_certificate = db.session.get(CommissioningCertificate, mc_certificate_id)
         assert mc_certificate.snapshot_json["readiness"]["pending_hold_points"] == 0
-        rf_certificate = CommissioningCertificate.query.filter_by(
-            package_id=package_id, certificate_type="RF",
+        rfc_certificate = CommissioningCertificate.query.filter_by(
+            package_id=package_id, certificate_type="RFC",
         ).one()
-        assert rf_certificate.snapshot_json["readiness"]["pending_hold_points"] == 0
-        assert rf_certificate.snapshot_json["witness_points"][0]["status"] == "RELEASED"
-        rf_certificate.snapshot_json = {"tampered": True}
+        assert rfc_certificate.certificate_type == "RFC"
+        assert rfc_certificate.certificate_date.isoformat() == "2026-11-17"
+        assert rfc_certificate.issued_by_id == opera_setup["manager"]
+        assert rfc_certificate.snapshot_json["certificate"]["issued_by_id"] == opera_setup["manager"]
+        assert rfc_certificate.snapshot_json["certificate"]["issued_at"]
+        assert rfc_certificate.snapshot_json["certificate"]["type"] == "RFC"
+        assert rfc_certificate.snapshot_json["readiness"]["pending_hold_points"] == 0
+        assert rfc_certificate.snapshot_json["witness_points"][0]["status"] == "RELEASED"
+        rfc_certificate.snapshot_json = {"tampered": True}
         with pytest.raises(ValueError, match="append-only"):
             db.session.commit()
         db.session.rollback()

@@ -25,10 +25,12 @@ def test_public_and_help_pages_use_english_shell(client):
         assert not PERSIAN_RE.search(html), path
 
 
-def test_legacy_persian_guide_url_redirects_to_english(client):
+def test_persian_user_guide_has_a_dedicated_route(client):
     response = client.get("/help/user-guide/fa")
-    assert response.status_code in (301, 302, 303, 307, 308)
-    assert response.headers["Location"].endswith("/help/user-guide")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'dir="rtl"' in html
+    assert "راهنمای کاربر OPERA" in html
 
 
 def test_legacy_auth_home_uses_opera_landing(client):
