@@ -26,3 +26,13 @@ html,body{max-width:100%;overflow-x:hidden}
 [data-theme="dark"] .auth-title,[data-theme="dark"] .opera-feature h3{color:#F1F5F9}
 [data-theme="dark"] .security-notice,[data-theme="dark"] .opera-cta{background:#172638;color:#E2E8F0;border-color:#334155}
 [data-theme="dark"] .opera-hero p,[data-theme="dark"] .opera-section-intro,[data-theme="dark"] .opera-cta p{color:#A8BAC7}
+
+/* Registration-specific components */
+.error{display:block;color:#B42318;font-size:.82rem;margin-top:.3rem}
+.captcha-group p{padding:12px 14px;border:1px solid var(--mh-border-soft);border-radius:9px;background:var(--mh-surface-2);color:var(--mh-text);font-weight:650}
+.qr-wrapper{display:flex;justify-content:center;margin:1.25rem 0}
+.qr-code{max-width:180px;padding:8px;border:1px solid var(--mh-border);border-radius:10px;background:#fff}
+.register-footer{margin-top:1.5rem;text-align:center;color:var(--mh-muted);font-size:.875rem}
+.footer-links{display:flex;flex-wrap:wrap;justify-content:center;gap:.65rem}
+.footer-links a{color:var(--mh-primary);text-decoration:underline;text-underline-offset:3px}
+.terms-group label{font-size:.875rem;color:var(--mh-muted);font-weight:500}
