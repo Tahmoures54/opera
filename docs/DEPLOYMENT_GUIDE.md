@@ -132,9 +132,62 @@ Confirm HSTS, secure cookies, request IDs and log output after each deploy.
 
 ## Production boundary
 
-- **Docker Compose is the production runtime.**
-- **Vercel is not a production target.** Vercel function filesystems are not durable and `/tmp` is ephemeral, so they cannot store evidence. `vercel.json` is intentionally empty. Vercel builds must not run migrations.
-- The S3-compatible evidence backend (`OPERA_STORAGE_BACKEND=s3`) is implemented in `services/commissioning_storage.py`. It is **not verified** against a real provider in this repository. Use it only after upload, authorized download, backup and restore have been tested with that provider.
+OPERA has two supported production targets. Both must meet the same requirements.
+
+1. **Vercel (owner-selected production target).** Follow section 10. The Vercel project `tahmoures54s-projects/opera` builds previews from GitHub. Production is **not verified** until every step in section 10 is complete.
+2. **Docker Compose (self-hosted alternative).** Sections 1 to 9 describe this path.
+
+Requirements for either target:
+
+- PostgreSQL for all production data. SQLite is rejected in production.
+- Durable private evidence storage. On Vercel, the local filesystem is not durable, and the application refuses local evidence storage in serverless mode. Use the S3-compatible backend (section 10).
+- Migrations run as a controlled release step, never in a build command. `vercel.json` must not contain a `buildCommand` that migrates.
+- A verified backup and restore of PostgreSQL and evidence storage before any production change.
+
+## 10. Vercel production runbook
+
+### 10.1 Environment variables (set in the Vercel project, Production scope only)
+
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | At least 32 bytes, generated per environment |
+| `DATABASE_URL` | PostgreSQL connection string (a `postgres://` alias is accepted) |
+| `PUBLIC_BASE_URL` | Canonical HTTPS origin |
+| `SESSION_COOKIE_SECURE` | `true` |
+| `OPERA_STORAGE_BACKEND` | `s3` |
+| `OPERA_S3_BUCKET` | Private bucket for evidence |
+| `OPERA_S3_REGION` | Bucket region |
+| `OPERA_S3_ENDPOINT_URL` | Only for S3-compatible providers that need a custom endpoint |
+| `OPERA_S3_ACCESS_KEY_ID`, `OPERA_S3_SECRET_ACCESS_KEY` | Only if the provider does not support an IAM role |
+| `OPERA_S3_PREFIX` | Optional; defaults to `opera-evidence` |
+| `RATELIMIT_STORAGE_URI` | Redis URL for shared rate limiting (required for multi-instance serverless) |
+| `ADMIN_EMAIL` | Optional; the account with this email gets administrator rights at registration |
+
+Do not set `VERCEL_ENV` manually. Vercel sets it.
+
+### 10.2 Migrations
+
+1. Take a verified PostgreSQL backup.
+2. Confirm the target database is the intended production database.
+3. Run `VERCEL_ENV=production python scripts/vercel_migrate.py` from a controlled release environment, not from a build.
+4. Confirm `flask --app wsgi db current` shows `20261118_0035` (or the current head).
+
+### 10.3 Deploy and verify
+
+1. Deploy the exact commit from `main` to Production in Vercel.
+2. Record the deployment URL and commit SHA.
+3. Check `/health/live` and `/health/ready`. Readiness must return 200.
+4. Upload a test evidence file to a non-production project, download it, and confirm its SHA-256 matches.
+5. Run the acceptance scenario in `docs/PRODUCTION_LAUNCH.md` with approved non-production data.
+6. Only then record the deployment as verified.
+
+### 10.4 Rollback
+
+Redeploy the previous Vercel deployment. Do not downgrade migrations automatically. Use a verified backup restore if data must be reverted.
+
+### 10.5 Status
+
+Vercel production is **not verified** by this document. The current Vercel preview build for `main` succeeded, but no production deployment, production migration or S3 round-trip has been confirmed.
 
 ## Status of this document
 
