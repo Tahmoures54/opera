@@ -1,9 +1,9 @@
 # OPERA — Production Launch Guide
 
 **Product:** OPERA Commissioning, Pre-Commissioning & Start-up  
-**Schema head:** 20261116_0019
+**Schema head:** 20261117_0033 (verify with `flask --app wsgi db heads`)
 
-This guide describes the production deployment of OPERA. It deliberately contains no shared demo credentials and no automatic demo-user seeding.
+This guide covers the go-live acceptance steps. For the authoritative deployment procedure, see `docs/DEPLOYMENT_GUIDE.md`. This guide describes the production deployment of OPERA. It deliberately contains no shared demo credentials and no automatic demo-user seeding.
 
 ## 1. Production architecture
 
@@ -46,8 +46,8 @@ Gunicorn / Flask OPERA
 - Verify Nginx TLS configuration before exposing ports 80/443.
 
 ### Database and migration
-- Confirm `flask --app wsgi db heads` reports exactly one head: `20261116_0019`.
-- Review the full Alembic chain. OPERA migration `20261116_0019` creates OPERA-owned tables and follows the inherited `20261017_0018` revision.
+- Confirm `flask --app wsgi db heads` reports exactly one head: `20261117_0033`.
+- Review the full Alembic chain. The OPERA foundation migration `20261116_0019` creates OPERA-owned tables and follows the inherited `20261017_0018` revision.
 - Take a verified backup before upgrading any existing database.
 - Test the migration on a staging copy first. Never stamp an existing database until its actual schema has been inspected.
 

@@ -10,7 +10,7 @@ OPERA is an independently implemented project completion, pre-commissioning, com
 - Relational database: PostgreSQL in production; SQLite for local/test use where supported.
 - Authentication: Flask-Login and the existing account security controls.
 - UI: Jinja templates, Bootstrap-oriented markup, shared CSS and JavaScript.
-- Deployment: Vercel/serverless configuration and Docker-based CI.
+- Deployment: Docker Compose production stack (see `docs/DEPLOYMENT_GUIDE.md`). Vercel is not a production target.
 - Domain implementation: `models_commissioning.py`, `blueprints/commissioning/`, and `services/commissioning_*`.
 
 ## Implemented domain capabilities on main

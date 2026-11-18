@@ -113,7 +113,21 @@ Additional mismatch: `services/commissioning_storage.py` implements an **S3 back
 - Witness evidence snapshots include SHA-256 checksums in the audit `before` payload.
 - Not reviewed in depth in this phase: CSRF configuration, session cookie flags, TOTP implementation, rate limiting in code, upload size and MIME validation, XSS in templates. These belong to the Phase 1 security review.
 
-## 8. Findings summary and priority
+## 8. Findings summary, priority and Phase 2 status
+
+Phase 2 status (this branch):
+
+| # | Finding | Status |
+|---|---|---|
+| 1 | Conflicting deployment documents | **Resolved in docs.** `DEPLOYMENT_GUIDE.md` is the single authoritative guide (Docker Compose). `DEPLOYMENT.md` is a pointer. Vercel is stated as not a production target. Stale head `20261116_0019` corrected to `20261117_0033` in `PRODUCTION_LAUNCH.md`, `ADMINISTRATOR_GUIDE.md` and `OPERA_ARCHITECTURE.md`. Not executed; document-only change. |
+| 2 | Punch categories hard-coded | **Deferred.** Changing `PunchCategory` into project configuration requires a model change, an Alembic migration, updates to number generation (`services/commissioning_number_service.py`), readiness policy (`commissioning_readiness_policy.py`), workflow (`workflow.py` lines ~958 and ~1291), demo seed and tests. This cannot be validated without installed dependencies and a PostgreSQL run, so it was not implemented on this branch. |
+| 3 | Test gaps | Open. No new tests written, because no test can be executed in this environment. |
+| 4 | Commissioning coverage gate below core gate | Open. |
+| 5 | No executed CI or lint evidence | Open. Dependencies could not be installed: the package index is unreachable from the audit environment. |
+| 6 | Marketing draft with fabricated metrics | Not in `main`. Keep it out. |
+| 7 | Advanced dependency types and critical path | Open. |
+
+Original priority list:
 
 | # | Finding | Priority |
 |---|---|---|
