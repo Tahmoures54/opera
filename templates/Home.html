@@ -103,44 +103,93 @@
   @media(max-width:900px){.opera-landing .op-hero-grid{grid-template-columns:1fr;gap:48px}.opera-landing .op-hero-copy{max-width:720px}.opera-landing .op-visual{width:min(100%,610px);margin-inline:auto}.opera-landing .op-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:600px){.opera-landing .op-shell{width:min(100% - 30px,520px)}.opera-landing .op-hero{padding:66px 0 65px}.opera-landing .op-hero h1{font-size:clamp(2.35rem,12vw,3.4rem)}.opera-landing .op-actions{display:grid;grid-template-columns:1fr}.opera-landing .op-actions .btn{width:100%}.opera-landing .op-dashboard{padding:12px;transform:none}.opera-landing .op-float{right:-5px;bottom:-22px}.opera-landing .op-feature-grid{grid-template-columns:1fr;gap:13px}.opera-landing .op-feature{min-height:0;padding:22px}.opera-landing .op-strip{grid-template-columns:repeat(2,1fr);margin-top:22px}.opera-landing .op-cta{align-items:flex-start;flex-direction:column}.opera-landing .op-cta:after{right:-80px}.opera-landing .op-cta-wrap{padding-bottom:60px}}
   @media(prefers-reduced-motion:reduce){.opera-landing *, .opera-landing *:before,.opera-landing *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+  /* Animated, image-led rotating hero banners */
+  .opera-landing .op-hero{padding:clamp(58px,8vw,104px) 0 clamp(62px,8vw,100px);min-height:690px;display:flex;align-items:center;background-position:center;background-image:linear-gradient(90deg,rgba(4,17,34,.80),rgba(5,25,47,.58) 52%,rgba(4,19,37,.72)),url("{{ url_for('static', filename='images/marketing/opera-hero.jpg') }}")}
+  .opera-landing .op-hero:before{opacity:.11}
+  .opera-landing .op-banner-wrap{position:relative;z-index:2;width:min(100%,1000px);margin:0 auto;text-align:center}
+  .opera-landing .op-banner-heading{margin:0 auto 24px;color:rgba(232,246,255,.78);font-size:.76rem;font-weight:850;letter-spacing:.2em;text-transform:uppercase}
+  .opera-landing .op-banner-stage{position:relative;min-height:390px;display:grid;place-items:center}
+  .opera-landing .op-banner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(25px,5vw,52px);border:1px solid rgba(226,242,255,.28);border-radius:26px;background:linear-gradient(135deg,rgba(7,25,48,.76),rgba(12,49,77,.58));box-shadow:0 24px 80px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.16);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);opacity:0;visibility:hidden;transform:translateY(22px) scale(.985);animation:op-banner-cycle 28s infinite}
+  .opera-landing .op-banner:nth-child(2){animation-delay:7s}
+  .opera-landing .op-banner:nth-child(3){animation-delay:14s}
+  .opera-landing .op-banner:nth-child(4){animation-delay:21s}
+  .opera-landing .op-banner-kicker{display:inline-flex;align-items:center;gap:9px;margin-bottom:17px;color:#83eee0;font-size:.78rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase}
+  .opera-landing .op-banner-kicker:before{content:"";width:7px;height:7px;border-radius:50%;background:#63e5d1;box-shadow:0 0 0 5px rgba(99,229,209,.13)}
+  .opera-landing .op-banner h1,.opera-landing .op-banner h2{max-width:850px;margin:0 0 16px;color:#fff;font-size:clamp(2rem,5vw,4.2rem);line-height:1.08;font-weight:850;letter-spacing:-.045em}
+  .opera-landing .op-banner h1 span,.opera-landing .op-banner h2 span{color:#78e5dc}
+  .opera-landing .op-banner p{max-width:780px;margin:0 auto;color:rgba(240,248,255,.88);font-size:clamp(.98rem,1.5vw,1.13rem);line-height:1.85}
+  .opera-landing .op-banner-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:25px}
+  .opera-landing .op-banner-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:13px 21px;border-radius:12px;font-weight:800;transition:transform .2s,box-shadow .2s}
+  .opera-landing .op-banner-actions .btn:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.2)}
+  .opera-landing .op-banner-primary{border:1px solid transparent;background:linear-gradient(110deg,#176de8,#0b9baf);color:#fff}
+  .opera-landing .op-banner-secondary{border:1px solid rgba(230,245,255,.42);background:rgba(255,255,255,.1);color:#fff}
+  .opera-landing .op-banner-pills{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:24px}
+  .opera-landing .op-banner-pills span{padding:9px 13px;border:1px solid rgba(220,240,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#f1fbff;font-size:.82rem;font-weight:750}
+  .opera-landing .op-banner-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:100%;margin-top:26px}
+  .opera-landing .op-banner-stat{padding:16px 10px;border:1px solid rgba(225,242,255,.2);border-radius:14px;background:rgba(255,255,255,.08)}
+  .opera-landing .op-banner-stat strong{display:block;color:#fff;font-size:clamp(1.35rem,3vw,2rem)}
+  .opera-landing .op-banner-stat small{color:rgba(238,248,255,.74);font-size:.78rem}
+  .opera-landing .op-banner-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:100%;margin-top:24px;text-align:left}
+  .opera-landing .op-banner-step{padding:13px 15px;border:1px solid rgba(225,242,255,.2);border-radius:13px;background:rgba(255,255,255,.075);color:#fff;font-size:.9rem;font-weight:750}
+  .opera-landing .op-banner-step small{display:block;margin-top:4px;color:rgba(238,248,255,.7);font-size:.76rem;font-weight:500}
+  .opera-landing .op-banner-foot{margin-top:18px;color:rgba(235,246,255,.72);font-size:.85rem}
+  .opera-landing .op-banner-progress{height:3px;width:min(100%,360px);margin:25px auto 0;overflow:hidden;border-radius:9px;background:rgba(255,255,255,.2)}
+  .opera-landing .op-banner-progress:after{content:"";display:block;width:25%;height:100%;background:#70e5dc;animation:op-banner-progress 7s linear infinite}
+  @keyframes op-banner-cycle{0%,2%{opacity:0;visibility:hidden;transform:translateY(22px) scale(.985)}5%,21%{opacity:1;visibility:visible;transform:translateY(0) scale(1)}25%,100%{opacity:0;visibility:hidden;transform:translateY(-16px) scale(.99)}}
+  @keyframes op-banner-progress{from{transform:translateX(-110%)}to{transform:translateX(410%)}}
+  @media(max-width:650px){.opera-landing .op-hero{min-height:690px;padding:55px 0}.opera-landing .op-banner-stage{min-height:470px}.opera-landing .op-banner{padding:24px 18px;border-radius:19px}.opera-landing .op-banner h1,.opera-landing .op-banner h2{font-size:clamp(1.8rem,9vw,2.8rem)}.opera-landing .op-banner-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.opera-landing .op-banner-steps{grid-template-columns:1fr;gap:8px}.opera-landing .op-banner-actions{display:grid;width:100%;grid-template-columns:1fr}.opera-landing .op-banner-actions .btn{width:100%}}
+  @media(prefers-reduced-motion:reduce){.opera-landing .op-banner{animation:none;opacity:1;visibility:visible;position:relative;transform:none}.opera-landing .op-banner:not(:first-child){display:none}.opera-landing .op-banner-progress:after{animation:none}}
+
 </style>
 <main class="opera-landing">
   <section class="op-hero">
-    <div class="op-shell op-hero-grid">
-      <div class="op-hero-copy">
-        <span class="op-kicker">Commissioning, under control</span>
-        <h1>Move every project milestone <span>forward with confidence.</span></h1>
-        <p class="op-lead">OPERA gives EPC and industrial teams one reliable workspace to plan commissioning, execute check sheets, resolve punch items and manage handover — with clear ownership and an auditable history.</p>
-        <div class="op-actions">
-          <a class="btn op-primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
-          <a class="btn op-secondary" href="{{ url_for('auth.login') }}">Sign in <i class="fas fa-sign-in-alt" aria-hidden="true"></i></a>
-        </div>
-        <div class="op-trust"><i class="fas fa-shield-alt" aria-hidden="true"></i> Built for project teams, commissioning engineers, QC and operations.</div>
-        <div class="op-hero-proof" aria-label="Connected commissioning capabilities"><span><i class="fas fa-sitemap" aria-hidden="true"></i> Project control</span><span><i class="fas fa-clipboard-check" aria-hidden="true"></i> Quality execution</span><span><i class="fas fa-file-signature" aria-hidden="true"></i> Traceable handover</span></div>
+    <div class="op-shell op-banner-wrap">
+      <div class="op-banner-heading">OPERA · Commissioning &amp; Start-up Workspace</div>
+      <div class="op-banner-stage" aria-label="OPERA features rotating banners">
+        <article class="op-banner">
+          <span class="op-banner-kicker">Commissioning, under control</span>
+          <h1>Move every project milestone <span>forward with confidence.</span></h1>
+          <p>OPERA gives EPC and industrial teams one reliable workspace to plan commissioning, execute check sheets, resolve punch items and manage handover — with clear ownership and an auditable history.</p>
+          <div class="op-banner-actions">
+            <a class="btn op-banner-primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+            <a class="btn op-banner-secondary" href="{{ url_for('auth.login') }}">Sign in <i class="fas fa-sign-in-alt" aria-hidden="true"></i></a>
+          </div>
+          <div class="op-banner-foot">Built for project teams, commissioning engineers, QC and operations.</div>
+        </article>
+        <article class="op-banner">
+          <span class="op-banner-kicker">One connected project view</span>
+          <h2>Every workstream. <span>One clear picture.</span></h2>
+          <p>Keep systems, inspections and outstanding work visible — with progress indicators that help teams understand where the project stands.</p>
+          <div class="op-banner-stats">
+            <div class="op-banner-stat"><strong>24</strong><small>Systems · Structured</small></div>
+            <div class="op-banner-stat"><strong>86</strong><small>Check sheets · Tracked</small></div>
+            <div class="op-banner-stat"><strong>12</strong><small>Punch items · In progress</small></div>
+            <div class="op-banner-stat"><strong>68%</strong><small>Illustrative readiness</small></div>
+          </div>
+          <div class="op-banner-pills"><span>Project control</span><span>Quality execution</span><span>Traceable handover</span></div>
+        </article>
+        <article class="op-banner">
+          <span class="op-banner-kicker">Quality execution</span>
+          <h2>From inspection to <span>verified close-out.</span></h2>
+          <p>Coordinate check sheet execution, QC verification, witness and hold points, punch ownership and closure — while keeping the supporting record connected to the work.</p>
+          <div class="op-banner-steps">
+            <div class="op-banner-step">Check sheet execution &amp; QC<small>Inspection, review and verification</small></div>
+            <div class="op-banner-step">Punch closure &amp; verification<small>Assigned ownership through close-out</small></div>
+          </div>
+        </article>
+        <article class="op-banner">
+          <span class="op-banner-kicker">Traceable handover</span>
+          <h2>Make readiness <span>visible and accountable.</span></h2>
+          <p>Organize project and system structure, then progress through MC, RFC, RFSU and handover with clear responsibilities and evidence-led milestones.</p>
+          <div class="op-banner-steps">
+            <div class="op-banner-step">Project &amp; system structure<small>Organized and assigned</small></div>
+            <div class="op-banner-step">MC, RFC, RFSU &amp; handover<small>Evidence-led readiness milestones</small></div>
+          </div>
+          <div class="op-banner-actions"><a class="btn op-banner-primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+        </article>
       </div>
-      <div class="op-visual" role="img" aria-label="Illustrative OPERA project overview dashboard showing systems, check sheets, punch items and overall readiness">
-        <div class="op-glow" aria-hidden="true"></div>
-        <div class="op-dashboard">
-          <div class="op-dash-head">
-            <div class="op-brand"><span class="op-brand-mark"><i class="fas fa-layer-group" aria-hidden="true"></i></span> OPERA <span class="op-dash-label">WORKSPACE</span></div>
-            <span class="op-dash-label">PROJECT OVERVIEW</span>
-          </div>
-          <div class="op-dash-title"><span>Commissioning overview</span><span class="op-status">On track</span></div>
-          <div class="op-metrics">
-            <div class="op-metric"><small>Systems</small><strong>24</strong><em><i class="fas fa-arrow-up" aria-hidden="true"></i> Structured</em></div>
-            <div class="op-metric"><small>Check sheets</small><strong>86</strong><em><i class="fas fa-check" aria-hidden="true"></i> Tracked</em></div>
-            <div class="op-metric"><small>Punch items</small><strong>12</strong><em>In progress</em></div>
-          </div>
-          <div class="op-progress"><div class="op-progress-top"><strong>Overall readiness</strong><span>68%</span></div><div class="op-progress-track"><i></i></div></div>
-          <div class="op-workflow">
-            <div class="op-workflow-row"><span class="op-workflow-icon"><i class="fas fa-sitemap" aria-hidden="true"></i></span><div><strong>Project &amp; system structure</strong><small>Organized and assigned</small></div></div>
-            <div class="op-workflow-row"><span class="op-workflow-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span><div><strong>Check sheet execution &amp; QC</strong><small>Inspection and verification</small></div></div>
-            <div class="op-workflow-row"><span class="op-workflow-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span><div><strong>Punch closure &amp; verification</strong><small>Ownership through close-out</small></div></div>
-            <div class="op-workflow-row"><span class="op-workflow-icon"><i class="fas fa-flag-checkered" aria-hidden="true"></i></span><div><strong>MC, RFC, RFSU &amp; handover</strong><small>Evidence-led readiness milestones</small></div></div>
-          </div>
-        </div>
-        <div class="op-float"><span class="op-float-icon"><i class="fas fa-check-double" aria-hidden="true"></i></span><span><strong>Traceable by design</strong><small>Clear actions. Accountable teams.</small></span></div>
-      </div>
+      <div class="op-banner-progress" aria-hidden="true"></div>
     </div>
   </section>
 
