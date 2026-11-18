@@ -2502,3 +2502,79 @@ def test_numeric_checksheet_measurement_limits_and_audit(client, app, opera_setu
         }]),
     })
     assert missing_unit.status_code == 400
+
+
+def _open_punch(app, opera_setup, status=PunchStatus.OPEN, number="FLOW-01-PUNCH-B-00901"):
+    with app.app_context():
+        punch = PunchItem(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], punch_number=number,
+            category=PunchCategory.B, severity=PunchSeverity.HIGH,
+            description="Leaking flange", raised_by_id=opera_setup["manager"],
+            status=status,
+        )
+        db.session.add(punch)
+        db.session.commit()
+        return punch.id
+
+
+def test_punch_waiver_requires_verify_permission(client, app, opera_setup):
+    from models import User
+    punch_id = _open_punch(app, opera_setup)
+    with app.app_context():
+        engineer_like = db.session.get(User, opera_setup["viewer"])
+    _login(client, engineer_like)
+    response = client.post(
+        f"/commissioning/punch/{punch_id}/transition",
+        data={"status": "WAIVED", "reason": "Accepted by client"},
+    )
+    assert response.status_code == 403
+    with app.app_context():
+        assert db.session.get(PunchItem, punch_id).status == PunchStatus.OPEN
+
+
+def test_punch_waiver_requires_reason_and_records_authority(client, app, opera_setup):
+    from models import User
+    punch_id = _open_punch(app, opera_setup)
+    with app.app_context():
+        qc = db.session.get(User, opera_setup["qc"])
+    _login(client, qc)
+
+    missing = client.post(f"/commissioning/punch/{punch_id}/transition", data={"status": "WAIVED"})
+    assert missing.status_code == 400
+    with app.app_context():
+        assert db.session.get(PunchItem, punch_id).status == PunchStatus.OPEN
+
+    ok = client.post(
+        f"/commissioning/punch/{punch_id}/transition",
+        data={"status": "WAIVED", "reason": "Client accepted deviation in writing"},
+    )
+    assert ok.status_code == 302
+    with app.app_context():
+        punch = db.session.get(PunchItem, punch_id)
+        assert punch.status == PunchStatus.WAIVED
+        assert punch.waiver_reason == "Client accepted deviation in writing"
+        assert punch.waived_by_id == qc.id
+        assert punch.waived_at is not None
+        history = PunchHistory.query.filter_by(punch_item_id=punch_id, new_status=PunchStatus.WAIVED).one()
+        assert history.remarks.startswith("Waived: Client accepted deviation")
+        audit = CommissioningAuditLog.query.filter_by(
+            entity_type="PunchItem", entity_id=punch_id, action="PUNCH_STATUS_CHANGED",
+        ).all()
+        assert any(entry.after_json.get("status") == "WAIVED" for entry in audit)
+
+
+def test_waived_punch_cannot_transition_further(client, app, opera_setup):
+    from models import User
+    punch_id = _open_punch(app, opera_setup, status=PunchStatus.WAIVED, number="FLOW-01-PUNCH-B-00902")
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+    _login(client, manager)
+    for target in ("IN_PROGRESS", "CLOSED", "VERIFIED"):
+        response = client.post(
+            f"/commissioning/punch/{punch_id}/transition",
+            data={"status": target, "corrective_action": "Re-tightened", "reason": "reopen"},
+        )
+        assert response.status_code == 409, target
+    with app.app_context():
+        assert db.session.get(PunchItem, punch_id).status == PunchStatus.WAIVED
