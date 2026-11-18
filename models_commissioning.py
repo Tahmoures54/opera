@@ -8,7 +8,7 @@ from datetime import datetime
 import enum
 
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, UniqueConstraint
-from sqlalchemy.orm import synonym
+from sqlalchemy.orm import synonym, validates
 from extensions import db
 
 
@@ -488,6 +488,8 @@ class PunchItem(db.Model):
     check_sheet_id = db.Column(db.Integer, db.ForeignKey("commissioning_check_sheet.id", ondelete="RESTRICT"))
     punch_number = db.Column(db.String(100), nullable=False)
     category = db.Column(_enum(PunchCategory, "commissioning_punch_category"), nullable=False)
+    # Project-defined category code (P1: additive; read paths still use `category`).
+    category_code = db.Column(db.String(8), nullable=True)
     severity = db.Column(_enum(PunchSeverity, "commissioning_punch_severity"), nullable=False, default=PunchSeverity.MEDIUM)
     description = db.Column(db.Text, nullable=False)
     raised_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
@@ -506,6 +508,63 @@ class PunchItem(db.Model):
     photos_json = db.Column(db.JSON)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+PUNCH_CATEGORY_CODE_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
+PUNCH_CATEGORY_CODE_MAX_LENGTH = 8
+PUNCH_CATEGORY_LABEL_MAX_LENGTH = 120
+
+
+def validate_punch_category_code(code):
+    """Codes are 1-8 characters from A-Z, 0-9, underscore or hyphen.
+
+    Restricting the alphabet keeps punch numbers unambiguous and avoids
+    lookalike or non-Latin codes in exports and audit records.
+    """
+    if (
+        not isinstance(code, str)
+        or not 1 <= len(code) <= PUNCH_CATEGORY_CODE_MAX_LENGTH
+        or any(char not in PUNCH_CATEGORY_CODE_ALPHABET for char in code)
+    ):
+        raise ValueError(
+            "Punch category code must be 1-8 characters: A-Z, 0-9, underscore or hyphen"
+        )
+    return code
+
+
+class CommissioningPunchCategory(db.Model):
+    """A project-defined Punch category. Rows are tenant- and project-scoped.
+
+    Inactive categories cannot be selected for new items but remain valid for
+    existing items and history.
+    """
+    __tablename__ = "commissioning_punch_category"
+    __table_args__ = (
+        ForeignKeyConstraint(["project_id", "company_name"], ["commissioning_project.id", "commissioning_project.company_name"], name="fk_comm_punch_category_project_tenant"),
+        UniqueConstraint("project_id", "code", name="uq_comm_punch_category_project_code"),
+        Index("ix_comm_punch_category_company_project", "company_name", "project_id"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, nullable=False)
+    code = db.Column(db.String(PUNCH_CATEGORY_CODE_MAX_LENGTH), nullable=False)
+    label = db.Column(db.String(PUNCH_CATEGORY_LABEL_MAX_LENGTH), nullable=False)
+    description = db.Column(db.Text)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @validates("code")
+    def _validate_code(self, key, value):
+        return validate_punch_category_code(value)
+
+    @validates("label")
+    def _validate_label(self, key, value):
+        if not isinstance(value, str) or not value.strip() or len(value.strip()) > PUNCH_CATEGORY_LABEL_MAX_LENGTH:
+            raise ValueError("Punch category label is required and must be at most 120 characters")
+        return value.strip()
 
 
 class PunchHistory(db.Model):
