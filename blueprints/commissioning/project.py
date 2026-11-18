@@ -10,6 +10,7 @@ from models_commissioning import (
     CommissioningSubsystem, CommissioningEquipment, CheckSheet, PunchItem, HandoverPackage, MembershipRole, ProjectStatus, PunchCategory, CheckSheetType,
 )
 from services.commissioning_access import add_audit_event, get_project, has_permission
+from services.commissioning_punch_categories import ensure_default_punch_categories
 from services.commissioning_readiness_policy import GATES, normalize_readiness_policy
 from blueprints.commissioning import commissioning_bp
 
@@ -86,6 +87,7 @@ def create_project():
             is_active=True,
             created_by_id=current_user.id,
         ))
+        ensure_default_punch_categories(current_user.company_name, project.id, created_by_id=current_user.id)
         add_audit_event(current_user.company_name, "CommissioningProject", project.id, "PROJECT_CREATED", after={"project_code": code, "name": name})
         db.session.commit()
         flash("OPERA project created successfully.", "success")
