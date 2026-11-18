@@ -6,22 +6,26 @@
   .opera-landing{--op-ink:#10233f;--op-muted:#60718a;--op-blue:#2463eb;--op-cyan:#45d5d0;--op-line:rgba(117,145,184,.2);color:var(--op-ink);overflow:hidden}
   .opera-landing *{box-sizing:border-box}
   .opera-landing .op-shell{width:min(1160px,calc(100% - 44px));margin-inline:auto}
-  .opera-landing .op-hero{position:relative;padding:clamp(76px,10vw,132px) 0 88px;background:radial-gradient(ellipse at 78% 18%,rgba(74,137,255,.17),transparent 35%),radial-gradient(ellipse at 8% 78%,rgba(53,209,199,.12),transparent 30%),linear-gradient(145deg,#f7faff 0%,#edf4ff 54%,#f8fbff 100%)}
-  .opera-landing .op-hero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.34;background-image:linear-gradient(rgba(67,104,158,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(67,104,158,.055) 1px,transparent 1px);background-size:42px 42px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 55%,#000);mask-image:linear-gradient(90deg,transparent,#000 55%,#000)}
-  .opera-landing .op-hero-grid{position:relative;display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(42px,7vw,90px);align-items:center}
-  .opera-landing .op-kicker{display:inline-flex;align-items:center;gap:10px;padding:8px 13px;border:1px solid rgba(36,99,235,.16);border-radius:999px;background:rgba(255,255,255,.72);color:#2858a9;font-size:.78rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 8px 26px rgba(39,83,150,.06)}
+  .opera-landing .op-hero{position:relative;isolation:isolate;padding:clamp(76px,10vw,132px) 0 88px;background-color:#10243d;background-image:linear-gradient(105deg,rgba(5,18,34,.91) 0%,rgba(8,29,52,.78) 48%,rgba(7,31,53,.56) 100%),url("{{ url_for('static', filename='images/marketing/opera-hero.jpg') }}");background-size:cover;background-position:center 48%;background-repeat:no-repeat}
+  .opera-landing .op-hero:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.16;background-image:linear-gradient(rgba(210,231,255,.15) 1px,transparent 1px),linear-gradient(90deg,rgba(210,231,255,.15) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 45%,#000);mask-image:linear-gradient(90deg,transparent,#000 45%,#000)}
+  .opera-landing .op-hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(42px,7vw,90px);align-items:center}
+  .opera-landing .op-kicker{display:inline-flex;align-items:center;gap:10px;padding:8px 13px;border:1px solid rgba(174,222,255,.28);border-radius:999px;background:rgba(7,24,44,.48);color:#d7f7ff;font-size:.78rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 8px 26px rgba(39,83,150,.06)}
   .opera-landing .op-kicker:before{content:"";width:7px;height:7px;border-radius:50%;background:#24b8a9;box-shadow:0 0 0 5px rgba(36,184,169,.13)}
-  .opera-landing .op-hero h1{max-width:650px;margin:22px 0 20px;font-size:clamp(2.55rem,5.3vw,4.65rem);line-height:1.04;letter-spacing:-.055em;font-weight:850;color:#10213b}
-  .opera-landing .op-hero h1 span{background:linear-gradient(100deg,#2463eb 10%,#168fba 55%,#18a99b);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .opera-landing .op-lead{max-width:590px;color:#596d87;font-size:clamp(1.02rem,1.5vw,1.15rem);line-height:1.85}
+  .opera-landing .op-hero h1{max-width:650px;margin:22px 0 20px;font-size:clamp(2.55rem,5.3vw,4.65rem);line-height:1.04;letter-spacing:-.055em;font-weight:850;color:#fff}
+  .opera-landing .op-hero h1 span{background:linear-gradient(100deg,#8bdcff 10%,#62e4db 55%,#b6f6d8);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .opera-landing .op-lead{max-width:590px;color:rgba(239,247,255,.86);font-size:clamp(1.02rem,1.5vw,1.15rem);line-height:1.85}
   .opera-landing .op-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
   .opera-landing .op-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:11px;padding:13px 21px;border-radius:12px;font-weight:750;box-shadow:none;transition:transform .2s ease,box-shadow .2s ease}
   .opera-landing .op-actions .btn:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(36,99,235,.2)}
-  .opera-landing .op-primary{color:#fff;background:linear-gradient(110deg,#245ee8,#247edc);border:1px solid transparent}
-  .opera-landing .op-secondary{color:#18345c;background:rgba(255,255,255,.8);border:1px solid rgba(88,119,166,.25)}
-  .opera-landing .op-trust{display:flex;align-items:center;gap:10px;margin-top:25px;color:#71829a;font-size:.88rem}
-  .opera-landing .op-trust i{color:#1aa795}
+  .opera-landing .op-primary{color:#fff;background:linear-gradient(110deg,#176de8,#0b9baf);border:1px solid transparent}
+  .opera-landing .op-secondary{color:#18345c;background:rgba(255,255,255,.12);border:1px solid rgba(218,237,255,.35);color:#fff}
+  .opera-landing .op-trust{display:flex;align-items:center;gap:10px;margin-top:25px;color:rgba(232,243,255,.78);font-size:.88rem}
+  .opera-landing .op-trust i{color:#63e5d1}
   .opera-landing .op-visual{position:relative;perspective:1100px;animation:op-rise .8s both}
+  .opera-landing .op-hero-proof{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
+  .opera-landing .op-hero-proof span{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid rgba(216,237,255,.2);border-radius:999px;background:rgba(5,24,44,.38);color:rgba(240,248,255,.9);font-size:.76rem;font-weight:700;backdrop-filter:blur(8px)}
+  .opera-landing .op-hero-proof i{color:#6de1d4}
+  @media(max-width:600px){.opera-landing .op-hero-proof{gap:7px}.opera-landing .op-hero-proof span{font-size:.7rem;padding:7px 9px}}
   .opera-landing .op-glow{position:absolute;inset:9% 3%;border-radius:35px;background:linear-gradient(135deg,rgba(49,112,238,.27),rgba(37,202,190,.2));filter:blur(38px);transform:translateY(20px)}
   .opera-landing .op-dashboard{position:relative;padding:18px;border:1px solid rgba(255,255,255,.9);border-radius:23px;background:rgba(255,255,255,.88);box-shadow:0 35px 90px rgba(30,67,124,.18),0 4px 18px rgba(30,67,124,.07);transform:rotateY(-5deg) rotateX(2deg);backdrop-filter:blur(12px)}
   .opera-landing .op-dash-head{display:flex;justify-content:space-between;align-items:center;padding:4px 3px 17px;border-bottom:1px solid #eaf0f8}
@@ -112,6 +116,7 @@
           <a class="btn op-secondary" href="{{ url_for('auth.login') }}">Sign in <i class="fas fa-sign-in-alt" aria-hidden="true"></i></a>
         </div>
         <div class="op-trust"><i class="fas fa-shield-alt" aria-hidden="true"></i> Built for project teams, commissioning engineers, QC and operations.</div>
+        <div class="op-hero-proof" aria-label="Connected commissioning capabilities"><span><i class="fas fa-sitemap" aria-hidden="true"></i> Project control</span><span><i class="fas fa-clipboard-check" aria-hidden="true"></i> Quality execution</span><span><i class="fas fa-file-signature" aria-hidden="true"></i> Traceable handover</span></div>
       </div>
       <div class="op-visual" role="img" aria-label="Illustrative OPERA project overview dashboard showing systems, check sheets, punch items and overall readiness">
         <div class="op-glow" aria-hidden="true"></div>
