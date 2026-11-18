@@ -141,6 +141,34 @@
   @media(max-width:650px){.opera-landing .op-hero{min-height:690px;padding:55px 0}.opera-landing .op-banner-stage{min-height:470px}.opera-landing .op-banner{padding:24px 18px;border-radius:19px}.opera-landing .op-banner h1,.opera-landing .op-banner h2{font-size:clamp(1.8rem,9vw,2.8rem)}.opera-landing .op-banner-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.opera-landing .op-banner-steps{grid-template-columns:1fr;gap:8px}.opera-landing .op-banner-actions{display:grid;width:100%;grid-template-columns:1fr}.opera-landing .op-banner-actions .btn{width:100%}}
   @media(prefers-reduced-motion:reduce){.opera-landing .op-banner{animation:none;opacity:1;visibility:visible;position:relative;transform:none}.opera-landing .op-banner:not(:first-child){display:none}.opera-landing .op-banner-progress:after{animation:none}}
 
+  /* Industrial typography and a controlled left-to-right banner sequence */
+  .opera-landing{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  .opera-landing .op-banner-heading{font-weight:650;letter-spacing:.16em}
+  .opera-landing .op-banner-stage{overflow:hidden;isolation:isolate}
+  .opera-landing .op-banner{will-change:transform,opacity;backface-visibility:hidden;animation-name:op-banner-slide-ltr;animation-duration:28s;animation-timing-function:cubic-bezier(.22,.72,.22,1);animation-iteration-count:infinite}
+  .opera-landing .op-banner-stage:hover .op-banner,.opera-landing .op-banner-stage:focus-within .op-banner,.opera-landing .op-banner-stage:hover .op-banner-progress:after{animation-play-state:paused}
+  .opera-landing .op-banner-kicker{font-weight:650;letter-spacing:.12em}
+  .opera-landing .op-banner h1,.opera-landing .op-banner h2{font-weight:720;letter-spacing:-.028em;line-height:1.12}
+  .opera-landing .op-banner p{font-weight:400;letter-spacing:0;line-height:1.75}
+  .opera-landing .op-banner-actions .btn{font-weight:650;letter-spacing:.005em}
+  .opera-landing .op-banner-pills span,.opera-landing .op-banner-step{font-weight:600}
+  .opera-landing .op-banner-stat strong{font-weight:700;font-variant-numeric:tabular-nums}
+  .opera-landing .op-banner-stat small,.opera-landing .op-banner-step small{font-weight:450}
+  @keyframes op-banner-slide-ltr{
+    0%,2%{opacity:0;visibility:hidden;transform:translate3d(-105%,0,0)}
+    5%,21%{opacity:1;visibility:visible;transform:translate3d(0,0,0)}
+    25%,100%{opacity:0;visibility:hidden;transform:translate3d(105%,0,0)}
+  }
+  @media(max-width:650px){
+    .opera-landing .op-banner-stage{overflow:hidden}
+    .opera-landing .op-banner{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .opera-landing .op-banner-heading{font-size:.7rem;letter-spacing:.12em}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .opera-landing .op-banner{will-change:auto;animation:none}
+    .opera-landing .op-banner:not(:first-child){display:none}
+  }
+
 </style>
 <main class="opera-landing">
   <section class="op-hero">
