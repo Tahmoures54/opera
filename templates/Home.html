@@ -78,12 +78,12 @@
     isolation: isolate;
     display: flex;
     align-items: center;
-    min-height: 0;
-    padding: clamp(60px, 8vw, 104px) 0 clamp(64px, 8vw, 100px);
+    min-height: clamp(480px, 62vh, 600px);
+    padding: clamp(40px, 5.5vw, 64px) 0;
     color: #fff;
     background:
-      linear-gradient(90deg, rgba(4, 17, 34, .84), rgba(5, 25, 47, .6) 55%, rgba(4, 19, 37, .76)),
-      var(--op-hero-img, none) center / cover no-repeat,
+      linear-gradient(90deg, rgba(4, 17, 34, .82), rgba(5, 25, 47, .52) 55%, rgba(4, 19, 37, .7)),
+      var(--op-hero-img, none) center 40% / cover no-repeat,
       #10243d;
   }
   .opera-landing .op-hero::before {
@@ -126,7 +126,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: clamp(24px, 4.5vw, 50px);
+    padding: clamp(22px, 3.5vw, 40px);
     border: 1px solid rgba(226, 242, 255, .26);
     border-radius: 26px;
     background: linear-gradient(135deg, rgba(7, 25, 48, .8), rgba(12, 49, 77, .6));
@@ -173,7 +173,7 @@
     max-width: 850px;
     margin: 0 0 16px;
     color: #fff;
-    font-size: clamp(2rem, 5vw, 4.1rem);
+    font-size: clamp(1.9rem, 4vw, 3.3rem);
     font-weight: 720;
     line-height: 1.1;
     letter-spacing: -.028em;
@@ -206,10 +206,10 @@
   /* Capability tiles (slide 2) */
   .opera-landing .op-capabilities {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
     width: 100%;
-    margin-top: 26px;
+    margin-top: 22px;
     text-align: left;
   }
   .opera-landing .op-capability {
@@ -493,11 +493,12 @@
   /* ---------- Responsive ---------- */
   @media (max-width: 900px) {
     .opera-landing .op-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .opera-landing .op-capabilities { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   @media (max-width: 650px) {
     .opera-landing .op-shell { width: min(100% - 30px, 520px); }
-    .opera-landing .op-hero { padding: 52px 0 60px; }
+    .opera-landing .op-hero { min-height: 0; padding: 40px 0 48px; }
     .opera-landing .op-slide { padding: 24px 18px; border-radius: 19px; }
     .opera-landing .op-slide h1,
     .opera-landing .op-slide h2 { font-size: clamp(1.8rem, 9vw, 2.6rem); }
