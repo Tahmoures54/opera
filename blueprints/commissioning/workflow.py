@@ -266,6 +266,7 @@ def operations(project_id):
     sheets = CheckSheet.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(CheckSheet.created_at.desc()).all()
     punches = PunchItem.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(PunchItem.raised_at.desc()).all()
     witnesses = WitnessPoint.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(WitnessPoint.scheduled_at.desc()).all()
+    witness_ids = [item.id for item in witnesses]
     packages = HandoverPackage.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(HandoverPackage.created_at.desc()).all()
     snapshots = ProgressSnapshot.query.filter_by(company_name=project.company_name, project_id=project.id).order_by(ProgressSnapshot.snapshot_date.desc()).limit(12).all()
     members = CommissioningMembership.query.filter_by(company_name=project.company_name, project_id=project.id, is_active=True).all()
@@ -282,8 +283,8 @@ def operations(project_id):
         certificates_by_package.setdefault(certificate.package_id, {})[certificate_key] = certificate
     evidence = CommissioningAttachment.query.filter(
         CommissioningAttachment.company_name == project.company_name,
-        CommissioningAttachment.entity_type.in_(["PunchItem", "HandoverPackage"]),
-        CommissioningAttachment.entity_id.in_(punch_ids + package_ids or [-1]),
+        CommissioningAttachment.entity_type.in_(["PunchItem", "HandoverPackage", "WitnessPoint"]),
+        CommissioningAttachment.entity_id.in_(punch_ids + package_ids + witness_ids or [-1]),
     ).order_by(CommissioningAttachment.uploaded_at.desc()).all()
     evidence_by_entity = {}
     for attachment in evidence:
@@ -320,6 +321,8 @@ def operations(project_id):
         can_manage_structure=has_permission(project.id, "structure.manage"),
         can_view_preservation=any(has_permission(project.id, p) for p in ("preservation.view", "preservation.manage")),
         can_upload_handover_evidence=any(has_permission(project.id, p) for p in ("handover.manage", "handover.accept")),
+        can_upload_witness_evidence=any(has_permission(project.id, p) for p in ("witness.manage", "witness.attend")),
+        can_view_witness_evidence=any(has_permission(project.id, p) for p in ("witness.view", "witness.manage", "witness.attend")),
         witness_items=CheckSheetItem.query.join(CheckSheet, CheckSheet.id == CheckSheetItem.check_sheet_id).filter(CheckSheet.company_name == project.company_name, CheckSheet.project_id == project.id).order_by(CheckSheet.sheet_number, CheckSheetItem.sequence).all(),
         sheet_types=list(CheckSheetType), checksheet_templates=checksheet_templates,
         can_manage_templates=has_permission(project.id, "checksheets.manage"), equipment=equipment,
@@ -1118,6 +1121,19 @@ def transition_witness(witness_id):
     _need(witness.project_id, "witness.attend", "witness.manage", "project.manage")
     target = _enum(WitnessStatus, _required("status", 20), "witness status")
     old_status = witness.status
+    now = datetime.utcnow()
+    remarks = (request.form.get("remarks") or "").strip()
+    witness_evidence = CommissioningAttachment.query.filter_by(
+        company_name=witness.company_name, entity_type="WitnessPoint", entity_id=witness.id,
+    ).order_by(CommissioningAttachment.uploaded_at, CommissioningAttachment.id).all()
+    evidence_snapshot = [
+        {
+            "id": item.id, "filename": item.filename, "sha256": item.checksum,
+            "file_size": item.file_size,
+            "uploaded_at": item.uploaded_at.isoformat() if item.uploaded_at else None,
+        }
+        for item in witness_evidence
+    ]
     before = {
         "status": old_status.value, "notified_party": witness.notified_party,
         "notified_at": witness.notified_at.isoformat() if witness.notified_at else None,
@@ -1125,10 +1141,8 @@ def transition_witness(witness_id):
         "attended_at": witness.attended_at.isoformat() if witness.attended_at else None,
         "result": witness.result, "released_by_id": witness.released_by_id,
         "released_at": witness.released_at.isoformat() if witness.released_at else None,
-        "remarks": witness.remarks,
+        "remarks": witness.remarks, "evidence": evidence_snapshot,
     }
-    now = datetime.utcnow()
-    remarks = (request.form.get("remarks") or "").strip()
     if target == WitnessStatus.ATTENDED:
         if not has_permission(witness.project_id, "witness.attend"):
             abort(403)
@@ -1174,7 +1188,7 @@ def transition_witness(witness_id):
         "attended_at": witness.attended_at.isoformat() if witness.attended_at else None,
         "result": witness.result, "released_by_id": witness.released_by_id,
         "released_at": witness.released_at.isoformat() if witness.released_at else None,
-        "remarks": witness.remarks,
+        "remarks": witness.remarks, "evidence": evidence_snapshot,
     }
     add_audit_event(
         witness.company_name, "WitnessPoint", witness.id, "WITNESS_STATUS_CHANGED",
@@ -1510,6 +1524,10 @@ _ATTACHMENT_PERMISSIONS = {
         "upload": ("preservation.execute", "preservation.manage"),
         "view": ("preservation.view", "preservation.execute", "preservation.manage", "project.manage"),
     },
+    "WitnessPoint": {
+        "upload": ("witness.manage", "witness.attend"),
+        "view": ("witness.view", "witness.manage", "witness.attend", "project.manage"),
+    },
 }
 
 
@@ -1539,6 +1557,11 @@ def _attachment_entity(entity_type, entity_id):
             id=entity_id, company_name=current_user.company_name
         ).first_or_404()
         return entity, entity.project_id
+    if entity_type == "WitnessPoint":
+        entity = WitnessPoint.query.filter_by(
+            id=entity_id, company_name=current_user.company_name
+        ).first_or_404()
+        return entity, entity.project_id
     abort(404)
 
 
@@ -1559,6 +1582,8 @@ def upload_evidence(entity_type, entity_id):
         abort(409, description="Accepted handover packages are immutable")
     if entity_type == "CommissioningDocument" and entity.status not in (DocumentStatus.DRAFT, DocumentStatus.REJECTED):
         abort(409, description="Evidence can only be added to draft or rejected document revisions")
+    if entity_type == "WitnessPoint" and entity.status in (WitnessStatus.RELEASED, WitnessStatus.CANCELLED):
+        abort(409, description="Released or cancelled inspection points are immutable; create a new point for additional evidence")
     metadata = store_commissioning_upload(
         request.files.get("file"), company_name=current_user.company_name,
         entity_type=entity_type, entity_id=entity_id, uploaded_by_id=current_user.id,

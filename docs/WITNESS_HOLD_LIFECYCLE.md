@@ -33,7 +33,8 @@ An attended point cannot be cancelled or silently reopened. HOLD points cannot b
 - HOLD points block configured MC/RFC/RFSU readiness gates while not released or cancelled.
 - REVIEW points are tracked for review traceability; they do not automatically become a HOLD point.
 - The application does not infer acceptance criteria, witness notice periods, waiver authority or statutory inspection rules. These must be defined by approved project procedures and the ITP.
-- WitnessPoint does not yet have dedicated file-evidence attachments; the release note and audit trail are recorded, but supporting ITP evidence must remain in the controlled document/check-sheet record until that linkage is implemented.
+- Supporting files may be attached to a WITNESS/HOLD/REVIEW point before release. OPERA records filename, SHA-256 checksum, file size and upload time; the release audit snapshot captures the evidence set present at release.
+- QC Inspectors may upload and view evidence; users with witness-view authority may view it. Released/cancelled points reject further uploads. Evidence storage remains subject to the configured private local/S3 storage backend and backup policy.
 - Authenticated user attribution is an application audit record, not a qualified electronic signature.
 
 Production acceptance still requires project-specific role/authority approval, staging execution, database migration rehearsal and audit/evidence retention verification.

@@ -292,6 +292,88 @@ def test_witness_hold_lifecycle_requires_notification_release_and_cancellation_r
         assert cancel_point.remarks.startswith("Procedure superseded")
 
 
+def test_witness_evidence_upload_download_release_snapshot_and_immutability(client, app, opera_setup, tmp_path):
+    from io import BytesIO
+
+    app.config["OPERA_UPLOAD_DIR"] = str(tmp_path)
+    with app.app_context():
+        manager = db.session.get(User, opera_setup["manager"])
+        sheet = CheckSheet(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            sheet_number="FLOW-01-WIT-EVD", sheet_type=CheckSheetType.COMM_C,
+            title="Witness evidence test", created_by_id=manager.id,
+        )
+        db.session.add(sheet)
+        db.session.commit()
+        sheet_id, manager_id, qc_id = sheet.id, manager.id, opera_setup["qc"]
+        project_id = opera_setup["project"]
+
+    _login_id(client, manager_id)
+    response = client.post(f"/commissioning/projects/{project_id}/witness", data={
+        "check_sheet_id": sheet_id, "type": WitnessType.WITNESS.value,
+        "notified_party": "Client QC", "scheduled_at": "2026-11-20T10:00",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        witness = WitnessPoint.query.filter_by(check_sheet_id=sheet_id).one()
+        witness_id = witness.id
+
+    upload_url = f"/commissioning/evidence/WitnessPoint/{witness_id}"
+    payload = b"%PDF-1.7\\nWitness inspection evidence"
+    uploaded = client.post(upload_url, data={
+        "file": (BytesIO(payload), "witness-report.pdf"),
+    }, content_type="multipart/form-data")
+    assert uploaded.status_code == 302
+    with app.app_context():
+        attachment = CommissioningAttachment.query.filter_by(
+            entity_type="WitnessPoint", entity_id=witness_id,
+        ).one()
+        attachment_id, checksum = attachment.id, attachment.checksum
+        assert len(checksum) == 64
+
+    downloaded = client.get(f"/commissioning/evidence/{attachment_id}")
+    assert downloaded.status_code == 200
+    assert downloaded.data == payload
+    assert downloaded.headers["Cache-Control"] == "private, no-store"
+
+    _login_id(client, qc_id)
+    assert client.get(f"/commissioning/evidence/{attachment_id}").status_code == 200
+
+    _login_id(client, opera_setup["viewer"])
+    assert client.get(f"/commissioning/evidence/{attachment_id}").status_code == 200
+    response = client.post(upload_url, data={
+        "file": (BytesIO(payload), "unauthorized.pdf"),
+    }, content_type="multipart/form-data")
+    assert response.status_code == 403
+
+    _login_id(client, manager_id)
+    transition = f"/commissioning/witness/{witness_id}/transition"
+    assert client.post(transition, data={"status": "NOTIFIED"}).status_code == 302
+    _login_id(client, qc_id)
+    assert client.post(transition, data={"status": "ATTENDED", "result": "ACCEPTED"}).status_code == 302
+    _login_id(client, manager_id)
+    released = client.post(transition, data={
+        "status": "RELEASED", "remarks": "Released after review of attached inspection report.",
+    })
+    assert released.status_code == 302
+    with app.app_context():
+        event = CommissioningAuditLog.query.filter_by(
+            entity_type="WitnessPoint", entity_id=witness_id,
+            action="WITNESS_STATUS_CHANGED",
+        ).order_by(CommissioningAuditLog.id.desc()).first()
+        assert event.after_json["evidence"] == [{
+            "id": attachment_id, "filename": "witness-report.pdf",
+            "sha256": checksum, "file_size": len(payload),
+            "uploaded_at": CommissioningAttachment.query.get(attachment_id).uploaded_at.isoformat(),
+        }]
+
+    response = client.post(upload_url, data={
+        "file": (BytesIO(payload), "late-evidence.pdf"),
+    }, content_type="multipart/form-data")
+    assert response.status_code == 409
+
+
 def test_viewer_cannot_transition_punch_status(client, app, opera_setup):
     from models import User
     with app.app_context():
