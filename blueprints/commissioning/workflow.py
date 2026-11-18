@@ -959,7 +959,8 @@ def create_punch(project_id):
     punch = PunchItem(
         company_name=project.company_name, project_id=project.id, subsystem_id=subsystem.id,
         punch_number=next_punch_number(project.company_name, project.project_code, category),
-        category=category, severity=_enum(PunchSeverity, request.form.get("severity") or "MEDIUM", "severity"),
+        category=category, category_code=category.value,
+        severity=_enum(PunchSeverity, request.form.get("severity") or "MEDIUM", "severity"),
         description=_required("description"), raised_by_id=current_user.id,
         target_closure_date=_date("target_closure_date"),
     )
