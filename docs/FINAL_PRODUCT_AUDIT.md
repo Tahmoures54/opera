@@ -49,7 +49,7 @@ Additional mismatch: `services/commissioning_storage.py` implements an **S3 back
 | Project → System → Subsystem → Equipment hierarchy | `models_commissioning.py` (1173 lines) | Implemented, insufficiently tested (structure tests unverified) |
 | Task Register with CCK / STS / PIP / PRC / FTS / OTS / PVP codes | Referenced in `models_commissioning.py` and `workflow.py`; activity-code catalogue configurability not verified | Partially implemented (catalogue configurability not confirmed) |
 | Check sheets with independent QC, two-party sign-off, immutability after sign-off | `workflow.py` (2787 lines); revision model in `models_commissioning.py` | Implemented, needs execution-level verification |
-| Punch A/B/C/D | `PunchCategory` enum `A`… in `models_commissioning.py` (line 84). Brief requires project-configurable categories; enum is hard-coded. | **Partially implemented**: category meanings are not project-configurable |
+| Punch A/B/C/D | `PunchCategory` enum (`models_commissioning.py` line 84) fixes the category set. Gate blocking is already project-configurable: `punch_blocking_categories` per gate in `services/commissioning_readiness_policy.py`, applied in `blueprints/commissioning/workflow.py` (`open_critical`). Category labels and meanings are not configurable. | **Partially implemented**: blocking rules configurable (tested); category set and meanings fixed |
 | Witness / Hold / Review points | `WitnessPoint`, `WitnessStatus`, `transition_witness` in `workflow.py` (line 1117). Release requires `witness.manage` permission and a non-empty release note. | Implemented, insufficiently tested |
 | Hold point blocks readiness | `services/commissioning_readiness.py` `_open_hold_points`, gate-specific via `hold_point_blocking_gates` policy | Implemented, policy-configurable |
 | MC and RFC certificates, RFSU gate | `services/commissioning_readiness.py` (MC, RFC, RFSU evaluation); `RFC` certificate per `20261117_0026_rfc_certificate_lifecycle` | Implemented, insufficiently tested |
@@ -75,7 +75,7 @@ Additional mismatch: `services/commissioning_storage.py` implements an **S3 back
 | A. Project systemization (hierarchy, ownership, boundaries) | Hierarchy and models exist; ownership and completion-responsibility fields not verified | Partially implemented |
 | B. Task management (dependencies, FS/SS/FF/SF, critical path) | Dependency migration `20261117_0022_commissioning_task_dependencies` exists; relationship types and critical-path logic not verified | Partially implemented; advanced dependency types not evidenced |
 | C. Check Sheet / Test Sheet engine (numeric measurements, limits) | Migration `20261117_0032_checksheet_numeric_measurements` and template migration `20261117_0030` exist | Partially implemented; limit enforcement needs test verification |
-| D. Punch management (categories, authority matrix, waiver) | Corrective-action migration `20261117_0025`; waiver history mentioned in README | Partially implemented; category configurability and authority matrix not evidenced |
+| D. Punch management (categories, authority matrix, waiver) | Corrective-action migration `20261117_0025`. Gate blocking per category configurable and tested (`test_readiness_policy_changes_punch_blockers_per_gate`). Waiver is gated by the fixed `punch.verify` permission (`workflow.py` ~line 1023); no dedicated waiver test. No configurable authority matrix. | Partially implemented |
 | E. Witness / Hold | Implemented as described in §3.2 | Implemented, insufficiently tested |
 | F. MC / RFC / RFSU gates and certificates | Policy engine (`commissioning_readiness_policy.py`) and gates present | Implemented, insufficiently tested |
 | G. Preservation | Blueprint `preservation.py` (392 lines), migration `20261117_0029` | Partially implemented; recurring-schedule timezone safety not verified |
@@ -91,7 +91,10 @@ Additional mismatch: `services/commissioning_storage.py` implements an **S3 back
 - CI coverage gates: 80% for core modules, 58% for commissioning modules.
 - The commissioning coverage gate (58%) is below the core gate. This should be raised only after tests are added, not by lowering gates.
 - Tests exist for: tenant isolation, commissioning access, workflows, number service, storage, evidence archive validation, account recovery (including PostgreSQL), readiness via workflows, legacy schema boundary, product boundary, UI localization.
-- **Not found**: explicit tests for Punch waiver authority, Excel import dry-run, PDF generation determinism, storage round-trip against S3, dossier SHA-256 verification, preservation schedule timezone handling.
+Corrected after a second check (the first draft of this section was wrong):
+
+- **Covered**: Excel dry-run import and export (`test_engineering_excel_exchange_dry_run_import_and_export`), formula-cell and scope rejection, Punch corrective-action and reopen rules, readiness policy configuration and per-gate Punch blockers, invalid policy fail-closed, preservation cycles and permissions and compliance report, serverless rejection of ephemeral evidence storage, storage path traversal, and SHA-256 checks in workflow tests.
+- **Not found**: a dedicated Punch waiver test, PDF generation determinism, a storage round-trip against a real S3-compatible service, and preservation schedule timezone handling.
 
 **Status: Partially implemented.** Test count is respectable but several brief-required categories have no identifiable test.
 
@@ -120,8 +123,8 @@ Phase 2 status (this branch):
 | # | Finding | Status |
 |---|---|---|
 | 1 | Conflicting deployment documents | **Resolved in docs.** `DEPLOYMENT_GUIDE.md` is the single authoritative guide (Docker Compose). `DEPLOYMENT.md` is a pointer. Vercel is stated as not a production target. Stale head `20261116_0019` corrected to `20261117_0033` in `PRODUCTION_LAUNCH.md`, `ADMINISTRATOR_GUIDE.md` and `OPERA_ARCHITECTURE.md`. Not executed; document-only change. |
-| 2 | Punch categories hard-coded | **Deferred.** Changing `PunchCategory` into project configuration requires a model change, an Alembic migration, updates to number generation (`services/commissioning_number_service.py`), readiness policy (`commissioning_readiness_policy.py`), workflow (`workflow.py` lines ~958 and ~1291), demo seed and tests. This cannot be validated without installed dependencies and a PostgreSQL run, so it was not implemented on this branch. |
-| 3 | Test gaps | Open. No new tests written, because no test can be executed in this environment. |
+| 2 | Punch categories fixed to A/B/C/D | **Deferred, and narrowed.** Gate blocking is already configurable and tested. Making the category set itself configurable needs a model change, an Alembic migration, and updates to number generation, readiness policy, workflow, demo seed and tests. Not implemented: it cannot be validated without installed dependencies and a PostgreSQL run. |
+| 3 | Test gaps | Open, narrowed to: waiver test, PDF determinism, real S3 round-trip, preservation timezone. No new tests written, because none can be executed here. |
 | 4 | Commissioning coverage gate below core gate | Open. |
 | 5 | No executed CI or lint evidence | Open. Dependencies could not be installed: the package index is unreachable from the audit environment. |
 | 6 | Marketing draft with fabricated metrics | Not in `main`. Keep it out. |
@@ -132,8 +135,8 @@ Original priority list:
 | # | Finding | Priority |
 |---|---|---|
 | 1 | Three conflicting deployment documents; Vercel guide contradicts S3 implementation | High |
-| 2 | Punch categories hard-coded to A/B/C/D; brief requires project configuration | High |
-| 3 | Test gaps for waiver authority, Excel import, storage round-trip, preservation timezones | High |
+| 2 | Punch category set and labels fixed to A/B/C/D; gate blocking already configurable | High |
+| 3 | Test gaps: waiver, PDF determinism, real S3 round-trip, preservation timezones | High |
 | 4 | Commissioning coverage gate (58%) below core gate (80%) | Medium |
 | 5 | No executed evidence of CI, linting or Docker build in this audit | High (verification) |
 | 6 | Marketing draft in session contains fabricated metrics; not in `main` but must not be merged | Medium (prevention) |
