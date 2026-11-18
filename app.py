@@ -281,7 +281,7 @@ def create_app(config_name=None):
     def index():
         if current_user.is_authenticated:
             return redirect(url_for('commissioning.dashboard'))
-        return render_template('marketing/landing.html')
+        return render_template('Home.html')
 
     @app.get('/robots.txt')
     def robots_txt():
