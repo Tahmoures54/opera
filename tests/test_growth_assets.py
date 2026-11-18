@@ -7,8 +7,15 @@ def test_production_env_template_exists():
     assert not (ROOT/'.env').exists()
 
 def test_marketing_pages_exist():
-    for name in ['landing.html','demo.html','pricing.html','contact.html']:
+    for name in ['demo.html','pricing.html','contact.html']:
         assert (ROOT/'templates'/'marketing'/name).exists()
+    home = ROOT/'templates'/'Home.html'
+    assert home.exists()
+    content = home.read_text(encoding='utf-8')
+    assert 'images/marketing/opera-hero.jpg' in content
+    assert 'Create your account' in content
+    assert 'Punch management' in content
+    assert (ROOT/'static'/'images'/'marketing'/'opera-hero.jpg').exists()
 
 def test_health_and_wsgi_exist():
     assert (ROOT/'wsgi.py').exists()
