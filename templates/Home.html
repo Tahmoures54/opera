@@ -1,223 +1,603 @@
 {% extends 'base.html' %}
 {% block title %}Commissioning & Start-up Management — OPERA{% endblock %}
 {% block meta_description %}Bring commissioning, check sheets, punch management, quality gates and handover together in OPERA's connected project workspace.{% endblock %}
+
 {% block content %}
 <style>
-  .opera-landing{--op-ink:#10233f;--op-muted:#60718a;--op-blue:#2463eb;--op-cyan:#45d5d0;--op-line:rgba(117,145,184,.2);color:var(--op-ink);overflow:hidden}
-  .opera-landing *{box-sizing:border-box}
-  .opera-landing .op-shell{width:min(1160px,calc(100% - 44px));margin-inline:auto}
-  .opera-landing .op-hero{position:relative;isolation:isolate;padding:clamp(76px,10vw,132px) 0 88px;background-color:#10243d;background-image:linear-gradient(105deg,rgba(5,18,34,.91) 0%,rgba(8,29,52,.78) 48%,rgba(7,31,53,.56) 100%),url("{{ url_for('static', filename='images/marketing/opera-hero.jpg') }}");background-size:cover;background-position:center 48%;background-repeat:no-repeat}
-  .opera-landing .op-hero:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.16;background-image:linear-gradient(rgba(210,231,255,.15) 1px,transparent 1px),linear-gradient(90deg,rgba(210,231,255,.15) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 45%,#000);mask-image:linear-gradient(90deg,transparent,#000 45%,#000)}
-  .opera-landing .op-hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(42px,7vw,90px);align-items:center}
-  .opera-landing .op-kicker{display:inline-flex;align-items:center;gap:10px;padding:8px 13px;border:1px solid rgba(174,222,255,.28);border-radius:999px;background:rgba(7,24,44,.48);color:#d7f7ff;font-size:.78rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase;box-shadow:0 8px 26px rgba(39,83,150,.06)}
-  .opera-landing .op-kicker:before{content:"";width:7px;height:7px;border-radius:50%;background:#24b8a9;box-shadow:0 0 0 5px rgba(36,184,169,.13)}
-  .opera-landing .op-hero h1{max-width:650px;margin:22px 0 20px;font-size:clamp(2.55rem,5.3vw,4.65rem);line-height:1.04;letter-spacing:-.055em;font-weight:850;color:#fff}
-  .opera-landing .op-hero h1 span{background:linear-gradient(100deg,#8bdcff 10%,#62e4db 55%,#b6f6d8);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .opera-landing .op-lead{max-width:590px;color:rgba(239,247,255,.86);font-size:clamp(1.02rem,1.5vw,1.15rem);line-height:1.85}
-  .opera-landing .op-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
-  .opera-landing .op-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:11px;padding:13px 21px;border-radius:12px;font-weight:750;box-shadow:none;transition:transform .2s ease,box-shadow .2s ease}
-  .opera-landing .op-actions .btn:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(36,99,235,.2)}
-  .opera-landing .op-primary{color:#fff;background:linear-gradient(110deg,#176de8,#0b9baf);border:1px solid transparent}
-  .opera-landing .op-secondary{color:#18345c;background:rgba(255,255,255,.12);border:1px solid rgba(218,237,255,.35);color:#fff}
-  .opera-landing .op-trust{display:flex;align-items:center;gap:10px;margin-top:25px;color:rgba(232,243,255,.78);font-size:.88rem}
-  .opera-landing .op-trust i{color:#63e5d1}
-  .opera-landing .op-visual{position:relative;perspective:1100px;animation:op-rise .8s both}
-  .opera-landing .op-hero-proof{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
-  .opera-landing .op-hero-proof span{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid rgba(216,237,255,.2);border-radius:999px;background:rgba(5,24,44,.38);color:rgba(240,248,255,.9);font-size:.76rem;font-weight:700;backdrop-filter:blur(8px)}
-  .opera-landing .op-hero-proof i{color:#6de1d4}
-  @media(max-width:600px){.opera-landing .op-hero-proof{gap:7px}.opera-landing .op-hero-proof span{font-size:.7rem;padding:7px 9px}}
-  .opera-landing .op-glow{position:absolute;inset:9% 3%;border-radius:35px;background:linear-gradient(135deg,rgba(49,112,238,.27),rgba(37,202,190,.2));filter:blur(38px);transform:translateY(20px)}
-  .opera-landing .op-dashboard{position:relative;padding:18px;border:1px solid rgba(255,255,255,.9);border-radius:23px;background:rgba(255,255,255,.88);box-shadow:0 35px 90px rgba(30,67,124,.18),0 4px 18px rgba(30,67,124,.07);transform:rotateY(-5deg) rotateX(2deg);backdrop-filter:blur(12px)}
-  .opera-landing .op-dash-head{display:flex;justify-content:space-between;align-items:center;padding:4px 3px 17px;border-bottom:1px solid #eaf0f8}
-  .opera-landing .op-brand{display:flex;align-items:center;gap:10px;font-weight:850;letter-spacing:.04em}
-  .opera-landing .op-brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;color:#fff;background:linear-gradient(145deg,#2765ed,#19aaa9);box-shadow:0 7px 16px rgba(36,99,235,.22)}
-  .opera-landing .op-dash-label{color:#8493a8;font-size:.68rem;font-weight:800;letter-spacing:.12em}
-  .opera-landing .op-dash-title{display:flex;justify-content:space-between;align-items:center;margin:18px 2px 15px;font-size:.92rem;font-weight:800}
-  .opera-landing .op-status{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:99px;background:#e9f8f2;color:#16865d;font-size:.72rem;font-weight:800}
-  .opera-landing .op-status:before{content:"";width:6px;height:6px;border-radius:50%;background:#20b77c}
-  .opera-landing .op-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-  .opera-landing .op-metric{padding:12px;border:1px solid #edf1f7;border-radius:12px;background:#fbfcff}
-  .opera-landing .op-metric small{display:block;color:#8a98ab;font-size:.68rem}
-  .opera-landing .op-metric strong{display:block;margin-top:5px;color:#203c66;font-size:1.25rem}
-  .opera-landing .op-metric em{font-size:.68rem;font-style:normal;color:#16a18b}
-  .opera-landing .op-progress{margin:17px 1px 14px;padding:14px;border:1px solid #edf1f7;border-radius:13px}
-  .opera-landing .op-progress-top{display:flex;justify-content:space-between;gap:10px;font-size:.78rem;font-weight:750}
-  .opera-landing .op-progress-top span{color:#2868d8}
-  .opera-landing .op-progress-track{height:7px;margin-top:11px;overflow:hidden;border-radius:20px;background:#eaf0f8}
-  .opera-landing .op-progress-track i{display:block;width:68%;height:100%;border-radius:20px;background:linear-gradient(90deg,#2868eb,#31c6b5);animation:op-progress 1.4s .35s both}
-  .opera-landing .op-workflow{display:grid;gap:8px}
-  .opera-landing .op-workflow-row{display:flex;align-items:center;gap:11px;padding:10px 11px;border:1px solid #edf1f7;border-radius:11px;background:#fff}
-  .opera-landing .op-workflow-icon{display:grid;place-items:center;flex:0 0 31px;height:31px;border-radius:9px;background:#edf4ff;color:#3470dc}
-  .opera-landing .op-workflow-row:nth-child(2) .op-workflow-icon{background:#e9faf7;color:#159a8c}
-  .opera-landing .op-workflow-row:nth-child(3) .op-workflow-icon{background:#fff5e9;color:#c98528}
-  .opera-landing .op-workflow-row:nth-child(4) .op-workflow-icon{background:#f2efff;color:#7963c9}
-  .opera-landing .op-workflow-row strong{display:block;font-size:.78rem}
-  .opera-landing .op-workflow-row small{display:block;margin-top:2px;color:#91a0b3;font-size:.68rem}
-  .opera-landing .op-float{position:absolute;right:-24px;bottom:28px;display:flex;align-items:center;gap:10px;padding:12px 15px;border:1px solid rgba(255,255,255,.9);border-radius:13px;background:#fff;box-shadow:0 14px 35px rgba(34,68,120,.16);animation:op-float 4s ease-in-out infinite}
-  .opera-landing .op-float-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#e8f8f4;color:#13977e}
-  .opera-landing .op-float strong{display:block;font-size:.78rem}
-  .opera-landing .op-float small{color:#8392a6;font-size:.68rem}
-  .opera-landing .op-section{padding:clamp(68px,8vw,104px) 0}
-  .opera-landing .op-section-head{max-width:720px;margin:0 auto 42px;text-align:center}
-  .opera-landing .op-section-kicker{color:#2868d8;font-size:.76rem;font-weight:850;letter-spacing:.15em;text-transform:uppercase}
-  .opera-landing .op-section h2{margin:13px 0 13px;color:#122845;font-size:clamp(1.9rem,3.6vw,3rem);font-weight:850;letter-spacing:-.04em}
-  .opera-landing .op-section-intro{max-width:680px;margin:0 auto;color:#6b7c93;font-size:1.02rem;line-height:1.8}
-  .opera-landing .op-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-  .opera-landing .op-feature{position:relative;min-height:220px;padding:26px 25px 24px;overflow:hidden;border:1px solid #e8eef7;border-radius:18px;background:linear-gradient(145deg,#fff,#fbfdff);box-shadow:0 8px 26px rgba(26,57,100,.045);transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s,border-color .28s;animation:op-card-in .65s both}
-  .opera-landing .op-feature:after{content:"";position:absolute;right:-35px;top:-45px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(52,119,229,.09),transparent 70%);transition:transform .35s}
-  .opera-landing .op-feature:hover{transform:translateY(-8px);border-color:#c8daf6;box-shadow:0 20px 42px rgba(32,77,139,.12)}
-  .opera-landing .op-feature:hover:after{transform:scale(1.7)}
-  .opera-landing .op-feature:nth-child(2){animation-delay:.06s}
-  .opera-landing .op-feature:nth-child(3){animation-delay:.12s}
-  .opera-landing .op-feature:nth-child(4){animation-delay:.18s}
-  .opera-landing .op-feature:nth-child(5){animation-delay:.24s}
-  .opera-landing .op-feature:nth-child(6){animation-delay:.30s}
-  .opera-landing .op-feature-icon{display:grid;place-items:center;width:48px;height:48px;margin-bottom:20px;border:1px solid #e1ebfb;border-radius:14px;background:linear-gradient(145deg,#edf4ff,#f7faff);color:#2e6cdb;font-size:1.12rem;box-shadow:inset 0 1px #fff}
-  .opera-landing .op-feature--teal .op-feature-icon{background:linear-gradient(145deg,#e8faf6,#f6fffd);color:#139b8b;border-color:#d8f2ec}
-  .opera-landing .op-feature--amber .op-feature-icon{background:linear-gradient(145deg,#fff4e8,#fffaf5);color:#c98631;border-color:#f7ead9}
-  .opera-landing .op-feature h3{position:relative;margin:0 0 9px;color:#1b3455;font-size:1.02rem;font-weight:800}
-  .opera-landing .op-feature p{position:relative;margin:0;color:#718198;font-size:.92rem;line-height:1.75}
-  .opera-landing .op-note{margin-top:22px;padding:14px 16px;border:1px solid #cfe3f5;border-left:4px solid #2463eb;border-radius:12px;background:#f2f8ff;color:#2b4668;font-size:.94rem;line-height:1.75}
-  .opera-landing .op-note code{padding:1px 6px;border-radius:6px;background:#e3eefc;color:#1c4fa3;font-weight:700;font-size:.88em}
-  .opera-landing .op-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:26px;overflow:hidden;border:1px solid #e7edf6;border-radius:16px;background:#e7edf6}
-  .opera-landing .op-strip-item{padding:19px 12px;text-align:center;background:#fbfcff}
-  .opera-landing .op-strip-item strong{display:block;color:#1e3c66;font-size:1.1rem}
-  .opera-landing .op-strip-item span{color:#8190a5;font-size:.78rem}
-  .opera-landing .op-cta-wrap{padding:0 0 86px}
-  .opera-landing .op-cta{position:relative;display:flex;align-items:center;justify-content:space-between;gap:28px;padding:clamp(28px,5vw,52px);overflow:hidden;border-radius:23px;color:#fff;background:radial-gradient(circle at 85% 15%,rgba(71,213,207,.26),transparent 32%),linear-gradient(115deg,#142e55,#1d4d8a 62%,#176f86);box-shadow:0 24px 55px rgba(23,61,111,.2)}
-  .opera-landing .op-cta:after{content:"";position:absolute;right:17%;top:-110px;width:260px;height:260px;border:1px solid rgba(255,255,255,.13);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.035),0 0 0 58px rgba(255,255,255,.025)}
-  .opera-landing .op-cta-copy{position:relative;z-index:1;max-width:650px}
-  .opera-landing .op-cta h2{margin:0 0 9px;color:#fff;font-size:clamp(1.55rem,3vw,2.25rem);font-weight:850;letter-spacing:-.03em}
-  .opera-landing .op-cta p{margin:0;color:rgba(255,255,255,.75);line-height:1.7}
-  .opera-landing .op-cta .btn{position:relative;z-index:1;flex:0 0 auto;padding:13px 19px;border:0;border-radius:11px;background:#fff;color:#1d4e91;font-weight:800;transition:transform .2s,box-shadow .2s}
-  .opera-landing .op-cta .btn:hover{transform:translateY(-3px);box-shadow:0 12px 25px rgba(0,0,0,.17)}
-  .opera-landing .op-cta .btn i{margin-left:8px}
+  /* ==========================================================================
+     OPERA landing page
+     ========================================================================== */
+  .opera-landing {
+    --op-ink: #10233f;
+    --op-muted: #60718a;
+    --op-blue: #2463eb;
+    --op-teal: #24b8a9;
+    --op-line: rgba(117, 145, 184, .2);
+    --op-radius-lg: 22px;
+    --op-radius-md: 14px;
+    font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--op-ink);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .opera-landing *,
+  .opera-landing *::before,
+  .opera-landing *::after { box-sizing: border-box; }
+
+  .opera-landing .op-shell {
+    width: min(1160px, calc(100% - 44px));
+    margin-inline: auto;
+  }
+
+  /* ---------- Buttons ---------- */
+  .opera-landing .op-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px 21px;
+    border-radius: 12px;
+    font-size: .95rem;
+    font-weight: 650;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+  }
+  .opera-landing .op-btn:hover { transform: translateY(-2px); }
+  .opera-landing .op-btn--primary {
+    color: #fff;
+    background: linear-gradient(110deg, #176de8, #0b9baf);
+    box-shadow: 0 10px 24px rgba(23, 109, 232, .22);
+  }
+  .opera-landing .op-btn--primary:hover { box-shadow: 0 14px 30px rgba(23, 109, 232, .3); }
+  .opera-landing .op-btn--ghost {
+    color: #fff;
+    background: rgba(255, 255, 255, .1);
+    border-color: rgba(230, 245, 255, .42);
+  }
+  .opera-landing .op-btn--ghost:hover { background: rgba(255, 255, 255, .18); }
+  .opera-landing .op-btn--light {
+    color: #1d4e91;
+    background: #fff;
+    flex: 0 0 auto;
+  }
+  .opera-landing .op-btn--light:hover { box-shadow: 0 12px 25px rgba(0, 0, 0, .17); }
+
   .opera-landing a:focus-visible,
-  .opera-landing button:focus-visible,
-  .opera-landing .btn:focus-visible{outline:3px solid #2463eb;outline-offset:3px;border-radius:12px}
-  .opera-landing .op-cta .btn:focus-visible{outline:3px solid #fff;outline-offset:3px}
-  @keyframes op-rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes op-card-in{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes op-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-  @keyframes op-progress{from{width:0}to{width:68%}}
-  @media(max-width:900px){.opera-landing .op-hero-grid{grid-template-columns:1fr;gap:48px}.opera-landing .op-hero-copy{max-width:720px}.opera-landing .op-visual{width:min(100%,610px);margin-inline:auto}.opera-landing .op-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  @media(max-width:600px){.opera-landing .op-shell{width:min(100% - 30px,520px)}.opera-landing .op-hero{padding:66px 0 65px}.opera-landing .op-hero h1{font-size:clamp(2.35rem,12vw,3.4rem)}.opera-landing .op-actions{display:grid;grid-template-columns:1fr}.opera-landing .op-actions .btn{width:100%}.opera-landing .op-dashboard{padding:12px;transform:none}.opera-landing .op-float{right:-5px;bottom:-22px}.opera-landing .op-feature-grid{grid-template-columns:1fr;gap:13px}.opera-landing .op-feature{min-height:0;padding:22px}.opera-landing .op-strip{grid-template-columns:repeat(2,1fr);margin-top:22px}.opera-landing .op-cta{align-items:flex-start;flex-direction:column}.opera-landing .op-cta:after{right:-80px}.opera-landing .op-cta-wrap{padding-bottom:60px}}
-  @media(prefers-reduced-motion:reduce){.opera-landing *, .opera-landing *:before,.opera-landing *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
-
-  /* Animated, image-led rotating hero banners */
-  .opera-landing .op-hero{padding:clamp(58px,8vw,104px) 0 clamp(62px,8vw,100px);min-height:690px;display:flex;align-items:center;background-position:center;background-image:linear-gradient(90deg,rgba(4,17,34,.80),rgba(5,25,47,.58) 52%,rgba(4,19,37,.72)),url("{{ url_for('static', filename='images/marketing/opera-hero.jpg') }}")}
-  .opera-landing .op-hero:before{opacity:.11}
-  .opera-landing .op-banner-wrap{position:relative;z-index:2;width:min(100%,1000px);margin:0 auto;text-align:center}
-  .opera-landing .op-banner-heading{margin:0 auto 24px;color:rgba(232,246,255,.78);font-size:.76rem;font-weight:850;letter-spacing:.2em;text-transform:uppercase}
-  .opera-landing .op-banner-stage{position:relative;min-height:390px;display:grid;place-items:center}
-  .opera-landing .op-banner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(25px,5vw,52px);border:1px solid rgba(226,242,255,.28);border-radius:26px;background:linear-gradient(135deg,rgba(7,25,48,.76),rgba(12,49,77,.58));box-shadow:0 24px 80px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.16);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);opacity:0;visibility:hidden;transform:translateY(22px) scale(.985);animation:op-banner-cycle 28s infinite}
-  .opera-landing .op-banner:nth-child(2){animation-delay:7s}
-  .opera-landing .op-banner:nth-child(3){animation-delay:14s}
-  .opera-landing .op-banner:nth-child(4){animation-delay:21s}
-  .opera-landing .op-banner-kicker{display:inline-flex;align-items:center;gap:9px;margin-bottom:17px;color:#83eee0;font-size:.78rem;font-weight:850;letter-spacing:.16em;text-transform:uppercase}
-  .opera-landing .op-banner-kicker:before{content:"";width:7px;height:7px;border-radius:50%;background:#63e5d1;box-shadow:0 0 0 5px rgba(99,229,209,.13)}
-  .opera-landing .op-banner h1,.opera-landing .op-banner h2{max-width:850px;margin:0 0 16px;color:#fff;font-size:clamp(2rem,5vw,4.2rem);line-height:1.08;font-weight:850;letter-spacing:-.045em}
-  .opera-landing .op-banner h1 span,.opera-landing .op-banner h2 span{color:#78e5dc}
-  .opera-landing .op-banner p{max-width:780px;margin:0 auto;color:rgba(240,248,255,.88);font-size:clamp(.98rem,1.5vw,1.13rem);line-height:1.85}
-  .opera-landing .op-banner-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:25px}
-  .opera-landing .op-banner-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:13px 21px;border-radius:12px;font-weight:800;transition:transform .2s,box-shadow .2s}
-  .opera-landing .op-banner-actions .btn:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.2)}
-  .opera-landing .op-banner-primary{border:1px solid transparent;background:linear-gradient(110deg,#176de8,#0b9baf);color:#fff}
-  .opera-landing .op-banner-secondary{border:1px solid rgba(230,245,255,.42);background:rgba(255,255,255,.1);color:#fff}
-  .opera-landing .op-banner-pills{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:24px}
-  .opera-landing .op-banner-pills span{padding:9px 13px;border:1px solid rgba(220,240,255,.25);border-radius:999px;background:rgba(255,255,255,.08);color:#f1fbff;font-size:.82rem;font-weight:750}
-  .opera-landing .op-banner-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:100%;margin-top:26px}
-  .opera-landing .op-banner-stat{padding:16px 10px;border:1px solid rgba(225,242,255,.2);border-radius:14px;background:rgba(255,255,255,.08)}
-  .opera-landing .op-banner-stat strong{display:block;color:#fff;font-size:clamp(1.35rem,3vw,2rem)}
-  .opera-landing .op-banner-stat small{color:rgba(238,248,255,.74);font-size:.78rem}
-  .opera-landing .op-banner-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:100%;margin-top:24px;text-align:left}
-  .opera-landing .op-banner-step{padding:13px 15px;border:1px solid rgba(225,242,255,.2);border-radius:13px;background:rgba(255,255,255,.075);color:#fff;font-size:.9rem;font-weight:750}
-  .opera-landing .op-banner-step small{display:block;margin-top:4px;color:rgba(238,248,255,.7);font-size:.76rem;font-weight:500}
-  .opera-landing .op-banner-foot{margin-top:18px;color:rgba(235,246,255,.72);font-size:.85rem}
-  .opera-landing .op-banner-progress{height:3px;width:min(100%,360px);margin:25px auto 0;overflow:hidden;border-radius:9px;background:rgba(255,255,255,.2)}
-  .opera-landing .op-banner-progress:after{content:"";display:block;width:25%;height:100%;background:#70e5dc;animation:op-banner-progress 7s linear infinite}
-  @keyframes op-banner-cycle{0%,2%{opacity:0;visibility:hidden;transform:translateY(22px) scale(.985)}5%,21%{opacity:1;visibility:visible;transform:translateY(0) scale(1)}25%,100%{opacity:0;visibility:hidden;transform:translateY(-16px) scale(.99)}}
-  @keyframes op-banner-progress{from{transform:translateX(-110%)}to{transform:translateX(410%)}}
-  @media(max-width:650px){.opera-landing .op-hero{min-height:690px;padding:55px 0}.opera-landing .op-banner-stage{min-height:470px}.opera-landing .op-banner{padding:24px 18px;border-radius:19px}.opera-landing .op-banner h1,.opera-landing .op-banner h2{font-size:clamp(1.8rem,9vw,2.8rem)}.opera-landing .op-banner-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.opera-landing .op-banner-steps{grid-template-columns:1fr;gap:8px}.opera-landing .op-banner-actions{display:grid;width:100%;grid-template-columns:1fr}.opera-landing .op-banner-actions .btn{width:100%}}
-  @media(prefers-reduced-motion:reduce){.opera-landing .op-banner{animation:none;opacity:1;visibility:visible;position:relative;transform:none}.opera-landing .op-banner:not(:first-child){display:none}.opera-landing .op-banner-progress:after{animation:none}}
-
-  /* Industrial typography and a controlled left-to-right banner sequence */
-  .opera-landing{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-  .opera-landing .op-banner-heading{font-weight:650;letter-spacing:.16em}
-  .opera-landing .op-banner-stage{overflow:hidden;isolation:isolate}
-  .opera-landing .op-banner{will-change:transform,opacity;backface-visibility:hidden;animation-name:op-banner-slide-ltr;animation-duration:28s;animation-timing-function:cubic-bezier(.22,.72,.22,1);animation-iteration-count:infinite}
-  .opera-landing .op-banner-stage:hover .op-banner,.opera-landing .op-banner-stage:focus-within .op-banner,.opera-landing .op-banner-stage:hover .op-banner-progress:after{animation-play-state:paused}
-  .opera-landing .op-banner-kicker{font-weight:650;letter-spacing:.12em}
-  .opera-landing .op-banner h1,.opera-landing .op-banner h2{font-weight:720;letter-spacing:-.028em;line-height:1.12}
-  .opera-landing .op-banner p{font-weight:400;letter-spacing:0;line-height:1.75}
-  .opera-landing .op-banner-actions .btn{font-weight:650;letter-spacing:.005em}
-  .opera-landing .op-banner-pills span,.opera-landing .op-banner-step{font-weight:600}
-  .opera-landing .op-banner-stat strong{font-weight:700;font-variant-numeric:tabular-nums}
-  .opera-landing .op-banner-stat small,.opera-landing .op-banner-step small{font-weight:450}
-  @keyframes op-banner-slide-ltr{
-    0%,2%{opacity:0;visibility:hidden;transform:translate3d(-105%,0,0)}
-    5%,21%{opacity:1;visibility:visible;transform:translate3d(0,0,0)}
-    25%,100%{opacity:0;visibility:hidden;transform:translate3d(105%,0,0)}
-  }
-  @media(max-width:650px){
-    .opera-landing .op-banner-stage{overflow:hidden}
-    .opera-landing .op-banner{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-    .opera-landing .op-banner-heading{font-size:.7rem;letter-spacing:.12em}
-  }
-  @media(prefers-reduced-motion:reduce){
-    .opera-landing .op-banner{will-change:auto;animation:none}
-    .opera-landing .op-banner:not(:first-child){display:none}
+  .opera-landing button:focus-visible {
+    outline: 3px solid #8fe9ff;
+    outline-offset: 3px;
+    border-radius: 10px;
   }
 
+  /* ---------- Hero / carousel ---------- */
+  .opera-landing .op-hero {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    min-height: 0;
+    padding: clamp(60px, 8vw, 104px) 0 clamp(64px, 8vw, 100px);
+    color: #fff;
+    background:
+      linear-gradient(90deg, rgba(4, 17, 34, .84), rgba(5, 25, 47, .6) 55%, rgba(4, 19, 37, .76)),
+      var(--op-hero-img, none) center / cover no-repeat,
+      #10243d;
+  }
+  .opera-landing .op-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: .1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(210, 231, 255, .15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(210, 231, 255, .15) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 45%, #000);
+            mask-image: linear-gradient(90deg, transparent, #000 45%, #000);
+  }
+
+  .opera-landing .op-hero-eyebrow {
+    margin: 0 auto 22px;
+    text-align: center;
+    color: rgba(232, 246, 255, .8);
+    font-size: .74rem;
+    font-weight: 650;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+
+  .opera-landing .op-carousel {
+    width: min(100%, 1000px);
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  /* Slides occupy the same grid cell, so the stage is as tall as the tallest slide. */
+  .opera-landing .op-slides { display: grid; }
+
+  .opera-landing .op-slide {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(24px, 4.5vw, 50px);
+    border: 1px solid rgba(226, 242, 255, .26);
+    border-radius: 26px;
+    background: linear-gradient(135deg, rgba(7, 25, 48, .8), rgba(12, 49, 77, .6));
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .25), inset 0 1px rgba(255, 255, 255, .14);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    opacity: 0;
+    visibility: hidden;
+    transform: translate3d(28px, 0, 0);
+    transition:
+      opacity .6s ease,
+      transform .7s cubic-bezier(.22, .72, .22, 1),
+      visibility 0s linear .7s;
+  }
+  .opera-landing .op-slide.is-active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0s;
+  }
+
+  .opera-landing .op-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 16px;
+    color: #83eee0;
+    font-size: .76rem;
+    font-weight: 650;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+  .opera-landing .op-kicker::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #63e5d1;
+    box-shadow: 0 0 0 5px rgba(99, 229, 209, .13);
+  }
+
+  .opera-landing .op-slide h1,
+  .opera-landing .op-slide h2 {
+    max-width: 850px;
+    margin: 0 0 16px;
+    color: #fff;
+    font-size: clamp(2rem, 5vw, 4.1rem);
+    font-weight: 720;
+    line-height: 1.1;
+    letter-spacing: -.028em;
+  }
+  .opera-landing .op-slide h1 span,
+  .opera-landing .op-slide h2 span { color: #78e5dc; }
+
+  .opera-landing .op-slide p {
+    max-width: 760px;
+    margin: 0 auto;
+    color: rgba(240, 248, 255, .88);
+    font-size: clamp(.98rem, 1.5vw, 1.1rem);
+    line-height: 1.75;
+  }
+
+  .opera-landing .op-slide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 26px;
+  }
+
+  .opera-landing .op-slide-foot {
+    margin-top: 18px;
+    color: rgba(235, 246, 255, .7);
+    font-size: .86rem;
+  }
+
+  /* Capability tiles (slide 2) */
+  .opera-landing .op-capabilities {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+    margin-top: 26px;
+    text-align: left;
+  }
+  .opera-landing .op-capability {
+    display: flex;
+    gap: 13px;
+    align-items: flex-start;
+    padding: 15px 16px;
+    border: 1px solid rgba(225, 242, 255, .2);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .07);
+  }
+  .opera-landing .op-capability i {
+    flex: 0 0 auto;
+    margin-top: 3px;
+    color: #78e5dc;
+  }
+  .opera-landing .op-capability strong {
+    display: block;
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 650;
+  }
+  .opera-landing .op-capability span {
+    display: block;
+    margin-top: 3px;
+    color: rgba(238, 248, 255, .72);
+    font-size: .82rem;
+    line-height: 1.5;
+  }
+
+  /* Step list (slides 3 and 4) */
+  .opera-landing .op-steps {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+    width: 100%;
+    margin-top: 24px;
+    text-align: left;
+  }
+  .opera-landing .op-step {
+    padding: 14px 16px;
+    border: 1px solid rgba(225, 242, 255, .2);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .075);
+    color: #fff;
+    font-size: .92rem;
+    font-weight: 650;
+  }
+  .opera-landing .op-step small {
+    display: block;
+    margin-top: 4px;
+    color: rgba(238, 248, 255, .7);
+    font-size: .8rem;
+    font-weight: 450;
+  }
+
+  /* Controls */
+  .opera-landing .op-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .opera-landing .op-dots {
+    display: flex;
+    gap: 8px;
+  }
+  .opera-landing .op-dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 0;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, .38);
+    cursor: pointer;
+    transition: width .3s ease, background-color .3s ease;
+  }
+  .opera-landing .op-dot:hover { background: rgba(255, 255, 255, .6); }
+  .opera-landing .op-dot[aria-current="true"] {
+    width: 30px;
+    background: #70e5dc;
+  }
+  .opera-landing .op-pause {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 13px;
+    border: 1px solid rgba(225, 242, 255, .35);
+    border-radius: 99px;
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .opera-landing .op-pause:hover { background: rgba(255, 255, 255, .16); }
+
+  .opera-landing .op-progress {
+    height: 3px;
+    width: min(100%, 340px);
+    margin: 18px auto 0;
+    overflow: hidden;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .18);
+  }
+  .opera-landing .op-progress-bar {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: #70e5dc;
+    animation: op-progress var(--op-interval, 7s) linear forwards;
+    animation-play-state: paused;
+  }
+  .opera-landing .op-carousel.is-running .op-progress-bar { animation-play-state: running; }
+  @keyframes op-progress { to { width: 100%; } }
+
+  /* ---------- Sections ---------- */
+  .opera-landing .op-section { padding: clamp(68px, 8vw, 104px) 0; }
+  .opera-landing .op-section-head {
+    max-width: 720px;
+    margin: 0 auto 42px;
+    text-align: center;
+  }
+  .opera-landing .op-section-kicker {
+    color: #2868d8;
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .opera-landing .op-section h2 {
+    margin: 13px 0;
+    color: #122845;
+    font-size: clamp(1.9rem, 3.6vw, 2.9rem);
+    font-weight: 750;
+    letter-spacing: -.035em;
+    line-height: 1.15;
+  }
+  .opera-landing .op-section-intro {
+    margin: 0 auto;
+    color: #6b7c93;
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+
+  .opera-landing .op-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .opera-landing .op-feature {
+    position: relative;
+    min-height: 210px;
+    padding: 26px 25px 24px;
+    overflow: hidden;
+    border: 1px solid #e8eef7;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #fff, #fbfdff);
+    box-shadow: 0 8px 26px rgba(26, 57, 100, .045);
+    transition: transform .28s cubic-bezier(.2, .8, .2, 1), box-shadow .28s, border-color .28s;
+  }
+  .opera-landing .op-feature:hover {
+    transform: translateY(-6px);
+    border-color: #c8daf6;
+    box-shadow: 0 20px 42px rgba(32, 77, 139, .12);
+  }
+  .opera-landing .op-feature-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 20px;
+    border: 1px solid #e1ebfb;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #edf4ff, #f7faff);
+    color: #2e6cdb;
+    font-size: 1.1rem;
+  }
+  .opera-landing .op-feature--teal .op-feature-icon {
+    background: linear-gradient(145deg, #e8faf6, #f6fffd);
+    border-color: #d8f2ec;
+    color: #139b8b;
+  }
+  .opera-landing .op-feature--amber .op-feature-icon {
+    background: linear-gradient(145deg, #fff4e8, #fffaf5);
+    border-color: #f7ead9;
+    color: #c98631;
+  }
+  .opera-landing .op-feature h3 {
+    margin: 0 0 9px;
+    color: #1b3455;
+    font-size: 1.02rem;
+    font-weight: 700;
+  }
+  .opera-landing .op-feature p {
+    margin: 0;
+    color: #718198;
+    font-size: .92rem;
+    line-height: 1.7;
+  }
+
+  .opera-landing .op-note {
+    margin-top: 24px;
+    padding: 14px 16px;
+    border: 1px solid #cfe3f5;
+    border-inline-start: 4px solid #2463eb;
+    border-radius: 12px;
+    background: #f2f8ff;
+    color: #2b4668;
+    font-size: .94rem;
+    line-height: 1.75;
+  }
+  .opera-landing .op-note code {
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: #e3eefc;
+    color: #1c4fa3;
+    font-weight: 700;
+    font-size: .88em;
+  }
+
+  .opera-landing .op-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    margin-top: 26px;
+    overflow: hidden;
+    border: 1px solid #e7edf6;
+    border-radius: 16px;
+    background: #e7edf6;
+  }
+  .opera-landing .op-strip-item {
+    padding: 19px 12px;
+    text-align: center;
+    background: #fbfcff;
+  }
+  .opera-landing .op-strip-item strong {
+    display: block;
+    color: #1e3c66;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .opera-landing .op-strip-item span {
+    color: #8190a5;
+    font-size: .78rem;
+  }
+
+  /* ---------- Closing CTA ---------- */
+  .opera-landing .op-cta-wrap { padding: 0 0 86px; }
+  .opera-landing .op-cta {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    padding: clamp(28px, 5vw, 52px);
+    overflow: hidden;
+    border-radius: 23px;
+    color: #fff;
+    background:
+      radial-gradient(circle at 85% 15%, rgba(71, 213, 207, .26), transparent 32%),
+      linear-gradient(115deg, #142e55, #1d4d8a 62%, #176f86);
+    box-shadow: 0 24px 55px rgba(23, 61, 111, .2);
+  }
+  .opera-landing .op-cta-copy { max-width: 650px; }
+  .opera-landing .op-cta h2 {
+    margin: 0 0 9px;
+    color: #fff;
+    font-size: clamp(1.55rem, 3vw, 2.2rem);
+    font-weight: 750;
+    letter-spacing: -.03em;
+  }
+  .opera-landing .op-cta p {
+    margin: 0;
+    color: rgba(255, 255, 255, .78);
+    line-height: 1.7;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .opera-landing .op-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 650px) {
+    .opera-landing .op-shell { width: min(100% - 30px, 520px); }
+    .opera-landing .op-hero { padding: 52px 0 60px; }
+    .opera-landing .op-slide { padding: 24px 18px; border-radius: 19px; }
+    .opera-landing .op-slide h1,
+    .opera-landing .op-slide h2 { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+    .opera-landing .op-capabilities,
+    .opera-landing .op-steps { grid-template-columns: 1fr; gap: 8px; }
+    .opera-landing .op-slide-actions { flex-direction: column; width: 100%; }
+    .opera-landing .op-slide-actions .op-btn { width: 100%; }
+    .opera-landing .op-feature-grid { grid-template-columns: 1fr; gap: 13px; }
+    .opera-landing .op-feature { min-height: 0; padding: 22px; }
+    .opera-landing .op-strip { grid-template-columns: repeat(2, 1fr); }
+    .opera-landing .op-cta { flex-direction: column; align-items: flex-start; }
+    .opera-landing .op-cta .op-btn { width: 100%; }
+    .opera-landing .op-cta-wrap { padding-bottom: 60px; }
+  }
+
+  /* ---------- Reduced motion ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    .opera-landing *,
+    .opera-landing *::before,
+    .opera-landing *::after {
+      transition-duration: .01ms !important;
+      animation: none !important;
+    }
+    .opera-landing .op-progress { display: none; }
+    .opera-landing .op-carousel .op-slide:not(.is-active) { display: none; }
+  }
 </style>
+
 <main class="opera-landing">
-  <section class="op-hero">
-    <div class="op-shell op-banner-wrap">
-      <div class="op-banner-heading">OPERA · Commissioning &amp; Start-up Workspace</div>
-      <div class="op-banner-stage" aria-label="OPERA features rotating banners">
-        <article class="op-banner">
-          <span class="op-banner-kicker">Commissioning, under control</span>
-          <h1>Move every project milestone <span>forward with confidence.</span></h1>
-          <p>OPERA gives EPC and industrial teams one reliable workspace to plan commissioning, execute check sheets, resolve punch items and manage handover — with clear ownership and an auditable history.</p>
-          <div class="op-banner-actions">
-            <a class="btn op-banner-primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
-            <a class="btn op-banner-secondary" href="{{ url_for('auth.login') }}">Sign in <i class="fas fa-sign-in-alt" aria-hidden="true"></i></a>
+
+  <section class="op-hero" style="--op-hero-img: url('{{ url_for('static', filename='images/marketing/opera-hero.jpg') }}');" aria-label="OPERA introduction">
+    <div class="op-shell">
+      <p class="op-hero-eyebrow">OPERA · Commissioning &amp; Start-up Workspace</p>
+
+      <div class="op-carousel" data-op-carousel data-interval="7000">
+        <div class="op-slides">
+
+          <article class="op-slide is-active" data-slide aria-roledescription="slide" aria-label="1 of 4">
+            <span class="op-kicker">Commissioning, under control</span>
+            <h1>Move every project milestone <span>forward with confidence.</span></h1>
+            <p>OPERA gives EPC and industrial teams one reliable workspace to plan commissioning, execute check sheets, resolve punch items and manage handover, with clear ownership and an auditable history.</p>
+            <div class="op-slide-actions">
+              <a class="op-btn op-btn--primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+              <a class="op-btn op-btn--ghost" href="{{ url_for('auth.login') }}">Sign in <i class="fas fa-sign-in-alt" aria-hidden="true"></i></a>
+            </div>
+            <div class="op-slide-foot">Built for project teams, commissioning engineers, QC and operations.</div>
+          </article>
+
+          <article class="op-slide" data-slide aria-roledescription="slide" aria-label="2 of 4" aria-hidden="true" inert>
+            <span class="op-kicker">One connected project view</span>
+            <h2>Every workstream. <span>One clear picture.</span></h2>
+            <p>Keep systems, inspections and outstanding work visible in a single structure, so every team works from the same records.</p>
+            <div class="op-capabilities">
+              <div class="op-capability"><i class="fas fa-sitemap" aria-hidden="true"></i><div><strong>Systems &amp; subsystems</strong><span>Structured, referenced and weighted</span></div></div>
+              <div class="op-capability"><i class="fas fa-clipboard-check" aria-hidden="true"></i><div><strong>Check sheets</strong><span>Issued, recorded and verified</span></div></div>
+              <div class="op-capability"><i class="fas fa-list-check" aria-hidden="true"></i><div><strong>Punch items</strong><span>Owned, tracked and closed out</span></div></div>
+              <div class="op-capability"><i class="fas fa-chart-line" aria-hidden="true"></i><div><strong>Progress evidence</strong><span>Dated snapshots tied to records</span></div></div>
+            </div>
+            <div class="op-slide-foot">Project control · Quality execution · Traceable handover</div>
+          </article>
+
+          <article class="op-slide" data-slide aria-roledescription="slide" aria-label="3 of 4" aria-hidden="true" inert>
+            <span class="op-kicker">Quality execution</span>
+            <h2>From inspection to <span>verified close-out.</span></h2>
+            <p>Coordinate check sheet execution, QC verification, witness and hold points, and punch closure, while the supporting record stays connected to the work.</p>
+            <div class="op-steps">
+              <div class="op-step">Check sheet execution &amp; QC<small>Inspection, review and verification</small></div>
+              <div class="op-step">Punch closure &amp; verification<small>Assigned ownership through close-out</small></div>
+            </div>
+          </article>
+
+          <article class="op-slide" data-slide aria-roledescription="slide" aria-label="4 of 4" aria-hidden="true" inert>
+            <span class="op-kicker">Traceable handover</span>
+            <h2>Make readiness <span>visible and accountable.</span></h2>
+            <p>Organize project and system structure, then progress through MC, RFC, RFSU and handover with clear responsibilities and evidence-led milestones.</p>
+            <div class="op-steps">
+              <div class="op-step">Project &amp; system structure<small>Organized and assigned</small></div>
+              <div class="op-step">MC, RFC, RFSU &amp; handover<small>Evidence-led readiness milestones</small></div>
+            </div>
+            <div class="op-slide-actions">
+              <a class="op-btn op-btn--primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+          </article>
+
+        </div>
+
+        <div class="op-controls">
+          <div class="op-dots" role="group" aria-label="Choose a banner">
+            <button type="button" class="op-dot" data-dot data-index="0" aria-label="Show banner 1: Commissioning, under control"></button>
+            <button type="button" class="op-dot" data-dot data-index="1" aria-label="Show banner 2: One connected project view"></button>
+            <button type="button" class="op-dot" data-dot data-index="2" aria-label="Show banner 3: Quality execution"></button>
+            <button type="button" class="op-dot" data-dot data-index="3" aria-label="Show banner 4: Traceable handover"></button>
           </div>
-          <div class="op-banner-foot">Built for project teams, commissioning engineers, QC and operations.</div>
-        </article>
-        <article class="op-banner">
-          <span class="op-banner-kicker">One connected project view</span>
-          <h2>Every workstream. <span>One clear picture.</span></h2>
-          <p>Keep systems, inspections and outstanding work visible — with progress indicators that help teams understand where the project stands.</p>
-          <div class="op-banner-stats">
-            <div class="op-banner-stat"><strong>24</strong><small>Systems · Structured</small></div>
-            <div class="op-banner-stat"><strong>86</strong><small>Check sheets · Tracked</small></div>
-            <div class="op-banner-stat"><strong>12</strong><small>Punch items · In progress</small></div>
-            <div class="op-banner-stat"><strong>68%</strong><small>Illustrative readiness</small></div>
-          </div>
-          <div class="op-banner-pills"><span>Project control</span><span>Quality execution</span><span>Traceable handover</span></div>
-        </article>
-        <article class="op-banner">
-          <span class="op-banner-kicker">Quality execution</span>
-          <h2>From inspection to <span>verified close-out.</span></h2>
-          <p>Coordinate check sheet execution, QC verification, witness and hold points, punch ownership and closure — while keeping the supporting record connected to the work.</p>
-          <div class="op-banner-steps">
-            <div class="op-banner-step">Check sheet execution &amp; QC<small>Inspection, review and verification</small></div>
-            <div class="op-banner-step">Punch closure &amp; verification<small>Assigned ownership through close-out</small></div>
-          </div>
-        </article>
-        <article class="op-banner">
-          <span class="op-banner-kicker">Traceable handover</span>
-          <h2>Make readiness <span>visible and accountable.</span></h2>
-          <p>Organize project and system structure, then progress through MC, RFC, RFSU and handover with clear responsibilities and evidence-led milestones.</p>
-          <div class="op-banner-steps">
-            <div class="op-banner-step">Project &amp; system structure<small>Organized and assigned</small></div>
-            <div class="op-banner-step">MC, RFC, RFSU &amp; handover<small>Evidence-led readiness milestones</small></div>
-          </div>
-          <div class="op-banner-actions"><a class="btn op-banner-primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
-        </article>
+          <button type="button" class="op-pause" data-pause aria-pressed="false">
+            <i class="fas fa-pause" aria-hidden="true"></i><span>Pause</span>
+          </button>
+        </div>
+
+        <div class="op-progress" aria-hidden="true"><span class="op-progress-bar"></span></div>
       </div>
-      <div class="op-banner-progress" aria-hidden="true"></div>
     </div>
   </section>
 
@@ -228,17 +608,44 @@
         <h2>From project structure to operational handover</h2>
         <p class="op-section-intro">Keep engineering, quality, construction and operations aligned around the same project records, responsibilities and acceptance criteria. Follow the project-approved milestone definitions: MC → RFC → RFSU → Operations Acceptance.</p>
       </header>
+
       <div class="op-feature-grid">
-        <article class="op-feature"><span class="op-feature-icon"><i class="fas fa-sitemap" aria-hidden="true"></i></span><h3>Project structure</h3><p>Organize projects into systems and subsystems, with clear references and weighted progress.</p></article>
-        <article class="op-feature op-feature--teal"><span class="op-feature-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span><h3>Check sheet execution</h3><p>Issue inspections, record results, verify independently and preserve signed revisions.</p></article>
-        <article class="op-feature op-feature--amber"><span class="op-feature-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span><h3>Punch management</h3><p>Assign deficiencies, track closure and retain verification and waiver history.</p></article>
-        <article class="op-feature"><span class="op-feature-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span><h3>Witness &amp; hold points</h3><p>Schedule notifications, record attendance and manage formal release steps.</p></article>
-        <article class="op-feature op-feature--teal"><span class="op-feature-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span><h3>Mechanical completion</h3><p>Track MC, RFC and RFSU milestones with project-specific handover packages.</p></article>
-        <article class="op-feature op-feature--amber"><span class="op-feature-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span><h3>Progress evidence</h3><p>Capture dated progress snapshots and keep supporting evidence with each record.</p></article>
+        <article class="op-feature">
+          <span class="op-feature-icon"><i class="fas fa-sitemap" aria-hidden="true"></i></span>
+          <h3>Project structure</h3>
+          <p>Organize projects into systems and subsystems, with clear references and weighted progress.</p>
+        </article>
+        <article class="op-feature op-feature--teal">
+          <span class="op-feature-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>
+          <h3>Check sheet execution</h3>
+          <p>Issue inspections, record results, verify independently and preserve signed revisions.</p>
+        </article>
+        <article class="op-feature op-feature--amber">
+          <span class="op-feature-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>
+          <h3>Punch management</h3>
+          <p>Assign deficiencies, track closure and retain verification and waiver history.</p>
+        </article>
+        <article class="op-feature">
+          <span class="op-feature-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span>
+          <h3>Witness &amp; hold points</h3>
+          <p>Schedule notifications, record attendance and manage formal release steps.</p>
+        </article>
+        <article class="op-feature op-feature--teal">
+          <span class="op-feature-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>
+          <h3>Mechanical completion</h3>
+          <p>Track MC, RFC and RFSU milestones with project-specific handover packages.</p>
+        </article>
+        <article class="op-feature op-feature--amber">
+          <span class="op-feature-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span>
+          <h3>Progress evidence</h3>
+          <p>Capture dated progress snapshots and keep supporting evidence with each record.</p>
+        </article>
       </div>
+
       <div class="op-note" role="note">
-        <strong>Readiness terminology:</strong> RFC means Ready for Commissioning. RFSU means Ready for Start-Up. OPERA now issues and stores a dedicated <code>RFC</code> certificate; earlier <code>RF</code> records are migrated automatically. RFSU remains the next start-up readiness milestone. Always follow the approved project handover procedure where terminology differs.
+        <strong>Readiness terminology:</strong> RFC means Ready for Commissioning. RFSU means Ready for Start-Up. OPERA issues and stores a dedicated <code>RFC</code> certificate; earlier <code>RF</code> records are migrated automatically. RFSU remains the next start-up readiness milestone. Always follow the approved project handover procedure where terminology differs.
       </div>
+
       <div class="op-strip" aria-label="OPERA workflow principles">
         <div class="op-strip-item"><strong>One workspace</strong><span>Connected project records</span></div>
         <div class="op-strip-item"><strong>Clear ownership</strong><span>Defined responsibilities</span></div>
@@ -255,9 +662,113 @@
           <h2>Bring your commissioning workflow into focus.</h2>
           <p>Start with a project workspace built around accountability, quality and traceability.</p>
         </div>
-        <a class="btn" href="{{ url_for('auth.register') }}">Get started <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+        <a class="op-btn op-btn--light" href="{{ url_for('auth.register') }}">Get started <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
       </div>
     </div>
   </section>
+
 </main>
+
+<script>
+(function () {
+  'use strict';
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  document.querySelectorAll('[data-op-carousel]').forEach(function (root) {
+    var slides = Array.prototype.slice.call(root.querySelectorAll('[data-slide]'));
+    var dots = Array.prototype.slice.call(root.querySelectorAll('[data-dot]'));
+    var pauseBtn = root.querySelector('[data-pause]');
+    var pauseLabel = pauseBtn.querySelector('span');
+    var pauseIcon = pauseBtn.querySelector('i');
+    var interval = parseInt(root.getAttribute('data-interval'), 10) || 7000;
+    var progressBar = root.querySelector('.op-progress-bar');
+
+    if (slides.length < 2) return;
+
+    root.style.setProperty('--op-interval', interval + 'ms');
+
+    var index = 0;
+    var timer = null;
+    var userPaused = reduceMotion.matches; // start paused for reduced-motion users
+    var hovered = false;
+    var focused = false;
+
+    function isRunning() {
+      return !userPaused && !hovered && !focused && !document.hidden;
+    }
+
+    function render() {
+      slides.forEach(function (slide, i) {
+        var active = i === index;
+        slide.classList.toggle('is-active', active);
+        slide.setAttribute('aria-hidden', String(!active));
+        slide.inert = !active;
+      });
+      dots.forEach(function (dot, i) {
+        dot.setAttribute('aria-current', i === index ? 'true' : 'false');
+      });
+      // Restart the progress bar for the newly active slide.
+      if (progressBar) {
+        progressBar.style.animation = 'none';
+        void progressBar.offsetWidth; // force reflow
+        progressBar.style.animation = '';
+      }
+    }
+
+    function sync() {
+      clearInterval(timer);
+      timer = null;
+      var running = isRunning();
+      root.classList.toggle('is-running', running);
+
+      pauseBtn.setAttribute('aria-pressed', String(userPaused));
+      pauseLabel.textContent = userPaused ? 'Play' : 'Pause';
+      pauseIcon.className = userPaused ? 'fas fa-play' : 'fas fa-pause';
+
+      if (running) {
+        timer = setInterval(function () { go(index + 1); }, interval);
+      }
+    }
+
+    function go(next) {
+      index = (next + slides.length) % slides.length;
+      render();
+      sync(); // resets the timer so manual navigation gets a full interval
+    }
+
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        go(parseInt(dot.getAttribute('data-index'), 10));
+      });
+    });
+
+    pauseBtn.addEventListener('click', function () {
+      userPaused = !userPaused;
+      sync();
+    });
+
+    root.addEventListener('mouseenter', function () { hovered = true; sync(); });
+    root.addEventListener('mouseleave', function () { hovered = false; sync(); });
+
+    root.addEventListener('focusin', function () { focused = true; sync(); });
+    root.addEventListener('focusout', function (e) {
+      if (!root.contains(e.relatedTarget)) {
+        focused = false;
+        sync();
+      }
+    });
+
+    root.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(index + 1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(index - 1); }
+    });
+
+    document.addEventListener('visibilitychange', sync);
+
+    render();
+    sync();
+  });
+})();
+</script>
 {% endblock %}
