@@ -1185,7 +1185,12 @@ def test_progress_snapshot_rejects_foreign_scope(client, opera_setup):
 
 
 def test_mc_rfc_certificates_capture_immutable_issue_time_evidence(client, app, opera_setup):
+    from models_commissioning import CommissioningProject
     with app.app_context():
+        # This test covers certificate snapshots, not Pre-Comm presence, which is tested separately.
+        project = db.session.get(CommissioningProject, opera_setup["project"])
+        project.readiness_policy_json = {"presence_required_gates": []}
+        db.session.commit()
         package = HandoverPackage(
             company_name="Contractor A", project_id=opera_setup["project"],
             subsystem_id=opera_setup["subsystem"], package_number="HP-SUB-01",
@@ -1578,7 +1583,7 @@ def test_readiness_policy_changes_punch_blockers_per_gate(client, app, opera_set
         db.session.commit()
 
         default_result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
-        assert default_result.is_ready_for_mc is True
+        assert not any(issue.code == "OPEN_BLOCKING_PUNCH" and issue.gate == "MC" for issue in default_result.issues)
 
         project.readiness_policy_json = {
             "punch_blocking_categories": {
@@ -2616,3 +2621,22 @@ def test_mc_task_gate_blocks_only_configured_activity_types(client, app, opera_s
         assert fts_task.id not in mc_task_ids
         assert result.is_ready_for_mc is False
         assert result.metrics["by_gate"]["MC"]["incomplete_task_count"] == 1
+
+
+def test_mc_requires_registered_pre_comm_sheets_by_default(client, app, opera_setup):
+    from services.commissioning_readiness import evaluate_subsystem_readiness
+
+    with app.app_context():
+        result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
+        missing = {
+            issue.message for issue in result.issues
+            if issue.code == "MISSING_REQUIRED_CHECK_SHEET" and issue.gate == "MC"
+        }
+        assert result.is_ready_for_mc is False
+        assert any("PRE_COMM_A" in message for message in missing)
+        assert any("PRE_COMM_B" in message for message in missing)
+        # RFC and RFSU keep the previous behaviour: presence is not enforced by default.
+        assert not any(
+            issue.code == "MISSING_REQUIRED_CHECK_SHEET" and issue.gate in ("RFC", "RFSU")
+            for issue in result.issues
+        )

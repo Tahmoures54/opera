@@ -21,7 +21,7 @@ Select the Check Sheet types whose existing records must be signed off for each 
 - COMM_C
 - FUNCTIONAL_TEST
 
-The initial defaults require PRE_COMM_A and PRE_COMM_B for MC, and all four types for RFC and RFSU. By default, OPERA checks the registered sheets of the selected types; it does not require a sheet of every selected type to exist. Enable **Require at least one registered Check Sheet for every selected type** when the project procedure requires presence as well as sign-off.
+The initial defaults require PRE_COMM_A and PRE_COMM_B for MC, and all four types for RFC and RFSU. By default, OPERA checks the registered sheets of the selected types. For **MC**, presence is also required by default: at least one registered sheet of every selected MC type must exist. For RFC and RFSU, presence is not required by default. Enable presence per gate, or the all-gates option, when the project procedure requires it.
 
 ### Task activities that block MC
 Select the task activity types (CCK, STS, PIP, PRC, FTS, OTS, PVP) whose incomplete tasks block Mechanical Completion. A task is incomplete unless it is Completed or Cancelled. The default is empty, so MC is not gated on tasks until a project selects activity types. RFSU task completion is controlled separately below.

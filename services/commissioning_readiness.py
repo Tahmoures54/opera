@@ -194,7 +194,7 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
             )
             gate_issue_count += 1
 
-        if policy["require_check_sheet_presence"]:
+        if policy["require_check_sheet_presence"] or gate in policy["presence_required_gates"]:
             present_types = {s.sheet_type.value for s in required_sheets}
             for missing_type in sorted(required_types - present_types):
                 result.add_blocker(

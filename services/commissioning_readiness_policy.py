@@ -24,6 +24,9 @@ DEFAULT_READINESS_POLICY = {
     # Activity types whose incomplete tasks block MC. Empty by default so
     # existing projects keep their behaviour until the project opts in.
     "mc_required_task_types": [],
+    # Gates that require at least one registered sheet of every selected type.
+    # MC requires Pre-Comm presence by default; RFC and RFSU keep the previous behaviour.
+    "presence_required_gates": ["MC"],
 }
 
 
@@ -74,6 +77,15 @@ def normalize_readiness_policy(raw):
                 errors.append(f"Invalid required Check Sheet types for {gate}")
             else:
                 policy["required_check_sheet_types"][gate] = sorted(set(values))
+
+    if "presence_required_gates" in raw:
+        supplied_presence = raw["presence_required_gates"]
+        if not isinstance(supplied_presence, list) or any(
+            not isinstance(value, str) or value not in GATES for value in supplied_presence
+        ):
+            errors.append("Invalid presence-required gates")
+        else:
+            policy["presence_required_gates"] = sorted(set(supplied_presence))
 
     task_values = {item.value for item in CommissioningTaskType}
     if "mc_required_task_types" in raw:

@@ -45,4 +45,4 @@ The project Readiness policy is stored in `CommissioningProject.readiness_policy
 
 - Electronic sign-off is an authenticated acknowledgement, not a qualified cryptographic signature.
 - The readiness rules are OPERA's configured baseline. Project contracts, approved completion procedures, ITPs and authority matrices remain authoritative.
-- Required Check Sheet types per gate, Punch blocking categories, Hold-point gates and MC task activities are configured per project (see [READINESS_POLICY.md](READINESS_POLICY.md)). Until a project saves its own policy, the defaults apply and a gate does not block on a Check Sheet type that has no registered sheet.
+- Required Check Sheet types per gate, Punch blocking categories, Hold-point gates and MC task activities are configured per project (see [READINESS_POLICY.md](READINESS_POLICY.md)). By default MC requires at least one registered Pre-Comm A and Pre-Comm B sheet; RFC and RFSU do not block on missing sheet types unless a project enables presence for them.

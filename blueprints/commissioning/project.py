@@ -129,6 +129,7 @@ def edit_readiness_policy(project_id):
             "require_check_sheet_presence": request.form.get("require_check_sheet_presence") == "on",
             "require_all_tasks_complete_for_rfsu": request.form.get("require_all_tasks_complete_for_rfsu") == "on",
             "mc_required_task_types": request.form.getlist("mc_required_task_types"),
+            "presence_required_gates": request.form.getlist("presence_required_gates"),
         }
         normalized, validation_errors = normalize_readiness_policy(updated)
         if validation_errors:
