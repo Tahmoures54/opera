@@ -47,6 +47,20 @@ The initial default requires every task in the subsystem to be Completed or Canc
 - MC and RFC certificates capture the effective policy, gate result, gate-specific issues and issue-time evidence in the immutable certificate snapshot.
 - Policy changes are audited with before/after values. A later policy change does not rewrite previously issued certificate snapshots.
 
+## Energy isolations (RFSU)
+Energy isolations applied for work on a subsystem are recorded in the isolation register (commissioning managers and engineers manage it; all project members can view it). An isolation records the tag, energy type (electrical, pneumatic, hydraulic, mechanical, thermal, chemical, gravity or other), purpose and the person who applied it. **RFSU is blocked while any isolation is applied.** An isolation can be released only by a different person than the one who applied it, so removal is independently verified.
+
+This implements a minimal subset of the energy isolation requirements in IOGP 577. It does not replace the site permit-to-work system, and it does not yet record multiple energy sources per equipment, shift-handover verification, or the isolation handover register for equipment transferred to operations.
+
+## Punch waivers
+Only the client representative can waive a Punch item (permission `punch.waive`). Managers and QC inspectors cannot waive. The waiver reason is recorded in the punch history and audit log.
+
+## Requirements handled through dossier document rules
+Vendor documentation, spare-parts lists, training records and utility-availability evidence are project-specific deliverables. Configure them as Document requirements on the Operations page rather than as separate modules. MC checks them when the rules are active for the project.
+
+## Electronic signatures
+Sign-off records use authenticated acknowledgement with an audit trail. This is not a qualified electronic signature. Part 11-style controls such as signature manifestation (printed name, date, time and meaning) and re-authentication at signing are not yet implemented. Choosing and implementing a qualified signature provider is a project decision, pending the applicable regulatory regime.
+
 ## Change control
 Before saving a policy, the project administrator must obtain the required engineering/client approval. Record the governing procedure and revision in the project's controlled document register. Reassess the policy whenever the contract, ITP, systemization, Punch classification or commissioning authority matrix changes.
 

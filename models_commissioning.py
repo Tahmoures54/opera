@@ -1236,3 +1236,41 @@ def _protect_commissioning_evidence(session, flush_context, instances):
     protected = (CommissioningAuditLog, CommissioningSignature, PunchHistory, CheckSheetRevision, CommissioningAttachment, CommissioningDocumentReview, CommissioningDossierReview, CommissioningCertificate, CommissioningPreservationInspection)
     if any(isinstance(obj, protected) for obj in set(session.dirty).union(session.deleted)):
         raise ValueError("Commissioning audit evidence is append-only.")
+
+
+ISOLATION_ENERGY_TYPES = (
+    "ELECTRICAL", "PNEUMATIC", "HYDRAULIC", "MECHANICAL",
+    "THERMAL", "CHEMICAL", "GRAVITY", "OTHER",
+)
+
+
+class CommissioningIsolation(db.Model):
+    """Energy isolation applied for work on a subsystem.
+
+    Released only by a person other than the one who applied it, so isolation
+    removal is independently verified. Applied isolations block RFSU.
+    """
+    __tablename__ = "commissioning_isolation"
+    __table_args__ = (
+        ForeignKeyConstraint(["project_id", "company_name"],
+                             ["commissioning_project.id", "commissioning_project.company_name"],
+                             name="fk_comm_isolation_project_tenant"),
+        ForeignKeyConstraint(["subsystem_id", "company_name"],
+                             ["commissioning_subsystem.id", "commissioning_subsystem.company_name"],
+                             name="fk_comm_isolation_subsystem_tenant"),
+        CheckConstraint("status IN ('APPLIED','RELEASED')", name="ck_comm_isolation_status"),
+        CheckConstraint("length(trim(tag_ref)) > 0", name="ck_comm_isolation_tag"),
+        Index("ix_comm_isolation_company_subsystem_status", "company_name", "subsystem_id", "status"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(100), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("commissioning_project.id", ondelete="RESTRICT"), nullable=False)
+    subsystem_id = db.Column(db.Integer, db.ForeignKey("commissioning_subsystem.id", ondelete="RESTRICT"), nullable=False)
+    tag_ref = db.Column(db.String(100), nullable=False)
+    energy_type = db.Column(db.String(30), nullable=False)
+    purpose = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="APPLIED")
+    applied_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False)
+    applied_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    released_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="RESTRICT"))
+    released_at = db.Column(db.DateTime)

@@ -11,6 +11,7 @@ from sqlalchemy import or_
 from extensions import db
 from models import User
 from models_commissioning import (
+    CommissioningIsolation, ISOLATION_ENERGY_TYPES,
     CommissioningMembership, CommissioningProject, CommissioningSystem, CommissioningSubsystem, CommissioningEquipment, CommissioningTask, CommissioningTaskDependency, CommissioningTaskType, CommissioningTaskStatus,
     CommissioningDocument, CommissioningDocumentReview, CommissioningDossierRequirement, CommissioningDossierRevision, CommissioningDossierReview, DossierRevisionStatus, DossierReviewDecision, CommissioningPreservationInspection, CommissioningCheckSheetTemplate, DocumentStatus,
     CheckSheet, CheckSheetItem, CheckSheetRevision,
@@ -1021,7 +1022,9 @@ def transition_punch(punch_id):
         abort(409, description=f"Transition {old.value} to {target.value} is not allowed")
     if target in (PunchStatus.IN_PROGRESS, PunchStatus.CLOSED) and not (has_permission(punch.project_id, "punch.assign") or has_permission(punch.project_id, "punch.raise")):
         abort(403)
-    if target in (PunchStatus.VERIFIED, PunchStatus.WAIVED) and not has_permission(punch.project_id, "punch.verify"):
+    if target == PunchStatus.VERIFIED and not has_permission(punch.project_id, "punch.verify"):
+        abort(403)
+    if target == PunchStatus.WAIVED and not has_permission(punch.project_id, "punch.waive"):
         abort(403)
     history_remarks = (request.form.get("remarks") or "").strip() or None
     audit_after = {"status": target.value}
@@ -2786,3 +2789,74 @@ def subsystem_dossier_zip_export(project_id, subsystem_id):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Cache-Control"] = "private, no-store"
     return response
+
+
+def _subsystem_in_project(project_id, subsystem_id, company_name):
+    subsystem = (
+        CommissioningSubsystem.query
+        .join(CommissioningSystem, CommissioningSystem.id == CommissioningSubsystem.system_id)
+        .filter(
+            CommissioningSubsystem.id == subsystem_id,
+            CommissioningSubsystem.company_name == company_name,
+            CommissioningSystem.project_id == project_id,
+        ).first()
+    )
+    if subsystem is None:
+        abort(400, description="Invalid subsystem")
+    return subsystem
+
+
+@commissioning_bp.post("/projects/<int:project_id>/isolations")
+@login_required
+def apply_isolation(project_id):
+    """Record an energy isolation applied for work on a subsystem."""
+    project = get_project(project_id)
+    _need(project_id, "isolation.manage")
+    try:
+        subsystem_id = int(request.form.get("subsystem_id", ""))
+    except ValueError:
+        abort(400, description="Invalid subsystem")
+    subsystem = _subsystem_in_project(project_id, subsystem_id, project.company_name)
+    energy_type = _required("energy_type", 30).upper()
+    if energy_type not in ISOLATION_ENERGY_TYPES:
+        abort(400, description="Invalid energy_type")
+    isolation = CommissioningIsolation(
+        company_name=project.company_name, project_id=project_id, subsystem_id=subsystem.id,
+        tag_ref=_required("tag_ref", 100), energy_type=energy_type,
+        purpose=_required("purpose", 255), status="APPLIED",
+        applied_by_id=current_user.id, applied_at=datetime.utcnow(),
+    )
+    db.session.add(isolation)
+    db.session.flush()
+    add_audit_event(
+        project.company_name, "CommissioningIsolation", isolation.id, "ISOLATION_APPLIED",
+        after={"tag_ref": isolation.tag_ref, "energy_type": energy_type, "subsystem_id": subsystem.id},
+    )
+    db.session.commit()
+    flash("Energy isolation recorded.", "success")
+    return redirect(url_for("commissioning.operations", project_id=project_id))
+
+
+@commissioning_bp.post("/isolations/<int:isolation_id>/release")
+@login_required
+def release_isolation(isolation_id):
+    """Release an isolation. The releaser must be a different person from the one who applied it."""
+    isolation = CommissioningIsolation.query.filter_by(
+        id=isolation_id, company_name=current_user.company_name,
+    ).first_or_404()
+    _need(isolation.project_id, "isolation.manage")
+    if isolation.status != "APPLIED":
+        abort(409, description="Isolation is not applied")
+    if isolation.applied_by_id == current_user.id:
+        abort(403, description="An isolation must be released by a different person")
+    isolation.status = "RELEASED"
+    isolation.released_by_id = current_user.id
+    isolation.released_at = datetime.utcnow()
+    add_audit_event(
+        isolation.company_name, "CommissioningIsolation", isolation.id, "ISOLATION_RELEASED",
+        before={"status": "APPLIED"}, after={"status": "RELEASED"},
+    )
+    db.session.commit()
+    flash("Energy isolation released.", "success")
+    return redirect(url_for("commissioning.operations", project_id=isolation.project_id))
+

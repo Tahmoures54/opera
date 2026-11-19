@@ -17,6 +17,21 @@ ROLE_PERMISSIONS = {
     MembershipRole.VIEWER: frozenset({"structure.view", "tasks.view", "checksheets.view", "punch.view", "witness.view", "handover.view", "reports.view", "documents.view", "preservation.view", "dossier.view"}),
 }
 
+# Decisions recorded in docs/READINESS_POLICY.md:
+# - A punch waiver is a client decision: only the client representative holds punch.waive.
+# - Energy isolations are managed by commissioning managers and engineers; everyone with project access can view them.
+ROLE_PERMISSIONS[MembershipRole.CLIENT_REPRESENTATIVE] = (
+    ROLE_PERMISSIONS[MembershipRole.CLIENT_REPRESENTATIVE] | frozenset({"punch.waive", "isolation.view"})
+)
+ROLE_PERMISSIONS[MembershipRole.COMMISSIONING_MANAGER] = (
+    ROLE_PERMISSIONS[MembershipRole.COMMISSIONING_MANAGER] | frozenset({"isolation.view", "isolation.manage"})
+)
+ROLE_PERMISSIONS[MembershipRole.COMMISSIONING_ENGINEER] = (
+    ROLE_PERMISSIONS[MembershipRole.COMMISSIONING_ENGINEER] | frozenset({"isolation.view", "isolation.manage"})
+)
+for _role in (MembershipRole.QC_INSPECTOR, MembershipRole.OPERATIONS_LEAD, MembershipRole.VIEWER):
+    ROLE_PERMISSIONS[_role] = ROLE_PERMISSIONS[_role] | frozenset({"isolation.view"})
+
 
 def get_project(project_id, company_name=None):
     """Return a project only inside the active user's company boundary."""

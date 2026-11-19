@@ -2543,7 +2543,14 @@ def test_punch_waiver_requires_reason_and_records_authority(client, app, opera_s
     punch_id = _open_punch(app, opera_setup)
     with app.app_context():
         qc = db.session.get(User, opera_setup["qc"])
+        client_rep = db.session.get(User, opera_setup["client"])
     _login(client, qc)
+    refused = client.post(
+        f"/commissioning/punch/{punch_id}/transition",
+        data={"status": "WAIVED", "reason": "QC attempt"},
+    )
+    assert refused.status_code == 403
+    _login(client, client_rep)
 
     missing = client.post(f"/commissioning/punch/{punch_id}/transition", data={"status": "WAIVED"})
     assert missing.status_code == 400
@@ -2699,3 +2706,68 @@ def test_mc_blocks_on_configured_equipment_status(client, app, opera_setup):
         equipment.status = "ACTIVE"
         db.session.commit()
         assert _blockers() == []
+
+
+def test_energy_isolation_blocks_rfsu_until_released_by_another_person(client, app, opera_setup):
+    from models_commissioning import CommissioningIsolation
+    from services.commissioning_readiness import evaluate_subsystem_readiness
+
+    def _isolation_blockers():
+        result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
+        return [i for i in result.issues if i.code == "ACTIVE_ISOLATION" and i.gate == "RFSU"]
+
+    _login_id(client, opera_setup["manager"])
+    response = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/isolations",
+        data={
+            "subsystem_id": opera_setup["subsystem"], "tag_ref": "ISO-P-101",
+            "energy_type": "electrical", "purpose": "Motor cable termination",
+        },
+    )
+    assert response.status_code == 302
+
+    with app.app_context():
+        isolation = CommissioningIsolation.query.filter_by(tag_ref="ISO-P-101").one()
+        isolation_id = isolation.id
+        assert isolation.status == "APPLIED"
+        assert isolation.energy_type == "ELECTRICAL"
+        assert len(_isolation_blockers()) == 1
+
+    # The person who applied an isolation may not release it.
+    own = client.post(f"/commissioning/isolations/{isolation_id}/release")
+    assert own.status_code == 403
+    with app.app_context():
+        assert db.session.get(CommissioningIsolation, isolation_id).status == "APPLIED"
+
+    # A viewer cannot apply or release isolations.
+    _login_id(client, opera_setup["viewer"])
+    assert client.post(
+        f"/commissioning/projects/{opera_setup['project']}/isolations",
+        data={"subsystem_id": opera_setup["subsystem"], "tag_ref": "ISO-X", "energy_type": "OTHER", "purpose": "x"},
+    ).status_code == 403
+    assert client.post(f"/commissioning/isolations/{isolation_id}/release").status_code == 403
+
+    with app.app_context():
+        db.session.get(CommissioningIsolation, isolation_id).status = "RELEASED"
+        db.session.commit()
+        assert _isolation_blockers() == []
+
+
+def test_energy_isolation_rejects_unknown_energy_type_and_foreign_subsystem(client, app, opera_setup):
+    _login_id(client, opera_setup["manager"])
+    bad_energy = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/isolations",
+        data={
+            "subsystem_id": opera_setup["subsystem"], "tag_ref": "ISO-BAD",
+            "energy_type": "NUCLEAR", "purpose": "x",
+        },
+    )
+    assert bad_energy.status_code == 400
+    bad_subsystem = client.post(
+        f"/commissioning/projects/{opera_setup['project']}/isolations",
+        data={
+            "subsystem_id": 999999, "tag_ref": "ISO-BAD2",
+            "energy_type": "ELECTRICAL", "purpose": "x",
+        },
+    )
+    assert bad_subsystem.status_code == 400

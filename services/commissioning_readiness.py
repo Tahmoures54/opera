@@ -17,6 +17,7 @@ from models_commissioning import (
     CommissioningDocument,
     CommissioningDossierRequirement,
     CommissioningEquipment,
+    CommissioningIsolation,
     CommissioningProject,
     CommissioningSubsystem,
     CommissioningSystem,
@@ -223,6 +224,10 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
             CommissioningEquipment.status.in_(policy["mc_blocking_equipment_statuses"]),
         ).all()
 
+    rfsu_active_isolations = CommissioningIsolation.query.filter_by(
+        company_name=company_name, subsystem_id=subsystem_id, status="APPLIED",
+    ).all()
+
     gate_ready = {}
     gate_metrics = {}
 
@@ -294,6 +299,14 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
                 )
 
         gate_task_count = len(incomplete_tasks) if gate == "RFSU" else 0
+        if gate == "RFSU":
+            for isolation in rfsu_active_isolations:
+                result.add_blocker(
+                    "ACTIVE_ISOLATION",
+                    f"Energy isolation not released: {isolation.tag_ref} ({isolation.energy_type})",
+                    entity_type="isolation", entity_id=isolation.id, gate=gate,
+                )
+                gate_issue_count += 1
         if gate == "MC":
             mc_task_types = set(policy["mc_required_task_types"])
             mc_blocking_tasks = [

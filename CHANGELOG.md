@@ -4,6 +4,11 @@ All notable OPERA product changes are recorded here. OPERA is an independent com
 
 ## [Unreleased] — 2026-11-19
 
+### Readiness (MC) — additional decisions
+- Energy isolation register: applied isolations block RFSU; release requires a different person than the applier.
+- Punch waivers are restricted to the client representative (`punch.waive`).
+- Electronic signatures remain authenticated acknowledgements; Part 11 re-authentication and qualified signatures are not implemented.
+
 ### Readiness (MC)
 - Mechanical Completion requires registered Pre-Comm A and Pre-Comm B check sheets by default.
 - Project-configurable MC gates for incomplete task activity types, dossier document rules and equipment statuses.
