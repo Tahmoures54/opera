@@ -3,7 +3,7 @@
 {% block meta_description %}Bring commissioning, check sheets, punch management, quality gates and handover together in OPERA's connected project workspace.{% endblock %}
 
 {% block content %}
-{# از <div> استفاده شده تا در صورت وجود <main> در base.html، تگ تودرتو ایجاد نشود. #}
+{# نکته: از <div> استفاده شده تا در صورت وجود <main> در base.html، تگ تودرتو نداشته باشیم. #}
 
 <style>
   /* ==========================================================================
@@ -12,6 +12,7 @@
   .opera-landing {
     --op-ink: #10233f;
     --op-blue: #2463eb;
+    --op-teal: #24b8a9;
     --op-accent: #70e5dc;
     --op-accent-soft: #7beadf;
     font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
@@ -29,7 +30,7 @@
     margin-inline: auto;
   }
 
-  /* Visually hidden, still read by screen readers. */
+  /* Screen-reader-only helper for the page H1. */
   .opera-landing .op-sr-only {
     position: absolute;
     width: 1px; height: 1px;
@@ -113,7 +114,6 @@
   .opera-landing .op-carousel {
     width: 100%;
     position: relative;
-    touch-action: pan-y; /* allow vertical scroll, capture horizontal swipes */
   }
 
   .opera-landing .op-slides { display: grid; }
@@ -186,7 +186,7 @@
 
   .opera-landing .op-slide p {
     margin: 0;
-    color: rgba(240, 248, 255, .86);
+    color: rgba(240, 248, 255, .82);
     font-size: clamp(.95rem, 1.15vw, 1.05rem);
     line-height: 1.75;
     max-width: 46ch;
@@ -201,7 +201,7 @@
 
   .opera-landing .op-slide-foot {
     margin-top: 20px;
-    color: rgba(235, 246, 255, .7);
+    color: rgba(235, 246, 255, .62);
     font-size: .82rem;
     letter-spacing: .01em;
   }
@@ -252,7 +252,7 @@
   .opera-landing .op-preview-dot:nth-child(3) { background: #4dd4a0; }
   .opera-landing .op-preview-title {
     margin-inline-start: 6px;
-    color: rgba(230, 245, 255, .76);
+    color: rgba(230, 245, 255, .72);
     font-size: .78rem;
     font-weight: 600;
     letter-spacing: .02em;
@@ -298,7 +298,7 @@
     font-weight: 600;
     letter-spacing: .08em;
     text-transform: uppercase;
-    color: rgba(230, 245, 255, .7);
+    color: rgba(230, 245, 255, .62);
     text-align: center;
   }
   @keyframes op-ring-in {
@@ -320,7 +320,7 @@
     background: rgba(255, 255, 255, .05);
     border: 1px solid rgba(255, 255, 255, .06);
     font-size: .82rem;
-    color: rgba(235, 245, 255, .88);
+    color: rgba(235, 245, 255, .85);
   }
   .opera-landing .op-preview-row strong {
     font-weight: 600;
@@ -378,7 +378,7 @@
     line-height: 1.3;
   }
   .opera-landing .op-capability span {
-    color: rgba(238, 248, 255, .74);
+    color: rgba(238, 248, 255, .66);
     font-size: .78rem;
     line-height: 1.45;
   }
@@ -430,7 +430,7 @@
   .opera-landing .op-step-card small {
     display: block;
     margin-top: 4px;
-    color: rgba(238, 248, 255, .74);
+    color: rgba(238, 248, 255, .66);
     font-size: .8rem;
   }
 
@@ -473,7 +473,7 @@
     border-radius: 50%;
     background: rgba(255, 255, 255, .06);
     border: 2px solid rgba(255, 255, 255, .26);
-    color: rgba(255, 255, 255, .85);
+    color: rgba(255, 255, 255, .78);
     font-weight: 750;
     font-size: .74rem;
     letter-spacing: .03em;
@@ -498,7 +498,7 @@
   }
   .opera-landing .op-milestone small {
     margin-top: 3px;
-    color: rgba(238, 248, 255, .7);
+    color: rgba(238, 248, 255, .6);
     font-size: .7rem;
     line-height: 1.35;
   }
@@ -531,10 +531,10 @@
     width: 10px;
     height: 10px;
     border-radius: 99px;
-    background: rgba(255, 255, 255, .45);
+    background: rgba(255, 255, 255, .4);
     transition: width .3s ease, background-color .3s ease;
   }
-  .opera-landing .op-dot:hover::before { background: rgba(255, 255, 255, .7); }
+  .opera-landing .op-dot:hover::before { background: rgba(255, 255, 255, .65); }
   .opera-landing .op-dot[aria-current="true"]::before {
     width: 30px;
     background: var(--op-accent);
@@ -648,7 +648,7 @@
   .opera-landing .op-feature--amber .op-feature-icon {
     background: linear-gradient(145deg, #fff4e8, #fffaf5);
     border-color: #f7ead9;
-    color: #b87424;
+    color: #c98631;
   }
   .opera-landing .op-feature h3 {
     margin: 0 0 9px;
@@ -658,7 +658,7 @@
   }
   .opera-landing .op-feature p {
     margin: 0;
-    color: #55657d;
+    color: #647590;
     font-size: .92rem;
     line-height: 1.7;
   }
@@ -705,7 +705,7 @@
     font-weight: 700;
   }
   .opera-landing .op-strip-item span {
-    color: #5f6f85;
+    color: #6f7f93;
     font-size: .78rem;
   }
 
@@ -736,7 +736,7 @@
   }
   .opera-landing .op-cta p {
     margin: 0;
-    color: rgba(255, 255, 255, .88);
+    color: rgba(255, 255, 255, .82);
     line-height: 1.7;
   }
 
@@ -818,7 +818,7 @@
 
         <div class="op-slides">
 
-          <!-- Slide 1 -->
+          <!-- ============================== Slide 1 -->
           <article class="op-slide is-active" id="op-slide-0" data-slide
                    aria-roledescription="slide" aria-label="1 of 4">
             <div class="op-slide-copy">
@@ -874,7 +874,7 @@
             </div>
           </article>
 
-          <!-- Slide 2 -->
+          <!-- ============================== Slide 2 -->
           <article class="op-slide" id="op-slide-1" data-slide
                    aria-roledescription="slide" aria-label="2 of 4" aria-hidden="true" inert>
             <div class="op-slide-copy">
@@ -897,7 +897,7 @@
                   <span>Issued, recorded and verified</span>
                 </div>
                 <div class="op-capability">
-                  <span class="op-capability-icon"><i class="fas fa-tasks"></i></span>
+                  <span class="op-capability-icon"><i class="fas fa-list-check"></i></span>
                   <strong>Punch items</strong>
                   <span>Owned, tracked and closed out</span>
                 </div>
@@ -910,7 +910,7 @@
             </div>
           </article>
 
-          <!-- Slide 3 -->
+          <!-- ============================== Slide 3 -->
           <article class="op-slide" id="op-slide-2" data-slide
                    aria-roledescription="slide" aria-label="3 of 4" aria-hidden="true" inert>
             <div class="op-slide-copy">
@@ -933,7 +933,7 @@
             </div>
           </article>
 
-          <!-- Slide 4 -->
+          <!-- ============================== Slide 4 -->
           <article class="op-slide" id="op-slide-3" data-slide
                    aria-roledescription="slide" aria-label="4 of 4" aria-hidden="true" inert>
             <div class="op-slide-copy">
@@ -976,27 +976,24 @@
         </div>
 
         <div class="op-controls">
-          <div class="op-dots" role="group" aria-label="Choose a slide">
+          <div class="op-dots" role="group" aria-label="Choose a banner">
             <button type="button" class="op-dot" data-dot data-index="0"
-                    aria-label="Show slide 1: Commissioning and start-up workspace"
+                    aria-label="Show banner 1: Commissioning &amp; Start-up Workspace"
                     aria-controls="op-slide-0"></button>
             <button type="button" class="op-dot" data-dot data-index="1"
-                    aria-label="Show slide 2: One connected project view"
+                    aria-label="Show banner 2: One connected project view"
                     aria-controls="op-slide-1"></button>
             <button type="button" class="op-dot" data-dot data-index="2"
-                    aria-label="Show slide 3: Quality execution"
+                    aria-label="Show banner 3: Quality execution"
                     aria-controls="op-slide-2"></button>
             <button type="button" class="op-dot" data-dot data-index="3"
-                    aria-label="Show slide 4: Traceable handover"
+                    aria-label="Show banner 4: Traceable handover"
                     aria-controls="op-slide-3"></button>
           </div>
           <button type="button" class="op-pause" data-pause>
             <i class="fas fa-pause" aria-hidden="true"></i><span>Pause</span>
           </button>
         </div>
-
-        <!-- Announces play/pause changes to assistive technology -->
-        <p class="op-sr-only" data-status role="status" aria-live="polite"></p>
 
         <div class="op-progress" aria-hidden="true"><span class="op-progress-bar"></span></div>
       </div>
@@ -1023,7 +1020,7 @@
           <p>Issue inspections, record results, verify independently and preserve signed revisions.</p>
         </article>
         <article class="op-feature op-feature--amber">
-          <span class="op-feature-icon"><i class="fas fa-tasks" aria-hidden="true"></i></span>
+          <span class="op-feature-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>
           <h3>Punch management</h3>
           <p>Assign deficiencies, track closure and retain verification and waiver history.</p>
         </article>
@@ -1033,7 +1030,7 @@
           <p>Schedule notifications, record attendance and manage formal release steps.</p>
         </article>
         <article class="op-feature op-feature--teal">
-          <span class="op-feature-icon"><i class="fas fa-boxes" aria-hidden="true"></i></span>
+          <span class="op-feature-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>
           <h3>Mechanical completion</h3>
           <p>Track MC, RFC and RFSU milestones with project-specific handover packages.</p>
         </article>
@@ -1045,7 +1042,7 @@
       </div>
 
       <div class="op-note" role="note">
-        <strong>Readiness terminology:</strong> RFC means Ready for Commissioning and RFSU means Ready for Start-Up. OPERA issues and stores a dedicated <code>RFC</code> certificate. Always follow the approved project handover procedure where terminology differs.
+        <strong>Readiness terminology:</strong> RFC means Ready for Commissioning. RFSU means Ready for Start-Up. OPERA issues and stores a dedicated <code>RFC</code> certificate; earlier <code>RF</code> records are migrated automatically. RFSU remains the next start-up readiness milestone. Always follow the approved project handover procedure where terminology differs.
       </div>
 
       <div class="op-strip" role="list" aria-label="OPERA workflow principles">
@@ -1078,25 +1075,23 @@
   'use strict';
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
+  var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-  // Tracks whether the most recent input was a keyboard press.
-  // Keyboard focus pauses autoplay; pointer focus does not.
+  // Track whether the last user interaction was keyboard-driven.
+  // Focus management must only pause autoplay for keyboard focus,
+  // not for focus gained by a pointer click (e.g. the Pause button itself).
   var lastInputWasKeyboard = false;
   document.addEventListener('keydown', function () { lastInputWasKeyboard = true; }, true);
   document.addEventListener('pointerdown', function () { lastInputWasKeyboard = false; }, true);
 
-  function toArray(list) { return Array.prototype.slice.call(list); }
-
   document.querySelectorAll('[data-op-carousel]').forEach(function (root) {
-    var slides = toArray(root.querySelectorAll('[data-slide]'));
+    var slides = Array.prototype.slice.call(root.querySelectorAll('[data-slide]'));
     if (slides.length < 2) return;
 
-    var dots = toArray(root.querySelectorAll('[data-dot]'));
+    var dots = Array.prototype.slice.call(root.querySelectorAll('[data-dot]'));
     var pauseBtn = root.querySelector('[data-pause]');
     var pauseLabel = pauseBtn ? pauseBtn.querySelector('span') : null;
     var pauseIcon = pauseBtn ? pauseBtn.querySelector('i') : null;
-    var statusEl = root.querySelector('[data-status]');
     var progressBar = root.querySelector('.op-progress-bar');
     var interval = parseInt(root.getAttribute('data-interval'), 10) || 7000;
 
@@ -1107,7 +1102,6 @@
     var userPaused = reduceMotion.matches; // start paused for reduced-motion users
     var hovered = false;
     var focused = false;
-    var touchStartX = null;
 
     function isRunning() {
       return !userPaused && !hovered && !focused && !document.hidden;
@@ -1116,7 +1110,7 @@
     function restartProgress() {
       if (!progressBar) return;
       progressBar.style.animation = 'none';
-      void progressBar.offsetWidth; // force reflow
+      void progressBar.offsetWidth; // force reflow to restart the animation
       progressBar.style.animation = '';
     }
 
@@ -1139,10 +1133,16 @@
       var running = isRunning();
       root.classList.toggle('is-running', running);
 
-      if (pauseLabel) pauseLabel.textContent = userPaused ? 'Play' : 'Pause';
-      if (pauseIcon) pauseIcon.className = userPaused ? 'fas fa-play' : 'fas fa-pause';
+      if (pauseBtn) {
+        // No aria-pressed: a play/pause control is not a toggle.
+        // The visible label change is the source of truth for assistive tech.
+        if (pauseLabel) pauseLabel.textContent = userPaused ? 'Play' : 'Pause';
+        if (pauseIcon)  pauseIcon.className  = userPaused ? 'fas fa-play' : 'fas fa-pause';
+      }
 
       if (running) {
+        // Restart the progress bar so the visual and the timer stay in sync
+        // after hover/focus/tab-resume interruptions.
         restartProgress();
         timer = setInterval(function () { go(index + 1); }, interval);
       }
@@ -1163,21 +1163,18 @@
     if (pauseBtn) {
       pauseBtn.addEventListener('click', function () {
         userPaused = !userPaused;
-        // An explicit user choice overrides focus-based pausing,
-        // so pressing Play with the keyboard actually starts playback.
-        focused = false;
-        if (statusEl) {
-          statusEl.textContent = userPaused ? 'Slideshow paused' : 'Slideshow playing';
-        }
         sync();
       });
     }
 
+    // Only bind hover pause on devices that actually have a hover-capable pointer.
+    // On touch screens, mouseenter is synthesized and would permanently pause.
     if (canHover) {
       root.addEventListener('mouseenter', function () { hovered = true; sync(); });
       root.addEventListener('mouseleave', function () { hovered = false; sync(); });
     }
 
+    // Focus pause only applies when focus came from the keyboard.
     root.addEventListener('focusin', function () {
       focused = lastInputWasKeyboard;
       sync();
@@ -1193,17 +1190,6 @@
       if (e.key === 'ArrowRight') { e.preventDefault(); go(index + 1); }
       if (e.key === 'ArrowLeft')  { e.preventDefault(); go(index - 1); }
     });
-
-    // Horizontal swipe support for touch screens.
-    root.addEventListener('touchstart', function (e) {
-      touchStartX = e.changedTouches[0].clientX;
-    }, { passive: true });
-    root.addEventListener('touchend', function (e) {
-      if (touchStartX === null) return;
-      var dx = e.changedTouches[0].clientX - touchStartX;
-      touchStartX = null;
-      if (Math.abs(dx) > 40) go(dx < 0 ? index + 1 : index - 1);
-    }, { passive: true });
 
     document.addEventListener('visibilitychange', sync);
 
