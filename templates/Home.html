@@ -3,18 +3,18 @@
 {% block meta_description %}Bring commissioning, check sheets, punch management, quality gates and handover together in OPERA's connected project workspace.{% endblock %}
 
 {% block content %}
-{# نکته: از <div> استفاده شده تا در صورت وجود <main> در base.html، تگ تودرتو نداشته باشیم. #}
-
 <style>
   /* ==========================================================================
      OPERA landing page
      ========================================================================== */
   .opera-landing {
     --op-ink: #10233f;
+    --op-muted: #60718a;
     --op-blue: #2463eb;
     --op-teal: #24b8a9;
-    --op-accent: #70e5dc;
-    --op-accent-soft: #7beadf;
+    --op-line: rgba(117, 145, 184, .2);
+    --op-radius-lg: 22px;
+    --op-radius-md: 14px;
     font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
     color: var(--op-ink);
     overflow-x: hidden;
@@ -28,17 +28,6 @@
   .opera-landing .op-shell {
     width: min(1160px, calc(100% - 44px));
     margin-inline: auto;
-  }
-
-  /* Screen-reader-only helper for the page H1. */
-  .opera-landing .op-sr-only {
-    position: absolute;
-    width: 1px; height: 1px;
-    padding: 0; margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
   }
 
   /* ---------- Buttons ---------- */
@@ -83,57 +72,67 @@
     border-radius: 10px;
   }
 
-  /* ==========================================================================
-     Hero
-     ========================================================================== */
+  /* ---------- Hero / carousel ---------- */
   .opera-landing .op-hero {
     position: relative;
     isolation: isolate;
-    padding: clamp(44px, 6vw, 72px) 0 clamp(52px, 6vw, 84px);
+    display: flex;
+    align-items: center;
+    min-height: clamp(480px, 62vh, 600px);
+    padding: clamp(40px, 5.5vw, 64px) 0;
     color: #fff;
     background:
-      radial-gradient(circle at 82% 18%, rgba(46, 149, 175, .28), transparent 42%),
-      radial-gradient(circle at 8% 90%, rgba(36, 99, 235, .22), transparent 46%),
-      linear-gradient(180deg, #0d1f38, #0a172a 90%);
+      linear-gradient(90deg, rgba(4, 17, 34, .82), rgba(5, 25, 47, .52) 55%, rgba(4, 19, 37, .7)),
+      var(--op-hero-img, none) center 40% / cover no-repeat,
+      #10243d;
   }
   .opera-landing .op-hero::before {
     content: "";
     position: absolute;
     inset: 0;
     z-index: -1;
-    opacity: .12;
+    opacity: .1;
     pointer-events: none;
     background-image:
-      linear-gradient(rgba(210, 231, 255, .18) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(210, 231, 255, .18) 1px, transparent 1px);
-    background-size: 56px 56px;
-    -webkit-mask-image: radial-gradient(circle at 65% 45%, #000, transparent 72%);
-            mask-image: radial-gradient(circle at 65% 45%, #000, transparent 72%);
+      linear-gradient(rgba(210, 231, 255, .15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(210, 231, 255, .15) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 45%, #000);
+            mask-image: linear-gradient(90deg, transparent, #000 45%, #000);
+  }
+
+  .opera-landing .op-hero-eyebrow {
+    margin: 0 auto 22px;
+    text-align: center;
+    color: rgba(232, 246, 255, .8);
+    font-size: .74rem;
+    font-weight: 650;
+    letter-spacing: .16em;
+    text-transform: uppercase;
   }
 
   .opera-landing .op-carousel {
-    width: 100%;
-    position: relative;
+    width: min(100%, 1000px);
+    margin: 0 auto;
+    text-align: center;
   }
 
+  /* Slides occupy the same grid cell, so the stage is as tall as the tallest slide. */
   .opera-landing .op-slides { display: grid; }
 
   .opera-landing .op-slide {
     grid-area: 1 / 1;
-    display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: clamp(24px, 4vw, 60px);
-    min-height: clamp(380px, 50vh, 480px);
-    padding: clamp(24px, 3.6vw, 44px);
-    border: 1px solid rgba(226, 242, 255, .16);
+    justify-content: center;
+    padding: clamp(22px, 3.5vw, 40px);
+    border: 1px solid rgba(226, 242, 255, .26);
     border-radius: 26px;
-    background:
-      radial-gradient(circle at 100% 0%, rgba(112, 229, 220, .08), transparent 42%),
-      linear-gradient(145deg, rgba(12, 32, 58, .82), rgba(10, 26, 47, .72));
-    box-shadow:
-      0 30px 90px rgba(0, 0, 0, .32),
-      inset 0 1px rgba(255, 255, 255, .1);
+    background: linear-gradient(135deg, rgba(7, 25, 48, .8), rgba(12, 49, 77, .6));
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .25), inset 0 1px rgba(255, 255, 255, .14);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     opacity: 0;
     visibility: hidden;
     transform: translate3d(28px, 0, 0);
@@ -149,20 +148,15 @@
     transition-delay: 0s;
   }
 
-  .opera-landing .op-slide-copy {
-    text-align: start;
-    min-width: 0;
-  }
-
   .opera-landing .op-kicker {
     display: inline-flex;
     align-items: center;
     gap: 9px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     color: #83eee0;
-    font-size: .74rem;
+    font-size: .76rem;
     font-weight: 650;
-    letter-spacing: .14em;
+    letter-spacing: .13em;
     text-transform: uppercase;
   }
   .opera-landing .op-kicker::before {
@@ -174,388 +168,146 @@
     box-shadow: 0 0 0 5px rgba(99, 229, 209, .13);
   }
 
-  .opera-landing .op-slide :is(h1, h2) {
+  .opera-landing .op-slide h1,
+  .opera-landing .op-slide h2 {
+    max-width: 850px;
     margin: 0 0 16px;
     color: #fff;
-    font-size: clamp(1.75rem, 2.9vw, 2.55rem);
+    font-size: clamp(1.9rem, 4vw, 3.3rem);
     font-weight: 720;
-    line-height: 1.14;
+    line-height: 1.1;
     letter-spacing: -.028em;
   }
-  .opera-landing .op-slide :is(h1, h2) span { color: var(--op-accent-soft); }
+  .opera-landing .op-slide h1 span,
+  .opera-landing .op-slide h2 span { color: #78e5dc; }
 
   .opera-landing .op-slide p {
-    margin: 0;
-    color: rgba(240, 248, 255, .82);
-    font-size: clamp(.95rem, 1.15vw, 1.05rem);
+    max-width: 760px;
+    margin: 0 auto;
+    color: rgba(240, 248, 255, .88);
+    font-size: clamp(.98rem, 1.5vw, 1.1rem);
     line-height: 1.75;
-    max-width: 46ch;
   }
 
   .opera-landing .op-slide-actions {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 12px;
     margin-top: 26px;
   }
 
   .opera-landing .op-slide-foot {
-    margin-top: 20px;
-    color: rgba(235, 246, 255, .62);
-    font-size: .82rem;
-    letter-spacing: .01em;
+    margin-top: 18px;
+    color: rgba(235, 246, 255, .7);
+    font-size: .86rem;
   }
 
-  .opera-landing .op-slide-visual {
-    position: relative;
-    min-width: 0;
-    justify-self: stretch;
-  }
-
-  /* ---------- Slide 1 · Project preview ---------- */
-  .opera-landing .op-preview {
-    position: relative;
-    padding: 20px;
-    border-radius: 20px;
-    background: linear-gradient(160deg, rgba(22, 46, 78, .94), rgba(14, 32, 56, .88));
-    border: 1px solid rgba(226, 242, 255, .16);
-    box-shadow:
-      0 30px 70px rgba(0, 0, 0, .4),
-      inset 0 1px rgba(255, 255, 255, .12);
-  }
-  .opera-landing .op-preview::before {
-    content: "";
-    position: absolute;
-    inset: -18% -14% -22% 10%;
-    z-index: -1;
-    border-radius: 40%;
-    background: radial-gradient(circle at 40% 40%, rgba(112, 229, 220, .28), transparent 62%);
-    filter: blur(38px);
-    pointer-events: none;
-  }
-
-  .opera-landing .op-preview-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: 16px;
-    margin-bottom: 18px;
-    border-bottom: 1px solid rgba(226, 242, 255, .12);
-  }
-  .opera-landing .op-preview-dot {
-    width: 9px; height: 9px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .22);
-  }
-  .opera-landing .op-preview-dot:nth-child(1) { background: #ff6b6b; }
-  .opera-landing .op-preview-dot:nth-child(2) { background: #ffcc55; }
-  .opera-landing .op-preview-dot:nth-child(3) { background: #4dd4a0; }
-  .opera-landing .op-preview-title {
-    margin-inline-start: 6px;
-    color: rgba(230, 245, 255, .72);
-    font-size: .78rem;
-    font-weight: 600;
-    letter-spacing: .02em;
-  }
-
-  .opera-landing .op-preview-body {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 18px;
-    align-items: center;
-  }
-
-  .opera-landing .op-ring {
-    position: relative;
-    width: 110px;
-    height: 110px;
-    flex: 0 0 auto;
-  }
-  .opera-landing .op-ring svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .opera-landing .op-ring-fill {
-    stroke-dasharray: 327;
-    stroke-dashoffset: 105; /* 68% */
-    animation: op-ring-in 1.4s ease-out both;
-  }
-  .opera-landing .op-ring-value {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    color: #fff;
-    font-size: 1.5rem;
-    font-weight: 750;
-    letter-spacing: -.02em;
-  }
-  .opera-landing .op-ring-value small {
-    display: block;
-    margin-top: -4px;
-    font-size: .62rem;
-    font-weight: 600;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: rgba(230, 245, 255, .62);
-    text-align: center;
-  }
-  @keyframes op-ring-in {
-    from { stroke-dashoffset: 327; }
-    to   { stroke-dashoffset: 105; }
-  }
-
-  .opera-landing .op-preview-rows {
-    display: grid;
-    gap: 10px;
-  }
-  .opera-landing .op-preview-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 9px 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, .05);
-    border: 1px solid rgba(255, 255, 255, .06);
-    font-size: .82rem;
-    color: rgba(235, 245, 255, .85);
-  }
-  .opera-landing .op-preview-row strong {
-    font-weight: 600;
-    color: #fff;
-    font-size: .8rem;
-  }
-  .opera-landing .op-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    font-size: .68rem;
-    font-weight: 700;
-    letter-spacing: .02em;
-  }
-  .opera-landing .op-badge::before {
-    content: "";
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-  .opera-landing .op-badge--ok   { color: #6ee7c1; background: rgba(110, 231, 193, .12); }
-  .opera-landing .op-badge--warn { color: #ffcc66; background: rgba(255, 204, 102, .12); }
-  .opera-landing .op-badge--info { color: #8fb6ff; background: rgba(143, 182, 255, .12); }
-
-  /* ---------- Slide 2 · Capability tiles ---------- */
+  /* Capability tiles (slide 2) */
   .opera-landing .op-capabilities {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
+    width: 100%;
+    margin-top: 22px;
+    text-align: left;
   }
   .opera-landing .op-capability {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 16px;
-    border: 1px solid rgba(225, 242, 255, .14);
+    gap: 13px;
+    align-items: flex-start;
+    padding: 15px 16px;
+    border: 1px solid rgba(225, 242, 255, .2);
     border-radius: 14px;
-    background: linear-gradient(160deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .03));
+    background: rgba(255, 255, 255, .07);
   }
-  .opera-landing .op-capability-icon {
-    display: grid;
-    place-items: center;
-    width: 34px; height: 34px;
-    border-radius: 10px;
-    background: rgba(112, 229, 220, .14);
-    color: var(--op-accent-soft);
-    font-size: .9rem;
+  .opera-landing .op-capability i {
+    flex: 0 0 auto;
+    margin-top: 3px;
+    color: #78e5dc;
   }
   .opera-landing .op-capability strong {
-    color: #fff;
-    font-size: .92rem;
-    font-weight: 650;
-    line-height: 1.3;
-  }
-  .opera-landing .op-capability span {
-    color: rgba(238, 248, 255, .66);
-    font-size: .78rem;
-    line-height: 1.45;
-  }
-
-  /* ---------- Slide 3 · Step timeline ---------- */
-  .opera-landing .op-steps-visual {
-    display: grid;
-    gap: 14px;
-    counter-reset: step;
-  }
-  .opera-landing .op-step-card {
-    position: relative;
-    padding: 16px 18px 16px 62px;
-    border-radius: 14px;
-    background: linear-gradient(160deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .035));
-    border: 1px solid rgba(225, 242, 255, .14);
-  }
-  .opera-landing .op-step-card::before {
-    counter-increment: step;
-    content: counter(step);
-    position: absolute;
-    left: 18px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 30px; height: 30px;
-    border-radius: 50%;
-    background: var(--op-accent);
-    color: #0a1f33;
-    font-weight: 800;
-    font-size: .85rem;
-    display: grid;
-    place-items: center;
-  }
-  .opera-landing .op-step-card + .op-step-card::after {
-    content: "";
-    position: absolute;
-    left: 32px;
-    bottom: 100%;
-    width: 2px;
-    height: 14px;
-    background: rgba(112, 229, 220, .35);
-  }
-  .opera-landing .op-step-card strong {
     display: block;
     color: #fff;
     font-size: .95rem;
     font-weight: 650;
   }
-  .opera-landing .op-step-card small {
+  .opera-landing .op-capability span {
+    display: block;
+    margin-top: 3px;
+    color: rgba(238, 248, 255, .72);
+    font-size: .82rem;
+    line-height: 1.5;
+  }
+
+  /* Step list (slides 3 and 4) */
+  .opera-landing .op-steps {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+    width: 100%;
+    margin-top: 24px;
+    text-align: left;
+  }
+  .opera-landing .op-step {
+    padding: 14px 16px;
+    border: 1px solid rgba(225, 242, 255, .2);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .075);
+    color: #fff;
+    font-size: .92rem;
+    font-weight: 650;
+  }
+  .opera-landing .op-step small {
     display: block;
     margin-top: 4px;
-    color: rgba(238, 248, 255, .66);
+    color: rgba(238, 248, 255, .7);
     font-size: .8rem;
+    font-weight: 450;
   }
 
-  /* ---------- Slide 4 · Milestone track (MC → RFC → RFSU → OA) ---------- */
-  .opera-landing .op-milestones {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    padding: 8px 0;
-  }
-  .opera-landing .op-milestone {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 8px 4px;
-  }
-  .opera-landing .op-milestone + .op-milestone::before {
-    content: "";
-    position: absolute;
-    top: 26px;
-    right: 50%;
-    width: 100%;
-    height: 2px;
-    background: rgba(255, 255, 255, .14);
-    z-index: 0;
-  }
-  .opera-landing .op-milestone.is-done + .op-milestone::before,
-  .opera-landing .op-milestone.is-current + .op-milestone::before {
-    background: linear-gradient(90deg, rgba(112, 229, 220, .8), rgba(112, 229, 220, .25));
-  }
-  .opera-landing .op-milestone-dot {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    place-items: center;
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .06);
-    border: 2px solid rgba(255, 255, 255, .26);
-    color: rgba(255, 255, 255, .78);
-    font-weight: 750;
-    font-size: .74rem;
-    letter-spacing: .03em;
-    margin-bottom: 10px;
-  }
-  .opera-landing .op-milestone.is-done .op-milestone-dot {
-    background: var(--op-accent);
-    border-color: var(--op-accent);
-    color: #0a1f33;
-  }
-  .opera-landing .op-milestone.is-current .op-milestone-dot {
-    background: rgba(112, 229, 220, .16);
-    border-color: var(--op-accent);
-    color: var(--op-accent-soft);
-    box-shadow: 0 0 0 5px rgba(112, 229, 220, .14);
-  }
-  .opera-landing .op-milestone strong {
-    color: #fff;
-    font-size: .82rem;
-    font-weight: 700;
-    letter-spacing: .04em;
-  }
-  .opera-landing .op-milestone small {
-    margin-top: 3px;
-    color: rgba(238, 248, 255, .6);
-    font-size: .7rem;
-    line-height: 1.35;
-  }
-  .opera-landing .op-milestone.is-current strong { color: var(--op-accent-soft); }
-
-  /* ---------- Controls ---------- */
+  /* Controls */
   .opera-landing .op-controls {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 18px;
-    margin-top: 26px;
+    gap: 16px;
+    margin-top: 24px;
   }
   .opera-landing .op-dots {
     display: flex;
-    gap: 4px;
+    gap: 8px;
   }
   .opera-landing .op-dot {
-    display: grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-  }
-  .opera-landing .op-dot::before {
-    content: "";
     width: 10px;
     height: 10px;
+    padding: 0;
+    border: 0;
     border-radius: 99px;
-    background: rgba(255, 255, 255, .4);
+    background: rgba(255, 255, 255, .38);
+    cursor: pointer;
     transition: width .3s ease, background-color .3s ease;
   }
-  .opera-landing .op-dot:hover::before { background: rgba(255, 255, 255, .65); }
-  .opera-landing .op-dot[aria-current="true"]::before {
+  .opera-landing .op-dot:hover { background: rgba(255, 255, 255, .6); }
+  .opera-landing .op-dot[aria-current="true"] {
     width: 30px;
-    background: var(--op-accent);
+    background: #70e5dc;
   }
-
   .opera-landing .op-pause {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    min-height: 32px;
-    padding: 6px 14px;
-    border: 1px solid rgba(225, 242, 255, .3);
+    padding: 7px 13px;
+    border: 1px solid rgba(225, 242, 255, .35);
     border-radius: 99px;
-    background: rgba(255, 255, 255, .06);
+    background: rgba(255, 255, 255, .08);
     color: #fff;
     font: inherit;
-    font-size: .78rem;
+    font-size: .8rem;
     font-weight: 600;
     cursor: pointer;
   }
-  .opera-landing .op-pause:hover { background: rgba(255, 255, 255, .14); }
+  .opera-landing .op-pause:hover { background: rgba(255, 255, 255, .16); }
 
   .opera-landing .op-progress {
     height: 3px;
@@ -563,22 +315,20 @@
     margin: 18px auto 0;
     overflow: hidden;
     border-radius: 3px;
-    background: rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .18);
   }
   .opera-landing .op-progress-bar {
     display: block;
     width: 0;
     height: 100%;
-    background: var(--op-accent);
+    background: #70e5dc;
     animation: op-progress var(--op-interval, 7s) linear forwards;
     animation-play-state: paused;
   }
   .opera-landing .op-carousel.is-running .op-progress-bar { animation-play-state: running; }
   @keyframes op-progress { to { width: 100%; } }
 
-  /* ==========================================================================
-     Sections below the hero
-     ========================================================================== */
+  /* ---------- Sections ---------- */
   .opera-landing .op-section { padding: clamp(68px, 8vw, 104px) 0; }
   .opera-landing .op-section-head {
     max-width: 720px;
@@ -602,7 +352,7 @@
   }
   .opera-landing .op-section-intro {
     margin: 0 auto;
-    color: #5a6b82;
+    color: #6b7c93;
     font-size: 1rem;
     line-height: 1.8;
   }
@@ -658,7 +408,7 @@
   }
   .opera-landing .op-feature p {
     margin: 0;
-    color: #647590;
+    color: #718198;
     font-size: .92rem;
     line-height: 1.7;
   }
@@ -667,7 +417,7 @@
     margin-top: 24px;
     padding: 14px 16px;
     border: 1px solid #cfe3f5;
-    border-inline-start: 4px solid var(--op-blue);
+    border-inline-start: 4px solid #2463eb;
     border-radius: 12px;
     background: #f2f8ff;
     color: #2b4668;
@@ -705,7 +455,7 @@
     font-weight: 700;
   }
   .opera-landing .op-strip-item span {
-    color: #6f7f93;
+    color: #8190a5;
     font-size: .78rem;
   }
 
@@ -736,57 +486,32 @@
   }
   .opera-landing .op-cta p {
     margin: 0;
-    color: rgba(255, 255, 255, .82);
+    color: rgba(255, 255, 255, .78);
     line-height: 1.7;
   }
 
-  /* ==========================================================================
-     Responsive
-     ========================================================================== */
+  /* ---------- Responsive ---------- */
   @media (max-width: 900px) {
     .opera-landing .op-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .opera-landing .op-slide {
-      grid-template-columns: 1fr;
-      text-align: center;
-      gap: 30px;
-      min-height: 0;
-    }
-    .opera-landing .op-slide-copy { text-align: center; }
-    .opera-landing .op-slide p { margin-inline: auto; }
-    .opera-landing .op-slide-actions { justify-content: center; }
-    .opera-landing .op-slide-foot { text-align: center; }
-    .opera-landing .op-slide-visual { max-width: 460px; width: 100%; margin: 0 auto; }
+    .opera-landing .op-capabilities { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   @media (max-width: 650px) {
     .opera-landing .op-shell { width: min(100% - 30px, 520px); }
-    .opera-landing .op-hero { padding: 32px 0 48px; }
-    .opera-landing .op-slide { padding: 22px 16px; border-radius: 20px; }
-    .opera-landing .op-slide :is(h1, h2) { font-size: clamp(1.7rem, 8vw, 2.3rem); }
+    .opera-landing .op-hero { min-height: 0; padding: 40px 0 48px; }
+    .opera-landing .op-slide { padding: 24px 18px; border-radius: 19px; }
+    .opera-landing .op-slide h1,
+    .opera-landing .op-slide h2 { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+    .opera-landing .op-capabilities,
+    .opera-landing .op-steps { grid-template-columns: 1fr; gap: 8px; }
     .opera-landing .op-slide-actions { flex-direction: column; width: 100%; }
     .opera-landing .op-slide-actions .op-btn { width: 100%; }
-    .opera-landing .op-capabilities { gap: 8px; }
-    .opera-landing .op-capability { padding: 14px; }
     .opera-landing .op-feature-grid { grid-template-columns: 1fr; gap: 13px; }
     .opera-landing .op-feature { min-height: 0; padding: 22px; }
     .opera-landing .op-strip { grid-template-columns: repeat(2, 1fr); }
     .opera-landing .op-cta { flex-direction: column; align-items: flex-start; }
     .opera-landing .op-cta .op-btn { width: 100%; }
     .opera-landing .op-cta-wrap { padding-bottom: 60px; }
-    .opera-landing .op-milestone strong { font-size: .74rem; }
-    .opera-landing .op-milestone small { font-size: .64rem; }
-    .opera-landing .op-milestone-dot { width: 30px; height: 30px; font-size: .68rem; }
-  }
-
-  @media (max-width: 420px) {
-    .opera-landing .op-preview-body {
-      grid-template-columns: 1fr;
-      justify-items: center;
-      text-align: center;
-    }
-    .opera-landing .op-preview-rows { width: 100%; }
-    .opera-landing .op-milestones { grid-template-columns: repeat(2, 1fr); gap: 14px 6px; }
-    .opera-landing .op-milestone + .op-milestone::before { display: none; }
   }
 
   /* ---------- Reduced motion ---------- */
@@ -795,181 +520,66 @@
     .opera-landing *::before,
     .opera-landing *::after {
       transition-duration: .01ms !important;
-      animation-duration: .01ms !important;
-      animation-iteration-count: 1 !important;
+      animation: none !important;
     }
     .opera-landing .op-progress { display: none; }
     .opera-landing .op-carousel .op-slide:not(.is-active) { display: none; }
   }
 </style>
 
-<div class="opera-landing" dir="ltr">
+<main class="opera-landing">
 
-  <h1 class="op-sr-only">OPERA — Commissioning &amp; Start-up Management workspace for EPC and industrial projects</h1>
-
-  <section class="op-hero" aria-label="OPERA introduction">
+  <section class="op-hero" style="--op-hero-img: url('{{ url_for('static', filename='images/marketing/opera-hero.jpg') }}');" aria-label="OPERA introduction">
     <div class="op-shell">
-      <div class="op-carousel"
-           data-op-carousel
-           data-interval="7000"
-           role="region"
-           aria-roledescription="carousel"
-           aria-label="OPERA introduction slides">
+      <p class="op-hero-eyebrow">OPERA · Commissioning &amp; Start-up Workspace</p>
 
+      <div class="op-carousel" data-op-carousel data-interval="7000">
         <div class="op-slides">
 
-          <!-- ============================== Slide 1 -->
-          <article class="op-slide is-active" id="op-slide-0" data-slide
-                   aria-roledescription="slide" aria-label="1 of 4">
-            <div class="op-slide-copy">
-              <span class="op-kicker">OPERA · Commissioning &amp; Start-up Workspace</span>
-              <h2>Move every project milestone <span>forward with confidence.</span></h2>
-              <p>OPERA gives EPC and industrial teams one reliable workspace to plan commissioning, execute check sheets, resolve punch items and manage handover, with clear ownership and an auditable history.</p>
-              <div class="op-slide-actions">
-                <a class="op-btn op-btn--primary" href="{{ url_for('auth.register') }}">
-                  Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i>
-                </a>
-                <a class="op-btn op-btn--ghost" href="{{ url_for('auth.login') }}">
-                  Sign in <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-                </a>
-              </div>
-              <div class="op-slide-foot">Built for project teams, commissioning engineers, QC and operations.</div>
+          <article class="op-slide is-active" data-slide aria-roledescription="slide" aria-label="1 of 4">
+            <span class="op-kicker">Commissioning, under control</span>
+            <h1>Move every project milestone <span>forward with confidence.</span></h1>
+            <p>OPERA gives EPC and industrial teams one reliable workspace to plan commissioning, execute check sheets, resolve punch items and manage handover, with clear ownership and an auditable history.</p>
+            <div class="op-slide-actions">
+              <a class="op-btn op-btn--primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+              <a class="op-btn op-btn--ghost" href="{{ url_for('auth.login') }}">Sign in <i class="fas fa-sign-in-alt" aria-hidden="true"></i></a>
             </div>
+            <div class="op-slide-foot">Built for project teams, commissioning engineers, QC and operations.</div>
+          </article>
 
-            <div class="op-slide-visual" aria-hidden="true">
-              <div class="op-preview">
-                <div class="op-preview-head">
-                  <span class="op-preview-dot"></span>
-                  <span class="op-preview-dot"></span>
-                  <span class="op-preview-dot"></span>
-                  <span class="op-preview-title">System 04 · Compressor Train</span>
-                </div>
-                <div class="op-preview-body">
-                  <div class="op-ring">
-                    <svg viewBox="0 0 120 120">
-                      <circle cx="60" cy="60" r="52" fill="none"
-                              stroke="rgba(255,255,255,.1)" stroke-width="10"/>
-                      <circle class="op-ring-fill" cx="60" cy="60" r="52" fill="none"
-                              stroke="#70e5dc" stroke-width="10" stroke-linecap="round"
-                              transform="rotate(-90 60 60)"/>
-                    </svg>
-                    <div class="op-ring-value">68%<small>Ready</small></div>
-                  </div>
-                  <div class="op-preview-rows">
-                    <div class="op-preview-row">
-                      <span class="op-badge op-badge--ok">Verified</span>
-                      <strong>CS-041</strong>
-                    </div>
-                    <div class="op-preview-row">
-                      <span class="op-badge op-badge--warn">Open</span>
-                      <strong>12 punch</strong>
-                    </div>
-                    <div class="op-preview-row">
-                      <span class="op-badge op-badge--info">MC due</span>
-                      <strong>4 days</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <article class="op-slide" data-slide aria-roledescription="slide" aria-label="2 of 4" aria-hidden="true" inert>
+            <span class="op-kicker">One connected project view</span>
+            <h2>Every workstream. <span>One clear picture.</span></h2>
+            <p>Keep systems, inspections and outstanding work visible in a single structure, so every team works from the same records.</p>
+            <div class="op-capabilities">
+              <div class="op-capability"><i class="fas fa-sitemap" aria-hidden="true"></i><div><strong>Systems &amp; subsystems</strong><span>Structured, referenced and weighted</span></div></div>
+              <div class="op-capability"><i class="fas fa-clipboard-check" aria-hidden="true"></i><div><strong>Check sheets</strong><span>Issued, recorded and verified</span></div></div>
+              <div class="op-capability"><i class="fas fa-list-check" aria-hidden="true"></i><div><strong>Punch items</strong><span>Owned, tracked and closed out</span></div></div>
+              <div class="op-capability"><i class="fas fa-chart-line" aria-hidden="true"></i><div><strong>Progress evidence</strong><span>Dated snapshots tied to records</span></div></div>
+            </div>
+            <div class="op-slide-foot">Project control · Quality execution · Traceable handover</div>
+          </article>
+
+          <article class="op-slide" data-slide aria-roledescription="slide" aria-label="3 of 4" aria-hidden="true" inert>
+            <span class="op-kicker">Quality execution</span>
+            <h2>From inspection to <span>verified close-out.</span></h2>
+            <p>Coordinate check sheet execution, QC verification, witness and hold points, and punch closure, while the supporting record stays connected to the work.</p>
+            <div class="op-steps">
+              <div class="op-step">Check sheet execution &amp; QC<small>Inspection, review and verification</small></div>
+              <div class="op-step">Punch closure &amp; verification<small>Assigned ownership through close-out</small></div>
             </div>
           </article>
 
-          <!-- ============================== Slide 2 -->
-          <article class="op-slide" id="op-slide-1" data-slide
-                   aria-roledescription="slide" aria-label="2 of 4" aria-hidden="true" inert>
-            <div class="op-slide-copy">
-              <span class="op-kicker">One connected project view</span>
-              <h2>Every workstream. <span>One clear picture.</span></h2>
-              <p>Keep systems, inspections and outstanding work visible in a single structure, so every team works from the same records.</p>
-              <div class="op-slide-foot">Project control · Quality execution · Traceable handover</div>
+          <article class="op-slide" data-slide aria-roledescription="slide" aria-label="4 of 4" aria-hidden="true" inert>
+            <span class="op-kicker">Traceable handover</span>
+            <h2>Make readiness <span>visible and accountable.</span></h2>
+            <p>Organize project and system structure, then progress through MC, RFC, RFSU and handover with clear responsibilities and evidence-led milestones.</p>
+            <div class="op-steps">
+              <div class="op-step">Project &amp; system structure<small>Organized and assigned</small></div>
+              <div class="op-step">MC, RFC, RFSU &amp; handover<small>Evidence-led readiness milestones</small></div>
             </div>
-
-            <div class="op-slide-visual" aria-hidden="true">
-              <div class="op-capabilities">
-                <div class="op-capability">
-                  <span class="op-capability-icon"><i class="fas fa-sitemap"></i></span>
-                  <strong>Systems &amp; subsystems</strong>
-                  <span>Structured, referenced and weighted</span>
-                </div>
-                <div class="op-capability">
-                  <span class="op-capability-icon"><i class="fas fa-clipboard-check"></i></span>
-                  <strong>Check sheets</strong>
-                  <span>Issued, recorded and verified</span>
-                </div>
-                <div class="op-capability">
-                  <span class="op-capability-icon"><i class="fas fa-list-check"></i></span>
-                  <strong>Punch items</strong>
-                  <span>Owned, tracked and closed out</span>
-                </div>
-                <div class="op-capability">
-                  <span class="op-capability-icon"><i class="fas fa-chart-line"></i></span>
-                  <strong>Progress evidence</strong>
-                  <span>Dated snapshots tied to records</span>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- ============================== Slide 3 -->
-          <article class="op-slide" id="op-slide-2" data-slide
-                   aria-roledescription="slide" aria-label="3 of 4" aria-hidden="true" inert>
-            <div class="op-slide-copy">
-              <span class="op-kicker">Quality execution</span>
-              <h2>From inspection to <span>verified close-out.</span></h2>
-              <p>Coordinate check sheet execution, QC verification, witness and hold points, and punch closure, while the supporting record stays connected to the work.</p>
-            </div>
-
-            <div class="op-slide-visual" aria-hidden="true">
-              <div class="op-steps-visual">
-                <div class="op-step-card">
-                  <strong>Check sheet execution &amp; QC</strong>
-                  <small>Inspection, review and verification</small>
-                </div>
-                <div class="op-step-card">
-                  <strong>Punch closure &amp; verification</strong>
-                  <small>Assigned ownership through close-out</small>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- ============================== Slide 4 -->
-          <article class="op-slide" id="op-slide-3" data-slide
-                   aria-roledescription="slide" aria-label="4 of 4" aria-hidden="true" inert>
-            <div class="op-slide-copy">
-              <span class="op-kicker">Traceable handover</span>
-              <h2>Make readiness <span>visible and accountable.</span></h2>
-              <p>Organize project and system structure, then progress through MC, RFC, RFSU and Operations Acceptance with clear responsibilities and evidence-led milestones.</p>
-              <div class="op-slide-actions">
-                <a class="op-btn op-btn--primary" href="{{ url_for('auth.register') }}">
-                  Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i>
-                </a>
-              </div>
-            </div>
-
-            <div class="op-slide-visual" aria-hidden="true">
-              <div class="op-milestones">
-                <div class="op-milestone is-done">
-                  <span class="op-milestone-dot">MC</span>
-                  <strong>Mechanical</strong>
-                  <small>Completed</small>
-                </div>
-                <div class="op-milestone is-done">
-                  <span class="op-milestone-dot">RFC</span>
-                  <strong>Ready for Commissioning</strong>
-                  <small>Certified</small>
-                </div>
-                <div class="op-milestone is-current">
-                  <span class="op-milestone-dot">RFSU</span>
-                  <strong>Ready for Start-Up</strong>
-                  <small>In progress</small>
-                </div>
-                <div class="op-milestone">
-                  <span class="op-milestone-dot">OA</span>
-                  <strong>Operations Acceptance</strong>
-                  <small>Pending</small>
-                </div>
-              </div>
+            <div class="op-slide-actions">
+              <a class="op-btn op-btn--primary" href="{{ url_for('auth.register') }}">Create your account <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
             </div>
           </article>
 
@@ -977,20 +587,12 @@
 
         <div class="op-controls">
           <div class="op-dots" role="group" aria-label="Choose a banner">
-            <button type="button" class="op-dot" data-dot data-index="0"
-                    aria-label="Show banner 1: Commissioning &amp; Start-up Workspace"
-                    aria-controls="op-slide-0"></button>
-            <button type="button" class="op-dot" data-dot data-index="1"
-                    aria-label="Show banner 2: One connected project view"
-                    aria-controls="op-slide-1"></button>
-            <button type="button" class="op-dot" data-dot data-index="2"
-                    aria-label="Show banner 3: Quality execution"
-                    aria-controls="op-slide-2"></button>
-            <button type="button" class="op-dot" data-dot data-index="3"
-                    aria-label="Show banner 4: Traceable handover"
-                    aria-controls="op-slide-3"></button>
+            <button type="button" class="op-dot" data-dot data-index="0" aria-label="Show banner 1: Commissioning, under control"></button>
+            <button type="button" class="op-dot" data-dot data-index="1" aria-label="Show banner 2: One connected project view"></button>
+            <button type="button" class="op-dot" data-dot data-index="2" aria-label="Show banner 3: Quality execution"></button>
+            <button type="button" class="op-dot" data-dot data-index="3" aria-label="Show banner 4: Traceable handover"></button>
           </div>
-          <button type="button" class="op-pause" data-pause>
+          <button type="button" class="op-pause" data-pause aria-pressed="false">
             <i class="fas fa-pause" aria-hidden="true"></i><span>Pause</span>
           </button>
         </div>
@@ -1045,11 +647,11 @@
         <strong>Readiness terminology:</strong> RFC means Ready for Commissioning. RFSU means Ready for Start-Up. OPERA issues and stores a dedicated <code>RFC</code> certificate; earlier <code>RF</code> records are migrated automatically. RFSU remains the next start-up readiness milestone. Always follow the approved project handover procedure where terminology differs.
       </div>
 
-      <div class="op-strip" role="list" aria-label="OPERA workflow principles">
-        <div class="op-strip-item" role="listitem"><strong>One workspace</strong><span>Connected project records</span></div>
-        <div class="op-strip-item" role="listitem"><strong>Clear ownership</strong><span>Defined responsibilities</span></div>
-        <div class="op-strip-item" role="listitem"><strong>Verified progress</strong><span>Evidence over assumptions</span></div>
-        <div class="op-strip-item" role="listitem"><strong>Audit-ready</strong><span>Traceable decisions</span></div>
+      <div class="op-strip" aria-label="OPERA workflow principles">
+        <div class="op-strip-item"><strong>One workspace</strong><span>Connected project records</span></div>
+        <div class="op-strip-item"><strong>Clear ownership</strong><span>Defined responsibilities</span></div>
+        <div class="op-strip-item"><strong>Verified progress</strong><span>Evidence over assumptions</span></div>
+        <div class="op-strip-item"><strong>Audit-ready</strong><span>Traceable decisions</span></div>
       </div>
     </div>
   </section>
@@ -1061,39 +663,29 @@
           <h2>Bring your commissioning workflow into focus.</h2>
           <p>Start with a project workspace built around accountability, quality and traceability.</p>
         </div>
-        <a class="op-btn op-btn--light" href="{{ url_for('auth.register') }}">
-          Get started <i class="fas fa-arrow-right" aria-hidden="true"></i>
-        </a>
+        <a class="op-btn op-btn--light" href="{{ url_for('auth.register') }}">Get started <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
       </div>
     </div>
   </section>
 
-</div>
+</main>
 
 <script>
 (function () {
   'use strict';
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-
-  // Track whether the last user interaction was keyboard-driven.
-  // Focus management must only pause autoplay for keyboard focus,
-  // not for focus gained by a pointer click (e.g. the Pause button itself).
-  var lastInputWasKeyboard = false;
-  document.addEventListener('keydown', function () { lastInputWasKeyboard = true; }, true);
-  document.addEventListener('pointerdown', function () { lastInputWasKeyboard = false; }, true);
 
   document.querySelectorAll('[data-op-carousel]').forEach(function (root) {
     var slides = Array.prototype.slice.call(root.querySelectorAll('[data-slide]'));
-    if (slides.length < 2) return;
-
     var dots = Array.prototype.slice.call(root.querySelectorAll('[data-dot]'));
     var pauseBtn = root.querySelector('[data-pause]');
-    var pauseLabel = pauseBtn ? pauseBtn.querySelector('span') : null;
-    var pauseIcon = pauseBtn ? pauseBtn.querySelector('i') : null;
-    var progressBar = root.querySelector('.op-progress-bar');
+    var pauseLabel = pauseBtn.querySelector('span');
+    var pauseIcon = pauseBtn.querySelector('i');
     var interval = parseInt(root.getAttribute('data-interval'), 10) || 7000;
+    var progressBar = root.querySelector('.op-progress-bar');
+
+    if (slides.length < 2) return;
 
     root.style.setProperty('--op-interval', interval + 'ms');
 
@@ -1107,13 +699,6 @@
       return !userPaused && !hovered && !focused && !document.hidden;
     }
 
-    function restartProgress() {
-      if (!progressBar) return;
-      progressBar.style.animation = 'none';
-      void progressBar.offsetWidth; // force reflow to restart the animation
-      progressBar.style.animation = '';
-    }
-
     function render() {
       slides.forEach(function (slide, i) {
         var active = i === index;
@@ -1124,26 +709,25 @@
       dots.forEach(function (dot, i) {
         dot.setAttribute('aria-current', i === index ? 'true' : 'false');
       });
+      // Restart the progress bar for the newly active slide.
+      if (progressBar) {
+        progressBar.style.animation = 'none';
+        void progressBar.offsetWidth; // force reflow
+        progressBar.style.animation = '';
+      }
     }
 
     function sync() {
       clearInterval(timer);
       timer = null;
-
       var running = isRunning();
       root.classList.toggle('is-running', running);
 
-      if (pauseBtn) {
-        // No aria-pressed: a play/pause control is not a toggle.
-        // The visible label change is the source of truth for assistive tech.
-        if (pauseLabel) pauseLabel.textContent = userPaused ? 'Play' : 'Pause';
-        if (pauseIcon)  pauseIcon.className  = userPaused ? 'fas fa-play' : 'fas fa-pause';
-      }
+      pauseBtn.setAttribute('aria-pressed', String(userPaused));
+      pauseLabel.textContent = userPaused ? 'Play' : 'Pause';
+      pauseIcon.className = userPaused ? 'fas fa-play' : 'fas fa-pause';
 
       if (running) {
-        // Restart the progress bar so the visual and the timer stay in sync
-        // after hover/focus/tab-resume interruptions.
-        restartProgress();
         timer = setInterval(function () { go(index + 1); }, interval);
       }
     }
@@ -1151,34 +735,24 @@
     function go(next) {
       index = (next + slides.length) % slides.length;
       render();
-      sync();
+      sync(); // resets the timer so manual navigation gets a full interval
     }
 
     dots.forEach(function (dot) {
       dot.addEventListener('click', function () {
-        go(parseInt(dot.getAttribute('data-index'), 10) || 0);
+        go(parseInt(dot.getAttribute('data-index'), 10));
       });
     });
 
-    if (pauseBtn) {
-      pauseBtn.addEventListener('click', function () {
-        userPaused = !userPaused;
-        sync();
-      });
-    }
-
-    // Only bind hover pause on devices that actually have a hover-capable pointer.
-    // On touch screens, mouseenter is synthesized and would permanently pause.
-    if (canHover) {
-      root.addEventListener('mouseenter', function () { hovered = true; sync(); });
-      root.addEventListener('mouseleave', function () { hovered = false; sync(); });
-    }
-
-    // Focus pause only applies when focus came from the keyboard.
-    root.addEventListener('focusin', function () {
-      focused = lastInputWasKeyboard;
+    pauseBtn.addEventListener('click', function () {
+      userPaused = !userPaused;
       sync();
     });
+
+    root.addEventListener('mouseenter', function () { hovered = true; sync(); });
+    root.addEventListener('mouseleave', function () { hovered = false; sync(); });
+
+    root.addEventListener('focusin', function () { focused = true; sync(); });
     root.addEventListener('focusout', function (e) {
       if (!root.contains(e.relatedTarget)) {
         focused = false;
@@ -1188,7 +762,7 @@
 
     root.addEventListener('keydown', function (e) {
       if (e.key === 'ArrowRight') { e.preventDefault(); go(index + 1); }
-      if (e.key === 'ArrowLeft')  { e.preventDefault(); go(index - 1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(index - 1); }
     });
 
     document.addEventListener('visibilitychange', sync);
