@@ -10,6 +10,11 @@ CHECKSHEET_KEYS = {
     CheckSheetType.PRE_COMM_B: "CS-PREB",
     CheckSheetType.COMM_C: "CS-COMC",
     CheckSheetType.FUNCTIONAL_TEST: "CS-FUNC",
+    CheckSheetType.HYDROTEST: "CS-HYDR",
+    CheckSheetType.LEAK_TEST: "CS-LEAK",
+    CheckSheetType.FLUSH_BLOW: "CS-FLSH",
+    CheckSheetType.MEGGER: "CS-MEGG",
+    CheckSheetType.CALIBRATION: "CS-CALB",
 }
 PUNCH_KEYS = {category: f"PUNCH-{category.value}" for category in PunchCategory}
 

@@ -56,6 +56,12 @@ class CheckSheetType(enum.Enum):
     PRE_COMM_B = "PRE_COMM_B"
     COMM_C = "COMM_C"
     FUNCTIONAL_TEST = "FUNCTIONAL_TEST"
+    # Mechanical test records. Projects choose which types gate each milestone.
+    HYDROTEST = "HYDROTEST"
+    LEAK_TEST = "LEAK_TEST"
+    FLUSH_BLOW = "FLUSH_BLOW"
+    MEGGER = "MEGGER"
+    CALIBRATION = "CALIBRATION"
 
 
 class CheckSheetStatus(enum.Enum):

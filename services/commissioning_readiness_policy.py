@@ -27,6 +27,10 @@ DEFAULT_READINESS_POLICY = {
     # Gates that require at least one registered sheet of every selected type.
     # MC requires Pre-Comm presence by default; RFC and RFSU keep the previous behaviour.
     "presence_required_gates": ["MC"],
+    # Equipment statuses that block MC. Status is free text; these are the
+    # conventional "not yet installed" values. The default does not affect
+    # equipment recorded with status ACTIVE.
+    "mc_blocking_equipment_statuses": ["NOT_INSTALLED", "PLANNED"],
 }
 
 
@@ -86,6 +90,16 @@ def normalize_readiness_policy(raw):
             errors.append("Invalid presence-required gates")
         else:
             policy["presence_required_gates"] = sorted(set(supplied_presence))
+
+    if "mc_blocking_equipment_statuses" in raw:
+        supplied_statuses = raw["mc_blocking_equipment_statuses"]
+        if not isinstance(supplied_statuses, list) or any(
+            not isinstance(value, str) or not value.strip() or len(value.strip()) > 30
+            for value in supplied_statuses
+        ):
+            errors.append("Invalid MC blocking equipment statuses")
+        else:
+            policy["mc_blocking_equipment_statuses"] = sorted({value.strip() for value in supplied_statuses})
 
     task_values = {item.value for item in CommissioningTaskType}
     if "mc_required_task_types" in raw:

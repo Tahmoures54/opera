@@ -2640,3 +2640,62 @@ def test_mc_requires_registered_pre_comm_sheets_by_default(client, app, opera_se
             issue.code == "MISSING_REQUIRED_CHECK_SHEET" and issue.gate in ("RFC", "RFSU")
             for issue in result.issues
         )
+
+
+def test_mc_document_requirement_blocks_until_approved_document_exists(client, app, opera_setup):
+    from models_commissioning import (
+        CommissioningDocument, CommissioningDossierRequirement, DocumentStatus,
+    )
+    from services.commissioning_readiness import evaluate_subsystem_readiness
+
+    def _blockers():
+        result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
+        return [i for i in result.issues if i.code == "MC_DOCUMENT_REQUIREMENT_UNMET" and i.gate == "MC"]
+
+    with app.app_context():
+        db.session.add(CommissioningDossierRequirement(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            document_type="Piping ISO", discipline="ANY", minimum_count=1,
+            require_approved=True, require_evidence=False, is_active=True,
+            created_by_id=opera_setup["manager"],
+        ))
+        document = CommissioningDocument(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            document_number="ISO-001", revision="A", revision_sequence=1,
+            title="Piping isometric", document_type="Piping ISO", discipline="Piping",
+            status=DocumentStatus.DRAFT, created_by_id=opera_setup["manager"],
+        )
+        db.session.add(document)
+        db.session.commit()
+
+        assert len(_blockers()) == 1
+
+        document.status = DocumentStatus.APPROVED
+        db.session.commit()
+        assert _blockers() == []
+
+
+def test_mc_blocks_on_configured_equipment_status(client, app, opera_setup):
+    from models_commissioning import CommissioningEquipment, CommissioningProject
+    from services.commissioning_readiness import evaluate_subsystem_readiness
+
+    def _blockers():
+        result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
+        return [i for i in result.issues if i.code == "MC_EQUIPMENT_NOT_READY" and i.gate == "MC"]
+
+    with app.app_context():
+        equipment = CommissioningEquipment(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            subsystem_id=opera_setup["subsystem"], tag_number="P-101",
+            equipment_type="PUMP", status="PLANNED",
+        )
+        db.session.add(equipment)
+        db.session.commit()
+
+        assert len(_blockers()) == 1
+        assert _blockers()[0].entity_id == equipment.id
+
+        equipment.status = "ACTIVE"
+        db.session.commit()
+        assert _blockers() == []

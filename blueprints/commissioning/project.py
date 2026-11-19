@@ -130,6 +130,10 @@ def edit_readiness_policy(project_id):
             "require_all_tasks_complete_for_rfsu": request.form.get("require_all_tasks_complete_for_rfsu") == "on",
             "mc_required_task_types": request.form.getlist("mc_required_task_types"),
             "presence_required_gates": request.form.getlist("presence_required_gates"),
+            "mc_blocking_equipment_statuses": [
+                value.strip() for value in request.form.get("mc_blocking_equipment_statuses", "").split(",")
+                if value.strip()
+            ],
         }
         normalized, validation_errors = normalize_readiness_policy(updated)
         if validation_errors:

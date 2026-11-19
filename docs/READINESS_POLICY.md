@@ -20,11 +20,18 @@ Select the Check Sheet types whose existing records must be signed off for each 
 - PRE_COMM_B
 - COMM_C
 - FUNCTIONAL_TEST
+- HYDROTEST, LEAK_TEST, FLUSH_BLOW, MEGGER, CALIBRATION (mechanical test records; projects add them to the gates that need them)
 
 The initial defaults require PRE_COMM_A and PRE_COMM_B for MC, and all four types for RFC and RFSU. By default, OPERA checks the registered sheets of the selected types. For **MC**, presence is also required by default: at least one registered sheet of every selected MC type must exist. For RFC and RFSU, presence is not required by default. Enable presence per gate, or the all-gates option, when the project procedure requires it.
 
 ### Task activities that block MC
 Select the task activity types (CCK, STS, PIP, PRC, FTS, OTS, PVP) whose incomplete tasks block Mechanical Completion. A task is incomplete unless it is Completed or Cancelled. The default is empty, so MC is not gated on tasks until a project selects activity types. RFSU task completion is controlled separately below.
+
+### Dossier documents for MC
+MC also checks the project's active dossier document rules (Document requirements on the Operations page). A rule uses the latest revision of each document of the subsystem, matched on document type and discipline (or any discipline). It passes when enough matching documents are approved (if required) and have evidence (if required). Projects without dossier rules are not affected.
+
+### Equipment statuses that block MC
+Enter the equipment status values that prevent MC, for example PLANNED or NOT_INSTALLED. Status is free text on equipment, so use the exact values recorded in the equipment register. The default blocks only PLANNED and NOT_INSTALLED, so equipment with status ACTIVE is not affected.
 
 ### Hold points
 Select the milestones blocked by unreleased Hold points linked to a Check Sheet. The initial default blocks MC, RFC and RFSU.

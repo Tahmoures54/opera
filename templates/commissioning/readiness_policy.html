@@ -112,6 +112,14 @@
       </div>
     </section>
 
+    <section class="card">
+      <div class="card-header fw-semibold">Equipment statuses that block MC</div>
+      <div class="card-body">
+        <p class="small text-muted">Enter comma-separated equipment status values. Any equipment in the subsystem with one of these statuses prevents Mechanical Completion. Use the exact status text recorded on the equipment.</p>
+        <input class="form-control" type="text" name="mc_blocking_equipment_statuses" value="{{ policy.mc_blocking_equipment_statuses|join(', ') }}">
+      </div>
+    </section>
+
     <div class="d-flex justify-content-end gap-2">
       <a class="btn btn-outline-secondary" href="{{ url_for('commissioning.operations', project_id=project.id) }}">Cancel</a>
       <button class="btn btn-primary" type="submit">Save readiness policy</button>

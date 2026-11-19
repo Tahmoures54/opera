@@ -2,6 +2,15 @@
 
 All notable OPERA product changes are recorded here. OPERA is an independent commissioning and start-up product. It reuses shared infrastructure from the original MaterialHub codebase, but MaterialHub is not the product identity.
 
+## [Unreleased] — 2026-11-19
+
+### Readiness (MC)
+- Mechanical Completion requires registered Pre-Comm A and Pre-Comm B check sheets by default.
+- Project-configurable MC gates for incomplete task activity types, dossier document rules and equipment statuses.
+- Added mechanical check sheet types: HYDROTEST, LEAK_TEST, FLUSH_BLOW, MEGGER, CALIBRATION (migration 20261119_0036, not yet verified against a database).
+- Corrected readiness documentation that described required-sheet configuration as future work.
+- Known limitation: the new MC gates and migration have not been run in CI; validate before release.
+
 ## [Unreleased] — 2026-11-16
 
 ### Product identity and architecture

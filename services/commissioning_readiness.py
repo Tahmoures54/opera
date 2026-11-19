@@ -13,11 +13,16 @@ from extensions import db
 from models_commissioning import (
     CheckSheet,
     CheckSheetStatus,
+    CommissioningAttachment,
+    CommissioningDocument,
+    CommissioningDossierRequirement,
+    CommissioningEquipment,
     CommissioningProject,
     CommissioningSubsystem,
     CommissioningSystem,
     CommissioningTask,
     CommissioningTaskStatus,
+    DocumentStatus,
     PunchItem,
     PunchStatus,
     WitnessPoint,
@@ -124,6 +129,61 @@ def _open_hold_points(company_name: str, subsystem_id: int):
     )
 
 
+def _document_requirement_shortfalls(company_name: str, subsystem: CommissioningSubsystem) -> List[str]:
+    """Unmet project dossier document rules for one subsystem, using the dossier export rules.
+
+    Only the latest revision of each document number counts. A rule passes when
+    enough matching documents are approved (if required) and have evidence (if
+    required). Projects without dossier rules are not affected.
+    """
+    system = CommissioningSystem.query.filter_by(id=subsystem.system_id, company_name=company_name).first()
+    if system is None:
+        return []
+    rules = CommissioningDossierRequirement.query.filter_by(
+        company_name=company_name, project_id=system.project_id, is_active=True,
+    ).all()
+    if not rules:
+        return []
+
+    documents = CommissioningDocument.query.filter_by(
+        company_name=company_name, project_id=system.project_id, subsystem_id=subsystem.id,
+    ).order_by(
+        CommissioningDocument.document_number,
+        CommissioningDocument.revision_sequence.desc(),
+    ).all()
+    latest = {}
+    for document in documents:
+        latest.setdefault(document.document_number, document)
+    latest_documents = list(latest.values())
+
+    evidence_ids = {
+        row.entity_id for row in CommissioningAttachment.query.filter(
+            CommissioningAttachment.company_name == company_name,
+            CommissioningAttachment.entity_type == "CommissioningDocument",
+            CommissioningAttachment.entity_id.in_([doc.id for doc in latest_documents] or [-1]),
+        ).all()
+    }
+
+    shortfalls = []
+    for rule in rules:
+        matching = [
+            doc for doc in latest_documents
+            if doc.document_type.strip().casefold() == rule.document_type.strip().casefold()
+            and (rule.discipline == "ANY" or doc.discipline.strip().casefold() == rule.discipline.strip().casefold())
+        ]
+        qualifying = [
+            doc for doc in matching
+            if (not rule.require_approved or doc.status == DocumentStatus.APPROVED)
+            and (not rule.require_evidence or doc.id in evidence_ids)
+        ]
+        if len(qualifying) < rule.minimum_count:
+            shortfalls.append(
+                f"Dossier document requirement not met: {rule.document_type} / {rule.discipline} "
+                f"({len(qualifying)} of {rule.minimum_count} qualifying)"
+            )
+    return shortfalls
+
+
 def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> ReadinessResult:
     """Evaluate project-configured MC, RFC and RFSU readiness for one subsystem.
 
@@ -153,6 +213,15 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
     tasks = CommissioningTask.query.filter_by(
         company_name=company_name, subsystem_id=subsystem_id,
     ).all()
+
+    mc_document_shortfalls = _document_requirement_shortfalls(company_name, subsystem)
+    mc_blocking_equipment = []
+    if policy["mc_blocking_equipment_statuses"]:
+        mc_blocking_equipment = CommissioningEquipment.query.filter(
+            CommissioningEquipment.company_name == company_name,
+            CommissioningEquipment.subsystem_id == subsystem_id,
+            CommissioningEquipment.status.in_(policy["mc_blocking_equipment_statuses"]),
+        ).all()
 
     gate_ready = {}
     gate_metrics = {}
@@ -239,6 +308,16 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
                 )
                 gate_issue_count += 1
             gate_task_count = len(mc_blocking_tasks)
+            for message in mc_document_shortfalls:
+                result.add_blocker("MC_DOCUMENT_REQUIREMENT_UNMET", message, gate=gate)
+                gate_issue_count += 1
+            for equipment in mc_blocking_equipment:
+                result.add_blocker(
+                    "MC_EQUIPMENT_NOT_READY",
+                    f"Equipment {equipment.tag_number} status is {equipment.status}",
+                    entity_type="equipment", entity_id=equipment.id, gate=gate,
+                )
+                gate_issue_count += 1
 
         gate_ready[gate] = gate_issue_count == 0
         gate_metrics[gate] = {
