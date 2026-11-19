@@ -224,12 +224,28 @@ def evaluate_subsystem_readiness(company_name: str, subsystem_id: int) -> Readin
                     entity_type="task", entity_id=task.id, gate=gate,
                 )
 
+        gate_task_count = len(incomplete_tasks) if gate == "RFSU" else 0
+        if gate == "MC":
+            mc_task_types = set(policy["mc_required_task_types"])
+            mc_blocking_tasks = [
+                task for task in incomplete_tasks
+                if task.activity_type.value in mc_task_types
+            ]
+            for task in mc_blocking_tasks:
+                result.add_blocker(
+                    "INCOMPLETE_TASK",
+                    f"MC task not completed: {task.task_number} ({task.activity_type.value}, {task.status.value})",
+                    entity_type="task", entity_id=task.id, gate=gate,
+                )
+                gate_issue_count += 1
+            gate_task_count = len(mc_blocking_tasks)
+
         gate_ready[gate] = gate_issue_count == 0
         gate_metrics[gate] = {
             "blocking_punch_count": len(gate_punches),
             "blocking_hold_count": len(gate_holds),
             "unsigned_check_sheet_count": len(unsigned_sheets),
-            "incomplete_task_count": len(incomplete_tasks) if gate == "RFSU" else 0,
+            "incomplete_task_count": gate_task_count,
             "required_check_sheet_count": len(required_sheets),
         }
 

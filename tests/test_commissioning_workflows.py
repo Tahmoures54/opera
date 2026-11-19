@@ -2578,3 +2578,41 @@ def test_waived_punch_cannot_transition_further(client, app, opera_setup):
         assert response.status_code == 409, target
     with app.app_context():
         assert db.session.get(PunchItem, punch_id).status == PunchStatus.WAIVED
+
+
+def test_mc_task_gate_blocks_only_configured_activity_types(client, app, opera_setup):
+    from models_commissioning import CommissioningProject
+    from services.commissioning_readiness import evaluate_subsystem_readiness
+
+    with app.app_context():
+        cck_task = CommissioningTask(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            task_number="MC-GATE-CCK", title="Conformity check",
+            activity_type=CommissioningTaskType.CCK, discipline="Mechanical",
+            estimated_man_hours=4, status=CommissioningTaskStatus.NOT_STARTED,
+            created_by_id=opera_setup["manager"],
+        )
+        fts_task = CommissioningTask(
+            company_name="Contractor A", project_id=opera_setup["project"],
+            system_id=opera_setup["system"], subsystem_id=opera_setup["subsystem"],
+            task_number="MC-GATE-FTS", title="Functional test",
+            activity_type=CommissioningTaskType.FTS, discipline="Process",
+            estimated_man_hours=4, status=CommissioningTaskStatus.NOT_STARTED,
+            created_by_id=opera_setup["manager"],
+        )
+        db.session.add_all([cck_task, fts_task])
+        db.session.commit()
+        project = db.session.get(CommissioningProject, opera_setup["project"])
+        project.readiness_policy_json = {"mc_required_task_types": ["CCK"]}
+        db.session.commit()
+
+        result = evaluate_subsystem_readiness("Contractor A", opera_setup["subsystem"])
+        mc_task_ids = [
+            issue.entity_id for issue in result.issues
+            if issue.code == "INCOMPLETE_TASK" and issue.gate == "MC"
+        ]
+        assert mc_task_ids == [cck_task.id]
+        assert fts_task.id not in mc_task_ids
+        assert result.is_ready_for_mc is False
+        assert result.metrics["by_gate"]["MC"]["incomplete_task_count"] == 1

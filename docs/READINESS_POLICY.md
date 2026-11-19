@@ -23,6 +23,9 @@ Select the Check Sheet types whose existing records must be signed off for each 
 
 The initial defaults require PRE_COMM_A and PRE_COMM_B for MC, and all four types for RFC and RFSU. By default, OPERA checks the registered sheets of the selected types; it does not require a sheet of every selected type to exist. Enable **Require at least one registered Check Sheet for every selected type** when the project procedure requires presence as well as sign-off.
 
+### Task activities that block MC
+Select the task activity types (CCK, STS, PIP, PRC, FTS, OTS, PVP) whose incomplete tasks block Mechanical Completion. A task is incomplete unless it is Completed or Cancelled. The default is empty, so MC is not gated on tasks until a project selects activity types. RFSU task completion is controlled separately below.
+
 ### Hold points
 Select the milestones blocked by unreleased Hold points linked to a Check Sheet. The initial default blocks MC, RFC and RFSU.
 

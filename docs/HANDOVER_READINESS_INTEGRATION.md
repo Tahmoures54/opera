@@ -7,7 +7,7 @@
 
 `DRAFT → MC_CERTIFIED → RFC_CERTIFIED → RFSU → ACCEPTED`
 
-- **MC:** `require_ready_for_mc` checks the pre-commissioning readiness criteria.
+- **MC:** `require_ready_for_mc` checks Punch blockers, Hold points, signed Pre-Comm sheets and, when configured, incomplete tasks of the selected activity types.
 - **RFC:** `require_ready_for_rfc` checks MC prerequisites plus Commissioning C / Functional Test completion.
 - **RFSU:** `require_ready_for_rfsu` checks RFC prerequisites, remaining Punch A/B blockers and task completion.
 - **Operations Acceptance:** only a user with `handover.accept` can accept or reject after RFSU.
@@ -45,4 +45,4 @@ The project Readiness policy is stored in `CommissioningProject.readiness_policy
 
 - Electronic sign-off is an authenticated acknowledgement, not a qualified cryptographic signature.
 - The readiness rules are OPERA's configured baseline. Project contracts, approved completion procedures, ITPs and authority matrices remain authoritative.
-- The Readiness Engine currently treats all registered Pre-Comm and Commissioning / Functional Test sheets in scope as required. Project-specific required-sheet configuration remains future work.
+- Required Check Sheet types per gate, Punch blocking categories, Hold-point gates and MC task activities are configured per project (see [READINESS_POLICY.md](READINESS_POLICY.md)). Until a project saves its own policy, the defaults apply and a gate does not block on a Check Sheet type that has no registered sheet.

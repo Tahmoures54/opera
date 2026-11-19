@@ -88,6 +88,23 @@
       </div>
     </section>
 
+    <section class="card">
+      <div class="card-header fw-semibold">Task activities that block MC</div>
+      <div class="card-body">
+        <p class="small text-muted">Incomplete tasks of the selected activity types prevent Mechanical Completion. Leave all unchecked to keep the previous behaviour, which does not gate MC on tasks.</p>
+        <div class="row g-2">
+          {% for task_type in task_types %}
+          <div class="col-md-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="mc_task_{{ task_type.value }}" name="mc_required_task_types" value="{{ task_type.value }}" {% if task_type.value in policy.mc_required_task_types %}checked{% endif %}>
+              <label class="form-check-label" for="mc_task_{{ task_type.value }}">{{ task_type.value }}</label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
     <div class="d-flex justify-content-end gap-2">
       <a class="btn btn-outline-secondary" href="{{ url_for('commissioning.operations', project_id=project.id) }}">Cancel</a>
       <button class="btn btn-primary" type="submit">Save readiness policy</button>

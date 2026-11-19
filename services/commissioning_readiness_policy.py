@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from models_commissioning import CheckSheetType, PunchCategory
+from models_commissioning import CheckSheetType, CommissioningTaskType, PunchCategory
 
 GATES = ("MC", "RFC", "RFSU")
 
@@ -21,6 +21,9 @@ DEFAULT_READINESS_POLICY = {
     },
     "require_check_sheet_presence": False,
     "require_all_tasks_complete_for_rfsu": True,
+    # Activity types whose incomplete tasks block MC. Empty by default so
+    # existing projects keep their behaviour until the project opts in.
+    "mc_required_task_types": [],
 }
 
 
@@ -71,6 +74,16 @@ def normalize_readiness_policy(raw):
                 errors.append(f"Invalid required Check Sheet types for {gate}")
             else:
                 policy["required_check_sheet_types"][gate] = sorted(set(values))
+
+    task_values = {item.value for item in CommissioningTaskType}
+    if "mc_required_task_types" in raw:
+        supplied_tasks = raw["mc_required_task_types"]
+        if not isinstance(supplied_tasks, list) or any(
+            not isinstance(value, str) or value not in task_values for value in supplied_tasks
+        ):
+            errors.append("Invalid MC task types")
+        else:
+            policy["mc_required_task_types"] = sorted(set(supplied_tasks))
 
     for key in ("require_check_sheet_presence", "require_all_tasks_complete_for_rfsu"):
         if key in raw:

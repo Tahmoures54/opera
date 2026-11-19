@@ -8,6 +8,7 @@ from extensions import db
 from models_commissioning import (
     CommissioningMembership, CommissioningProject, CommissioningSystem,
     CommissioningSubsystem, CommissioningEquipment, CheckSheet, PunchItem, HandoverPackage, MembershipRole, ProjectStatus, PunchCategory, CheckSheetType,
+    CommissioningTaskType,
 )
 from services.commissioning_access import add_audit_event, get_project, has_permission
 from services.commissioning_punch_categories import ensure_default_punch_categories
@@ -127,6 +128,7 @@ def edit_readiness_policy(project_id):
             },
             "require_check_sheet_presence": request.form.get("require_check_sheet_presence") == "on",
             "require_all_tasks_complete_for_rfsu": request.form.get("require_all_tasks_complete_for_rfsu") == "on",
+            "mc_required_task_types": request.form.getlist("mc_required_task_types"),
         }
         normalized, validation_errors = normalize_readiness_policy(updated)
         if validation_errors:
@@ -148,6 +150,7 @@ def edit_readiness_policy(project_id):
         gates=GATES,
         punch_categories=list(PunchCategory),
         check_sheet_types=list(CheckSheetType),
+        task_types=list(CommissioningTaskType),
         policy_errors=errors,
     )
 
