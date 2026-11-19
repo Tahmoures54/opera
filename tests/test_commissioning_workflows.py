@@ -2677,7 +2677,7 @@ def test_mc_document_requirement_blocks_until_approved_document_exists(client, a
 
 
 def test_mc_blocks_on_configured_equipment_status(client, app, opera_setup):
-    from models_commissioning import CommissioningEquipment, CommissioningProject
+    from models_commissioning import CommissioningEquipment
     from services.commissioning_readiness import evaluate_subsystem_readiness
 
     def _blockers():
