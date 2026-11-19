@@ -278,7 +278,7 @@
   }
   .opera-landing .op-ring-fill {
     stroke-dasharray: 327;
-    stroke-dashoffset: 105; /* 68% */
+    stroke-dashoffset: 105; /* decorative fill, not a metric */
     animation: op-ring-in 1.4s ease-out both;
   }
   .opera-landing .op-ring-value {
@@ -725,6 +725,16 @@
       radial-gradient(circle at 85% 15%, rgba(71, 213, 207, .26), transparent 32%),
       linear-gradient(115deg, #142e55, #1d4d8a 62%, #176f86);
     box-shadow: 0 24px 55px rgba(23, 61, 111, .2);
+    isolation: isolate; /* keep the decorative ::after above the background, below the copy */
+  }
+  .opera-landing .op-cta::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(115deg, rgba(20, 46, 85, .92), rgba(23, 111, 134, .85)), url("{{ url_for('static', filename='images/marketing/opera-hero.jpg') }}") center / cover;
+    opacity: .35;
+    pointer-events: none;
   }
   .opera-landing .op-cta-copy { max-width: 650px; }
   .opera-landing .op-cta h2 {
@@ -853,7 +863,7 @@
                               stroke="#70e5dc" stroke-width="10" stroke-linecap="round"
                               transform="rotate(-90 60 60)"/>
                     </svg>
-                    <div class="op-ring-value">68%<small>Ready</small></div>
+                    <div class="op-ring-value">&mdash;<small>Sample</small></div>
                   </div>
                   <div class="op-preview-rows">
                     <div class="op-preview-row">
